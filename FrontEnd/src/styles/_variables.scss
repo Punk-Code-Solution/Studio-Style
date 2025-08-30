@@ -1,0 +1,169 @@
+// Colors
+$primary-color: #2196F3;
+$primary-light: #64B5F6;
+$primary-dark: #1976D2;
+$secondary-color: #FF4081;
+$secondary-light: #FF80AB;
+$secondary-dark: #F50057;
+$success-color: #4CAF50;
+$warning-color: #FFC107;
+$error-color: #F44336;
+$info-color: #00BCD4;
+
+// Text Colors
+$text-primary: #212121;
+$text-secondary: #757575;
+$text-disabled: #9E9E9E;
+$text-light: #ffffff;
+$text-muted: #999999;
+$text-color: #333;
+
+// Background Colors
+$background-color: #f8f9fa;
+$background-light: #FFFFFF;
+$background-dark: #F5F5F5;
+$background-darker: #EEEEEE;
+$background-hover: #e3f0ff;
+$background-active: #b3d8fd;
+
+// Border Colors
+$border-color: #e0e0e0;
+$border-light: #e9ecef;
+$border-dark: #dee2e6;
+$border-radius: 10px;
+
+// Typography
+$font-family: 'Roboto', sans-serif;
+$font-size-xs: 0.75rem;    // 12px
+$font-size-sm: 0.875rem;   // 14px
+$font-size-base: 1rem;     // 16px
+$font-size-lg: 1.125rem;   // 18px
+$font-size-xl: 1.25rem;    // 20px
+$font-size-xxl: 1.5rem;    // 24px
+$font-size-xxxl: 2rem;     // 32px
+$font-weight-light: 300;
+$font-weight-regular: 400;
+$font-weight-medium: 500;
+$font-weight-bold: 700;
+$line-height-base: 1.5;
+$light-gray: #e0e0e0;
+
+// Spacing
+$spacing-xs: 0.25rem;    // 4px
+$spacing-sm: 0.5rem;     // 8px
+$spacing-md: 1rem;       // 16px
+$spacing-lg: 1.5rem;     // 24px
+$spacing-xl: 2rem;       // 32px
+$spacing-xxl: 3rem;      // 48px
+
+// Border Radius
+$border-radius-sm: 0.25rem;   // 4px
+$border-radius-md: 0.5rem;    // 8px
+$border-radius-lg: 1rem;      // 16px
+$border-radius-xl: 2rem;      // 32px
+$border-radius-full: 9999px;
+
+// Shadows
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+$shadow-md: 0 3px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12);
+$shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.15), 0 3px 6px rgba(0, 0, 0, 0.10);
+$shadow-xl: 0 15px 25px rgba(0, 0, 0, 0.15), 0 5px 10px rgba(0, 0, 0, 0.05);
+
+// Transitions
+$transition-fast: 150ms ease;
+$transition-normal: 250ms ease;
+$transition-slow: 350ms ease;
+
+// Z-index
+$z-index-dropdown: 1000;
+$z-index-sticky: 1020;
+$z-index-fixed: 1030;
+$z-index-modal-backdrop: 1040;
+$z-index-modal: 1050;
+$z-index-popover: 1060;
+$z-index-tooltip: 1070;
+
+// Breakpoints
+$breakpoint-xs: 0;
+$breakpoint-sm: 576px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 992px;
+$breakpoint-xl: 1200px;
+$breakpoint-xxl: 1400px; 
+
+// Colors
+$primary-color: #1976d2;
+$primary-dark: #1565c0;
+$primary-light: #42a5f5;
+$secondary-color: #9c27b0;
+$success-color: #4caf50;
+$error-color: #f44336;
+$warning-color: #ff9800;
+$info-color: #2196f3;
+
+// Text colors
+$text-primary: #2c3e50;
+$text-secondary: #666666;
+$text-light: #ffffff;
+$light-gray: #e0e0e0;
+
+// Background colors
+$background-light: #ffffff;
+$background-dark: #f5f5f5;
+
+// Border colors
+$border-color: #e0e0e0;
+
+// Spacing
+$spacing-xs: 0.25rem;
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 1.5rem;
+$spacing-xl: 2rem;
+$spacing-xxl: 3rem;
+
+// Border radius
+$border-radius-sm: 4px;
+$border-radius-md: 8px;
+$border-radius-lg: 12px;
+$border-radius-full: 9999px;
+$border-radius-xl: 16px;
+$border-radius: 20px;
+
+// Font sizes
+$font-size-xs: 0.75rem;
+$font-size-small: 0.875rem;
+$font-size-base: 1rem;
+$font-size-large: 1.25rem;
+$font-size-lg: 1.5rem;
+$font-size-xl: 2rem;
+$font-size-xxl: 2.5rem;
+
+// Font weights
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-bold: 700;
+
+// Shadows
+$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+$shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+// Z-index
+$z-index-dropdown: 1000;
+$z-index-sticky: 1020;
+$z-index-fixed: 1030;
+$z-index-modal: 1040;
+$z-index-popover: 1050;
+$z-index-tooltip: 1060;
+
+// Transitions
+$transition-fast: 0.15s ease;
+$transition-normal: 0.3s ease;
+$transition-slow: 0.5s ease;
+
+// Breakpoints
+$breakpoint-sm: 576px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 992px;
+$breakpoint-xl: 1200px; 

@@ -1,0 +1,14 @@
+<form [formGroup]="consultationForm" (ngSubmit)="onSubmit()">
+  <textarea formControlName="anotacoes" placeholder="Anotações clínicas"></textarea>
+  <div class="erro" *ngIf="consultationForm.get('anotacoes')?.invalid && consultationForm.get('anotacoes')?.touched">Anotações são obrigatórias.</div>
+
+  <textarea formControlName="prescricao" placeholder="Prescrição"></textarea>
+  <div class="erro" *ngIf="consultationForm.get('prescricao')?.invalid && consultationForm.get('prescricao')?.touched">Prescrição é obrigatória.</div>
+
+  <input formControlName="exames" placeholder="Solicitação de exames" />
+  <div class="erro" *ngIf="consultationForm.get('exames')?.invalid && consultationForm.get('exames')?.touched">Solicitação de exames é obrigatória.</div>
+
+  <button type="submit" [disabled]="!consultationForm.valid">Salvar Consulta</button>
+
+  <div class="sucesso" *ngIf="sucesso">Consulta salva com sucesso!</div>
+</form>

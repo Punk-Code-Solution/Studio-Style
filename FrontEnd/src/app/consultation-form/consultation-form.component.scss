@@ -1,0 +1,81 @@
+form {
+  max-width: 800px;
+  margin: 2.5rem auto;
+  padding: 2.2rem 2rem 1.5rem 2rem;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(99, 164, 255, 0.10);
+
+  textarea {
+    width: 100%;
+    padding: 0.85rem;
+    margin-bottom: 1.2rem;
+    border: 1.5px solid #b3d8fd;
+    border-radius: 8px;
+    font-size: 1.08rem;
+    background: #f7fbff;
+    color: #1976d2;
+    transition: border 0.2s;
+    min-height: 120px;
+    resize: vertical;
+
+    &:focus {
+      outline: none;
+      border-color: #1976d2;
+      background: #e3f0ff;
+    }
+  }
+
+  input {
+    width: 100%;
+    padding: 0.85rem;
+    margin-bottom: 1.2rem;
+    border: 1.5px solid #b3d8fd;
+    border-radius: 8px;
+    font-size: 1.08rem;
+    background: #f7fbff;
+    color: #1976d2;
+    transition: border 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: #1976d2;
+      background: #e3f0ff;
+    }
+  }
+
+  button {
+    width: 100%;
+    padding: 0.85rem;
+    background: linear-gradient(90deg, #63a4ff 0%, #1976d2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.08rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    box-shadow: 0 2px 8px rgba(99, 164, 255, 0.10);
+
+    &:hover {
+      background: linear-gradient(90deg, #1976d2 0%, #63a4ff 100%);
+    }
+  }
+}
+
+.erro {
+  color: #e53935;
+  font-size: 0.98rem;
+  margin-bottom: 0.7rem;
+  margin-left: 0.2rem;
+}
+
+.sucesso {
+  color: #009688;
+  font-size: 1.05rem;
+  margin-top: 1.2rem;
+  text-align: center;
+  background: #e0f7fa;
+  border-radius: 6px;
+  padding: 0.7rem 0;
+}

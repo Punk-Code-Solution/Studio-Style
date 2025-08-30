@@ -1,0 +1,34 @@
+<div class="sidebar" *ngIf="authService.isAuthenticated()">
+  <div class="sidebar-header">
+    <img src="assets/images/logo.png" alt="ExperienceMed Logo" class="logo">
+  </div>
+
+  <div class="sidebar-content">
+    <nav>
+      <a *ngFor="let item of menuItems"
+         [routerLink]="item.route"
+         routerLinkActive="active"
+         [class.active]="isActive(item.route)"
+         class="nav-item"
+         *ngIf="canAccessMenuItem(item)">
+        <i class="material-icons">{{item.icon}}</i>
+        <span>{{item.label}}</span>
+      </a>
+    </nav>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-info" *ngIf="getCurrentUser()">
+      <div class="user-avatar">
+        <i class="material-icons">account_circle</i>
+      </div>
+      <div class="user-details">
+        <span class="user-name">{{getCurrentUser()?.nome}}</span>
+        <span class="user-role">{{getCurrentUserRole()}}</span>
+      </div>
+      <button class="logout-button" (click)="logout()">
+        <i class="material-icons">exit_to_app</i>
+      </button>
+    </div>
+  </div>
+</div> 

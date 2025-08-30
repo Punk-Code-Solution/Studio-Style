@@ -1,0 +1,168 @@
+<div class="consultation-form-container">
+  <h2>
+    <i class="fas" [class.fa-edit]="isEditMode" [class.fa-plus]="!isEditMode"></i>
+    {{ isEditMode ? 'Editar Consulta' : 'Nova Consulta' }}
+  </h2>
+
+  <form [formGroup]="consultationForm" (ngSubmit)="onSubmit()">
+    <div class="form-group">
+      <label for="patientId">
+        <i class="fas fa-user"></i>
+        Paciente
+      </label>
+      <select 
+        id="patientId" 
+        formControlName="patientId"
+        [class.error]="consultationForm.get('patientId')?.invalid && consultationForm.get('patientId')?.touched"
+      >
+        <option value="">Selecione um paciente</option>
+        <!-- TODO: Adicionar lista de pacientes -->
+      </select>
+      <div class="error-message" *ngIf="consultationForm.get('patientId')?.invalid && consultationForm.get('patientId')?.touched">
+        {{ getErrorMessage('patientId') }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="doctorId">
+        <i class="fas fa-user-md"></i>
+        Médico
+      </label>
+      <select 
+        id="doctorId" 
+        formControlName="doctorId"
+        [class.error]="consultationForm.get('doctorId')?.invalid && consultationForm.get('doctorId')?.touched"
+      >
+        <option value="">Selecione um médico</option>
+        <!-- TODO: Adicionar lista de médicos -->
+      </select>
+      <div class="error-message" *ngIf="consultationForm.get('doctorId')?.invalid && consultationForm.get('doctorId')?.touched">
+        {{ getErrorMessage('doctorId') }}
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="date">
+          <i class="fas fa-calendar"></i>
+          Data
+        </label>
+        <input 
+          type="date" 
+          id="date" 
+          formControlName="date"
+          [class.error]="consultationForm.get('date')?.invalid && consultationForm.get('date')?.touched"
+        >
+        <div class="error-message" *ngIf="consultationForm.get('date')?.invalid && consultationForm.get('date')?.touched">
+          {{ getErrorMessage('date') }}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="time">
+          <i class="fas fa-clock"></i>
+          Horário
+        </label>
+        <input 
+          type="time" 
+          id="time" 
+          formControlName="time"
+          [class.error]="consultationForm.get('time')?.invalid && consultationForm.get('time')?.touched"
+        >
+        <div class="error-message" *ngIf="consultationForm.get('time')?.invalid && consultationForm.get('time')?.touched">
+          {{ getErrorMessage('time') }}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="type">
+          <i class="fas fa-stethoscope"></i>
+          Tipo de Consulta
+        </label>
+        <select 
+          id="type" 
+          formControlName="type"
+          [class.error]="consultationForm.get('type')?.invalid && consultationForm.get('type')?.touched"
+        >
+          <option value="">Selecione o tipo</option>
+          <option value="first_visit">Primeira Consulta</option>
+          <option value="follow_up">Retorno</option>
+          <option value="emergency">Emergência</option>
+        </select>
+        <div class="error-message" *ngIf="consultationForm.get('type')?.invalid && consultationForm.get('type')?.touched">
+          {{ getErrorMessage('type') }}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="status">
+          <i class="fas fa-info-circle"></i>
+          Status
+        </label>
+        <select 
+          id="status" 
+          formControlName="status"
+          [class.error]="consultationForm.get('status')?.invalid && consultationForm.get('status')?.touched"
+        >
+          <option value="scheduled">Agendada</option>
+          <option value="confirmed">Confirmada</option>
+          <option value="completed">Realizada</option>
+          <option value="cancelled">Cancelada</option>
+        </select>
+        <div class="error-message" *ngIf="consultationForm.get('status')?.invalid && consultationForm.get('status')?.touched">
+          {{ getErrorMessage('status') }}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="notes">
+        <i class="fas fa-clipboard"></i>
+        Observações
+      </label>
+      <textarea 
+        id="notes" 
+        formControlName="notes" 
+        rows="4"
+        placeholder="Digite as observações da consulta"
+      ></textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="attachments">
+        <i class="fas fa-paperclip"></i>
+        Anexos
+      </label>
+      <div class="file-upload">
+        <input type="file" id="attachments" (change)="onFileChange($event)" multiple />
+        <div class="file-upload-label">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <span>Arraste arquivos ou clique para selecionar</span>
+        </div>
+      </div>
+      <div class="attachments-list" *ngIf="attachments.length">
+        <div *ngFor="let file of attachments">
+          <i class="fas fa-file"></i>
+          {{ file.name }}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn-secondary" (click)="cancel()">
+        <i class="fas fa-times"></i>
+        Cancelar
+      </button>
+      <button type="submit" class="btn-primary" [disabled]="consultationForm.invalid">
+        <i class="fas" [class.fa-save]="isEditMode" [class.fa-plus]="!isEditMode"></i>
+        {{ isEditMode ? 'Salvar' : 'Criar' }}
+      </button>
+      <button type="button" class="btn-print" (click)="printConsultation()" *ngIf="isEditMode">
+        <i class="fas fa-print"></i>
+        Imprimir
+      </button>
+    </div>
+  </form>
+</div> 

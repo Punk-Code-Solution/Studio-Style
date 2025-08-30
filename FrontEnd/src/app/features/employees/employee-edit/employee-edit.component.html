@@ -1,0 +1,151 @@
+<div class="employee-form-container">
+  <div *ngIf="isLoading" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Carregando dados do funcionário...</p>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    <i class="fas fa-exclamation-circle"></i>
+    {{ errorMessage }}
+  </div>
+
+  <form *ngIf="!isLoading && !errorMessage" [formGroup]="employeeForm" (ngSubmit)="onSubmit()">
+    <h2>
+      <i class="fas fa-user-edit"></i>
+      Editar Funcionário
+    </h2>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="name">Nome Completo</label>
+        <input 
+          type="text" 
+          id="name" 
+          formControlName="name"
+          [class.error]="employeeForm.get('name')?.invalid && employeeForm.get('name')?.touched"
+          placeholder="Digite o nome completo"
+        >
+        <div class="error-message" *ngIf="employeeForm.get('name')?.invalid && employeeForm.get('name')?.touched">
+          <i class="fas fa-exclamation-circle"></i>
+          {{ getErrorMessage('name') }}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input 
+          type="email" 
+          id="email" 
+          formControlName="email"
+          [class.error]="employeeForm.get('email')?.invalid && employeeForm.get('email')?.touched"
+          placeholder="Digite o email"
+        >
+        <div class="error-message" *ngIf="employeeForm.get('email')?.invalid && employeeForm.get('email')?.touched">
+          <i class="fas fa-exclamation-circle"></i>
+          {{ getErrorMessage('email') }}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="role">Cargo</label>
+        <select 
+          id="role" 
+          formControlName="role"
+          [class.error]="employeeForm.get('role')?.invalid && employeeForm.get('role')?.touched"
+        >
+          <option value="">Selecione o cargo</option>
+          <option value="medico">Médico</option>
+          <option value="enfermeiro">Enfermeiro</option>
+          <option value="recepcionista">Recepcionista</option>
+          <option value="administrativo">Administrativo</option>
+        </select>
+        <div class="error-message" *ngIf="employeeForm.get('role')?.invalid && employeeForm.get('role')?.touched">
+          <i class="fas fa-exclamation-circle"></i>
+          {{ getErrorMessage('role') }}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="department">Departamento</label>
+        <select 
+          id="department" 
+          formControlName="department"
+          [class.error]="employeeForm.get('department')?.invalid && employeeForm.get('department')?.touched"
+        >
+          <option value="">Selecione o departamento</option>
+          <option value="clinica">Clínica Geral</option>
+          <option value="pediatria">Pediatria</option>
+          <option value="cardiologia">Cardiologia</option>
+          <option value="neurologia">Neurologia</option>
+          <option value="ortopedia">Ortopedia</option>
+        </select>
+        <div class="error-message" *ngIf="employeeForm.get('department')?.invalid && employeeForm.get('department')?.touched">
+          <i class="fas fa-exclamation-circle"></i>
+          {{ getErrorMessage('department') }}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="phone">Telefone</label>
+        <input 
+          type="tel" 
+          id="phone" 
+          formControlName="phone"
+          [class.error]="employeeForm.get('phone')?.invalid && employeeForm.get('phone')?.touched"
+          placeholder="Digite o telefone"
+        >
+        <div class="error-message" *ngIf="employeeForm.get('phone')?.invalid && employeeForm.get('phone')?.touched">
+          <i class="fas fa-exclamation-circle"></i>
+          {{ getErrorMessage('phone') }}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="status">Status</label>
+        <select 
+          id="status" 
+          formControlName="status"
+          [class.error]="employeeForm.get('status')?.invalid && employeeForm.get('status')?.touched"
+        >
+          <option value="active">Ativo</option>
+          <option value="inactive">Inativo</option>
+          <option value="on_leave">Em Licença</option>
+        </select>
+        <div class="error-message" *ngIf="employeeForm.get('status')?.invalid && employeeForm.get('status')?.touched">
+          <i class="fas fa-exclamation-circle"></i>
+          {{ getErrorMessage('status') }}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="address">Endereço</label>
+      <input 
+        type="text" 
+        id="address" 
+        formControlName="address"
+        [class.error]="employeeForm.get('address')?.invalid && employeeForm.get('address')?.touched"
+        placeholder="Digite o endereço completo"
+      >
+      <div class="error-message" *ngIf="employeeForm.get('address')?.invalid && employeeForm.get('address')?.touched">
+        <i class="fas fa-exclamation-circle"></i>
+        {{ getErrorMessage('address') }}
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn-secondary" (click)="cancel()">
+        <i class="fas fa-times"></i>
+        Cancelar
+      </button>
+      <button type="submit" class="btn-primary" [disabled]="employeeForm.invalid || isLoading">
+        <i class="fas fa-save"></i>
+        Salvar Alterações
+      </button>
+    </div>
+  </form>
+</div> 

@@ -1,0 +1,186 @@
+@use 'variables' as vars;
+
+// Flexbox
+@mixin flex($direction: row, $justify: flex-start, $align: stretch, $wrap: nowrap) {
+  display: flex;
+  flex-direction: $direction;
+  justify-content: $justify;
+  align-items: $align;
+  flex-wrap: $wrap;
+}
+
+// Grid
+@mixin grid($columns: 1, $gap: vars.$spacing-md) {
+  display: grid;
+  grid-template-columns: repeat($columns, 1fr);
+  gap: $gap;
+}
+
+// Typography
+@mixin typography($size: vars.$font-size-base, $weight: vars.$font-weight-regular, $line-height: 1.5) {
+  font-size: $size;
+  font-weight: $weight;
+  line-height: $line-height;
+}
+
+// Buttons
+@mixin button($bg-color: vars.$primary-color, $text-color: vars.$text-light, $hover-bg: vars.$primary-dark) {
+  background-color: $bg-color;
+  color: $text-color;
+  border: none;
+  border-radius: vars.$border-radius-md;
+  padding: vars.$spacing-sm vars.$spacing-md;
+  cursor: pointer;
+  transition: background-color vars.$transition-fast;
+  @include typography(vars.$font-size-base, vars.$font-weight-medium);
+
+  &:hover {
+    background-color: $hover-bg;
+  }
+
+  &:disabled {
+    background-color: vars.$text-disabled;
+    cursor: not-allowed;
+  }
+}
+
+// Form Elements
+@mixin form-element {
+  width: 100%;
+  padding: vars.$spacing-sm;
+  border: 1px solid vars.$border-color;
+  border-radius: vars.$border-radius-sm;
+  background-color: vars.$background-light;
+  @include typography(vars.$font-size-base);
+  transition: border-color vars.$transition-fast;
+
+  &:focus {
+    outline: none;
+    border-color: vars.$primary-color;
+  }
+
+  &:disabled {
+    background-color: vars.$background-dark;
+    cursor: not-allowed;
+  }
+}
+
+// Glass Effect
+@mixin glass-effect($opacity: 0.8) {
+  background: rgba(vars.$background-light, $opacity);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(vars.$background-light, 0.2);
+}
+
+// Responsive
+@mixin responsive($breakpoint) {
+  @if $breakpoint == xs {
+    @media (max-width: (vars.$breakpoint-sm - 1)) { @content; }
+  }
+  @else if $breakpoint == sm {
+    @media (min-width: vars.$breakpoint-sm) and (max-width: (vars.$breakpoint-md - 1)) { @content; }
+  }
+  @else if $breakpoint == md {
+    @media (min-width: vars.$breakpoint-md) and (max-width: (vars.$breakpoint-lg - 1)) { @content; }
+  }
+  @else if $breakpoint == lg {
+    @media (min-width: vars.$breakpoint-lg) and (max-width: (vars.$breakpoint-xl - 1)) { @content; }
+  }
+  @else if $breakpoint == xl {
+    @media (min-width: vars.$breakpoint-xl) and (max-width: (vars.$breakpoint-xxl - 1)) { @content; }
+  }
+  @else if $breakpoint == xxl {
+    @media (min-width: vars.$breakpoint-xxl) { @content; }
+  }
+}
+
+// Animations
+@mixin fade-in($duration: vars.$transition-normal) {
+  animation: fadeIn $duration ease-in-out;
+}
+
+@mixin slide-in($direction: 'left', $duration: vars.$transition-normal) {
+  @if $direction == 'left' {
+    animation: slideInLeft $duration ease-in-out;
+  } @else if $direction == 'right' {
+    animation: slideInRight $duration ease-in-out;
+  } @else if $direction == 'up' {
+    animation: slideInUp $duration ease-in-out;
+  } @else if $direction == 'down' {
+    animation: slideInDown $duration ease-in-out;
+  }
+}
+
+// Keyframes
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideInUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes slideInDown {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+// Card
+@mixin card {
+  background-color: vars.$background-light;
+  border-radius: vars.$border-radius-md;
+  box-shadow: vars.$shadow-md;
+  transition: box-shadow vars.$transition-normal;
+
+  &:hover {
+    box-shadow: vars.$shadow-lg;
+  }
+}
+
+// Badge
+@mixin badge($bg-color: vars.$primary-color, $text-color: vars.$text-light) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: vars.$spacing-xs vars.$spacing-sm;
+  background-color: $bg-color;
+  color: $text-color;
+  border-radius: vars.$border-radius-full;
+  font-size: vars.$font-size-xs;
+  font-weight: vars.$font-weight-medium;
+  line-height: 1;
+}
+
+// Custom Scrollbar
+@mixin custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: vars.$background-color;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: vars.$border-color;
+    border-radius: vars.$border-radius-sm;
+
+    &:hover {
+      background: vars.$text-secondary;
+    }
+  }
+} 

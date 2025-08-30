@@ -1,0 +1,11 @@
+
+
+.input {
+
+    width: 1936px;
+    height: 1200px;
+    flex-shrink: 0;
+    opacity: 0.5;
+    background: url('../../../public/700033.jpg'), rgb(255, 255, 255) -224.035px 0px / 123.144% 100% no-repeat;
+    mix-blend-mode: difference;
+}

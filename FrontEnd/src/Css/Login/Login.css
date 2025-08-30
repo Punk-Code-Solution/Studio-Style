@@ -1,0 +1,77 @@
+/* Login.css */
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Usando altura da viewport para cobrir toda a tela */
+  background-repeat: no-repeat;
+  background-position: top center;
+  background-image: url("../../../public/salao.jpg");
+  background-color: #030303; /* Cor de fundo suave */
+  background-size: 35% /* Usando cobertura total para a imagem de fundo */
+}
+
+.form-container {
+  background-color: #fff;
+  padding: 5%;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  max-width: 400px; /* Limitando a largura do formulário para melhor legibilidade */
+  width: 90%; /* Adaptação da largura para dispositivos menores */
+}
+
+h2 {
+  font-family: 'Arial', sans-serif;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+label {
+  font-family: 'Arial', sans-serif;
+  color: #555;
+  margin-bottom: 8px;
+}
+
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  padding: 3%;
+  margin-bottom: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-family: 'Arial', sans-serif;
+  color: #444;
+}
+
+button {
+  background-color: #ffffff; /* Cor laranja */
+  color: #030303;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-family: 'Arial', sans-serif;
+  font-weight: bold;
+  width: 100%;
+}
+
+button:hover {
+  background-color: hsl(0, 0%, 41%); /* Laranja mais escuro no hover */
+}
+
+/* Regras de mídia para tornar o layout responsivo */
+
+@media screen and (max-width: 768px) {
+  .form-container {
+      padding: 3%; /* Reduzindo o preenchimento para dispositivos menores */
+  }
+}

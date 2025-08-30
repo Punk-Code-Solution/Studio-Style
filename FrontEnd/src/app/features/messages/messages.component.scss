@@ -1,0 +1,54 @@
+@use '../../../styles/variables' as vars;
+
+.page-container {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(99, 164, 255, 0.10);
+  padding: 2rem 2.5rem;
+  margin: 2rem auto;
+}
+
+h2 {
+  color: #1976d2;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+.quick-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  a {
+    background: #e3f0ff;
+    color: #1976d2;
+    padding: 0.5rem 1.2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background 0.2s, color 0.2s;
+    &:hover {
+      background: #b3d8fd;
+      color: #fff;
+    }
+  }
+}
+
+.messages-container {
+  background: vars.$background-light;
+}
+
+.primary-text {
+  color: vars.$primary-color;
+}
+
+.hover-bg {
+  background: vars.$background-hover;
+  color: vars.$primary-color;
+}
+
+.active-bg {
+  background: vars.$background-active;
+  color: vars.$text-light;
+}

@@ -1,0 +1,313 @@
+@use '../../../../styles/variables' as vars;
+
+.page-container {
+  padding: vars.$spacing-lg;
+  background-color: var(--background-light);
+  min-height: 100vh;
+}
+
+.form-container {
+  background-color: var(--background-white);
+  border-radius: vars.$border-radius;
+  padding: vars.$spacing-lg;
+  box-shadow: vars.$shadow-sm;
+  max-width: 800px;
+  margin: 0 auto;
+
+  h2 {
+    color: var(--text-primary);
+    margin-bottom: vars.$spacing-lg;
+    font-size: vars.$font-size-xl;
+  }
+}
+
+.form-group {
+  margin-bottom: vars.$spacing-md;
+
+  label {
+    display: block;
+    margin-bottom: vars.$spacing-sm;
+    color: var(--text-primary);
+    font-size: vars.$font-size-base;
+  }
+
+  input, select {
+    width: 100%;
+    padding: vars.$spacing-sm;
+    border: 1px solid var(--border-color);
+    border-radius: vars.$border-radius;
+    font-size: vars.$font-size-base;
+    transition: all 0.3s ease;
+
+    &:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.1);
+    }
+
+    &.ng-invalid.ng-touched {
+      border-color: var(--error-color);
+    }
+  }
+
+  .error-message {
+    color: var(--error-color);
+    font-size: vars.$font-size-base;
+    margin-top: vars.$spacing-xs;
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: vars.$spacing-md;
+  margin-top: vars.$spacing-lg;
+
+  button {
+    padding: vars.$spacing-sm vars.$spacing-lg;
+    border: none;
+    border-radius: vars.$border-radius;
+    font-size: vars.$font-size-base;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  .cancel-btn {
+    background-color: var(--background-light);
+    color: var(--text-primary);
+
+    &:hover:not(:disabled) {
+      background-color: var(--background-hover);
+    }
+  }
+
+  .submit-btn {
+    background-color: var(--primary-color);
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: var(--primary-color-dark);
+    }
+  }
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: vars.$spacing-xl;
+  background-color: var(--background-white);
+  border-radius: vars.$border-radius;
+  box-shadow: vars.$shadow-sm;
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--background-light);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: vars.$spacing-md;
+  }
+
+  span {
+    color: var(--text-secondary);
+    font-size: vars.$font-size-base;
+  }
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: vars.$spacing-sm;
+  padding: vars.$spacing-md;
+  background-color: var(--error-color-light);
+  border-radius: vars.$border-radius;
+  margin-bottom: vars.$spacing-lg;
+  color: var(--error-color);
+
+  i {
+    font-size: vars.$font-size-lg;
+  }
+
+  .retry-btn {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--error-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: vars.$spacing-sm;
+    padding: vars.$spacing-sm vars.$spacing-md;
+    border-radius: vars.$border-radius;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background-color: rgba(var(--error-color-rgb), 0.1);
+    }
+
+    i {
+      font-size: vars.$font-size-base;
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: vars.$spacing-md;
+  margin-bottom: vars.$spacing-md;
+}
+
+.form-group {
+  margin-bottom: vars.$spacing-md;
+
+  label {
+    display: block;
+    margin-bottom: vars.$spacing-xs;
+    color: vars.$text-primary;
+    font-weight: vars.$font-weight-medium;
+    font-size: vars.$font-size-sm;
+  }
+
+  input,
+  select {
+    width: 100%;
+    padding: vars.$spacing-sm vars.$spacing-md;
+    border: 1px solid vars.$border-color;
+    border-radius: vars.$border-radius-sm;
+    font-size: vars.$font-size-base;
+    transition: all vars.$transition-fast;
+    background-color: vars.$background-light;
+
+    &:hover {
+      border-color: vars.$primary-light;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: vars.$primary-color;
+      box-shadow: 0 0 0 2px rgba(vars.$primary-color, 0.1);
+    }
+
+    &.error {
+      border-color: vars.$error-color;
+      background-color: rgba(vars.$error-color, 0.05);
+    }
+
+    &:disabled {
+      background-color: vars.$background-dark;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+  }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8.825L1.175 4 2.05 3.125 6 7.075 9.95 3.125 10.825 4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right vars.$spacing-sm center;
+    padding-right: vars.$spacing-xl;
+  }
+}
+
+.error-message {
+  color: vars.$error-color;
+  font-size: vars.$font-size-sm;
+  margin-top: vars.$spacing-xs;
+  display: flex;
+  align-items: center;
+  gap: vars.$spacing-xs;
+
+  i {
+    font-size: vars.$font-size-base;
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: vars.$spacing-md;
+  margin-top: vars.$spacing-xl;
+  padding-top: vars.$spacing-lg;
+  border-top: 1px solid vars.$border-color;
+
+  button {
+    padding: vars.$spacing-sm vars.$spacing-xl;
+    border: none;
+    border-radius: vars.$border-radius-md;
+    font-size: vars.$font-size-base;
+    font-weight: vars.$font-weight-medium;
+    cursor: pointer;
+    transition: all vars.$transition-fast;
+    display: flex;
+    align-items: center;
+    gap: vars.$spacing-sm;
+
+    i {
+      font-size: vars.$font-size-lg;
+    }
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    &.btn-secondary {
+      background: vars.$background-dark;
+      color: vars.$text-primary;
+
+      &:hover:not(:disabled) {
+        background: darken(vars.$background-dark, 5%);
+      }
+    }
+
+    &.btn-primary {
+      background: vars.$primary-color;
+      color: vars.$text-light;
+
+      &:hover:not(:disabled) {
+        background: vars.$primary-dark;
+        transform: translateY(-1px);
+      }
+
+      &:active:not(:disabled) {
+        transform: translateY(0);
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .employee-form-container {
+    margin: vars.$spacing-md;
+    padding: vars.$spacing-lg;
+
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+      flex-direction: column;
+
+      button {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+} 

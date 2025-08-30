@@ -1,0 +1,305 @@
+/* You can add global styles to this file, and also import other style files */
+@use 'styles/variables' as vars;
+@use 'styles/mixins' as mix;
+
+/* Font Awesome */
+@import '@fortawesome/fontawesome-free/css/all.min.css';
+
+/* Global Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: vars.$font-family;
+  font-size: vars.$font-size-base;
+  line-height: vars.$line-height-base;
+  color: vars.$text-primary;
+  background-color: vars.$background-color;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  margin-bottom: vars.$spacing-md;
+  font-weight: vars.$font-weight-bold;
+  line-height: 1.2;
+}
+
+h1 { font-size: vars.$font-size-xxxl; }
+h2 { font-size: vars.$font-size-xxl; }
+h3 { font-size: vars.$font-size-xl; }
+h4 { font-size: vars.$font-size-lg; }
+h5 { font-size: vars.$font-size-base; }
+h6 { font-size: vars.$font-size-sm; }
+
+p {
+  margin-bottom: vars.$spacing-md;
+}
+
+a {
+  color: vars.$primary-color;
+  text-decoration: none;
+  transition: color 0.3s ease;
+
+  &:hover {
+    color: vars.$primary-dark;
+  }
+}
+
+/* Buttons */
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+/* Form Elements */
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Layout */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 vars.$spacing-md;
+}
+
+.row {
+  @include mix.flex(row, flex-start, stretch, wrap);
+  margin: 0 calc(-1 * vars.$spacing-sm);
+}
+
+.col {
+  flex: 1;
+  padding: 0 vars.$spacing-sm;
+}
+
+/* Utilities */
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.mt-1 { margin-top: vars.$spacing-xs; }
+.mt-2 { margin-top: vars.$spacing-sm; }
+.mt-3 { margin-top: vars.$spacing-md; }
+.mt-4 { margin-top: vars.$spacing-lg; }
+.mt-5 { margin-top: vars.$spacing-xl; }
+
+.mb-1 { margin-bottom: vars.$spacing-xs; }
+.mb-2 { margin-bottom: vars.$spacing-sm; }
+.mb-3 { margin-bottom: vars.$spacing-md; }
+.mb-4 { margin-bottom: vars.$spacing-lg; }
+.mb-5 { margin-bottom: vars.$spacing-xl; }
+
+.ml-1 { margin-left: vars.$spacing-xs; }
+.ml-2 { margin-left: vars.$spacing-sm; }
+.ml-3 { margin-left: vars.$spacing-md; }
+.ml-4 { margin-left: vars.$spacing-lg; }
+.ml-5 { margin-left: vars.$spacing-xl; }
+
+.mr-1 { margin-right: vars.$spacing-xs; }
+.mr-2 { margin-right: vars.$spacing-sm; }
+.mr-3 { margin-right: vars.$spacing-md; }
+.mr-4 { margin-right: vars.$spacing-lg; }
+.mr-5 { margin-right: vars.$spacing-xl; }
+
+.p-1 { padding: vars.$spacing-xs; }
+.p-2 { padding: vars.$spacing-sm; }
+.p-3 { padding: vars.$spacing-md; }
+.p-4 { padding: vars.$spacing-lg; }
+.p-5 { padding: vars.$spacing-xl; }
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.slide-in-left {
+  @include mix.slide-in('left');
+}
+
+.slide-in-right {
+  @include mix.slide-in('right');
+}
+
+.slide-in-up {
+  @include mix.slide-in('up');
+}
+
+.slide-in-down {
+  @include mix.slide-in('down');
+}
+
+/* Responsive */
+@include mix.responsive(xs) {
+  .container {
+    padding: 0 vars.$spacing-sm;
+  }
+}
+
+@include mix.responsive(sm) {
+  .container {
+    padding: 0 vars.$spacing-md;
+  }
+}
+
+@include mix.responsive(md) {
+  .container {
+    padding: 0 vars.$spacing-lg;
+  }
+}
+
+@include mix.responsive(lg) {
+  .container {
+    padding: 0 vars.$spacing-xl;
+  }
+}
+
+@include mix.responsive(xl) {
+  .container {
+    max-width: 1140px;
+  }
+}
+
+@include mix.responsive(xxl) {
+  .container {
+    max-width: 1320px;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: vars.$background-color;
+}
+
+::-webkit-scrollbar-thumb {
+  background: vars.$border-color;
+  border-radius: vars.$border-radius-sm;
+
+  &:hover {
+    background: vars.$text-secondary;
+  }
+}
+
+/* PrimeNG Overrides */
+.p-button {
+  @include mix.button;
+}
+
+.p-card {
+  @include mix.card;
+}
+
+.p-dialog {
+  .p-dialog-header {
+    padding: vars.$spacing-lg;
+    border-bottom: 1px solid vars.$border-color;
+    background: vars.$background-color;
+  }
+
+  .p-dialog-content {
+    padding: vars.$spacing-lg;
+  }
+
+  .p-dialog-footer {
+    padding: vars.$spacing-lg;
+    border-top: 1px solid vars.$border-color;
+    background: vars.$background-color;
+  }
+}
+
+.p-dropdown {
+  @include mix.form-element;
+}
+
+.p-inputtext {
+  @include mix.form-element;
+}
+
+.p-calendar {
+  .p-inputtext {
+    width: 100%;
+  }
+}
+
+.p-multiselect {
+  @include mix.form-element;
+}
+
+.p-datatable {
+  .p-datatable-header {
+    padding: vars.$spacing-lg;
+    background: vars.$background-color;
+    border: 1px solid vars.$border-color;
+    border-bottom: none;
+  }
+
+  .p-datatable-thead > tr > th {
+    padding: vars.$spacing-md;
+    background: vars.$background-color;
+    color: vars.$text-primary;
+    font-weight: vars.$font-weight-medium;
+    border: 1px solid vars.$border-color;
+  }
+
+  .p-datatable-tbody > tr > td {
+    padding: vars.$spacing-md;
+    border: 1px solid vars.$border-color;
+  }
+
+  .p-datatable-tbody > tr {
+    transition: background-color vars.$transition-normal;
+
+    &:hover {
+      background-color: rgba(vars.$primary-color, 0.05);
+    }
+  }
+
+  .p-paginator {
+    padding: vars.$spacing-md;
+    background: vars.$background-color;
+    border: 1px solid vars.$border-color;
+    border-top: none;
+  }
+}
+
+.p-toast {
+  .p-toast-message {
+    @include mix.card;
+    margin: vars.$spacing-md;
+    box-shadow: vars.$shadow-lg;
+  }
+}
+
+.p-confirm-dialog {
+  .p-dialog-content {
+    padding: vars.$spacing-xl;
+  }
+}

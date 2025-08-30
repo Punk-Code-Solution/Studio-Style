@@ -1,0 +1,25 @@
+
+npx sequelize-cli model:generate --name Hair --attributes type:string,level:integer,letter:string,type_hair_id:string --force
+npx sequelize-cli model:generate --name TypeAccount --attributes type:string,edit:boolean,creat:boolean,viwer:boolean,delet:boolean --force
+npx sequelize-cli model:generate --name Account --attributes name:string,lastname:string,password:string,cpf:string,start_date:date,birthday:date,deleted:boolean,avatar:string,typeaccount_id:string --force
+npx sequelize-cli model:generate --name Company --attributes name:string,cnpj:string,start_date:date,active:date,avatar:text,company_id_account:string --force
+npx sequelize-cli model:generate --name Purchase --attributes nameproduct:string,amount_product:integer,value_product:float,date_purchase:date,product_description:text,account_id_purchase:string,company_id_purchase:string --force
+npx sequelize-cli model:generate --name Product --attributes liters:float,weight:float,name:string,priceTotal:float,amount:integer,description:text,tipeProduct:string,brand:string,date_validity:date,purchase_id_product:string,product_id_sale:string --force
+npx sequelize-cli model:generate --name Adress --attributes city:string,neighborhood:string,road:string,account_id:string --force
+npx sequelize-cli model:generate --name Phone --attributes phone:integer,ddd:integer,active:date,type:string,account_id_phone:string,company_id_phone:string --force
+npx sequelize-cli model:generate --name Email --attributes name:string,email:string,active:date,account_id_email:string,company_id_email:string --force
+npx sequelize-cli model:generate --name Service --attributes service:string,date_service:date,additionalComments:string,client_id_service:string,provider_id_service:string --force
+npx sequelize-cli model:generate --name Payment --attributes valueTotal:float,discountValue:float,tipePayment:string,date:date,service_id_payment:string --force
+npx sequelize-cli model:generate --name Action --attributes name:string,additionalComments:string,service_id_action:string --force
+npx sequelize-cli model:generate --name Sale --attributes name_product:string,amount_product:integer,price_total:float,discount:integer,date_sale:date,paid_off:boolean,remaining:float,account_id_sale:string,client_id_sale:string --force
+npx sequelize-cli model:generate --name Schedules --attributes name_client:string,date_and_houres:date,active:boolean,finished:boolean,provider_id_schedules:string,client_id_schedules:string --force
+npx sequelize-cli model:generate --name Purchase_Material --attributes name:string,amount:integer,value:float,date:date,product_description:string,account_id_purchase_material:string --force
+npx sequelize-cli model:generate --name SaleProducts --attributes saleId:string,productId:string --force
+npx sequelize-cli model:generate --name HairAccount --attributes hairId:string,accountId:string --force
+npx sequelize-cli db:migrate
+
+npx sequelize-cli seed:generate --name adm
+
+npx sequelize-cli seed:generate --name account
+
+npx sequelize-cli db:seed:all

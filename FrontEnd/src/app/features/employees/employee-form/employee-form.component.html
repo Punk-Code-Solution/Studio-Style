@@ -1,0 +1,106 @@
+<div class="employee-form-container">
+  <h2>{{ isEditMode ? 'Editar' : 'Novo' }} Funcionário</h2>
+
+  <form [formGroup]="employeeForm" (ngSubmit)="onSubmit()">
+    <div class="form-group">
+      <label for="name">Nome Completo</label>
+      <input 
+        type="text" 
+        id="name" 
+        formControlName="name" 
+        placeholder="Digite o nome completo"
+        [class.error]="employeeForm.get('name')?.invalid && employeeForm.get('name')?.touched"
+      >
+      <div class="error-message" *ngIf="employeeForm.get('name')?.invalid && employeeForm.get('name')?.touched">
+        {{ getErrorMessage('name') }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="email">E-mail</label>
+      <input 
+        type="email" 
+        id="email" 
+        formControlName="email" 
+        placeholder="Digite o e-mail"
+        [class.error]="employeeForm.get('email')?.invalid && employeeForm.get('email')?.touched"
+      >
+      <div class="error-message" *ngIf="employeeForm.get('email')?.invalid && employeeForm.get('email')?.touched">
+        {{ getErrorMessage('email') }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="phone">Telefone</label>
+      <input 
+        type="tel" 
+        id="phone" 
+        formControlName="phone" 
+        placeholder="(00) 00000-0000"
+        [class.error]="employeeForm.get('phone')?.invalid && employeeForm.get('phone')?.touched"
+      >
+      <div class="error-message" *ngIf="employeeForm.get('phone')?.invalid && employeeForm.get('phone')?.touched">
+        {{ getErrorMessage('phone') }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="role">Cargo</label>
+      <select 
+        id="role" 
+        formControlName="role"
+        [class.error]="employeeForm.get('role')?.invalid && employeeForm.get('role')?.touched"
+      >
+        <option value="">Selecione um cargo</option>
+        <option value="doctor">Médico</option>
+        <option value="nurse">Enfermeiro</option>
+        <option value="receptionist">Recepcionista</option>
+        <option value="admin">Administrador</option>
+      </select>
+      <div class="error-message" *ngIf="employeeForm.get('role')?.invalid && employeeForm.get('role')?.touched">
+        {{ getErrorMessage('role') }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="department">Departamento</label>
+      <select 
+        id="department" 
+        formControlName="department"
+        [class.error]="employeeForm.get('department')?.invalid && employeeForm.get('department')?.touched"
+      >
+        <option value="">Selecione um departamento</option>
+        <option value="clinical">Clínica</option>
+        <option value="surgery">Cirurgia</option>
+        <option value="pediatrics">Pediatria</option>
+        <option value="administration">Administração</option>
+      </select>
+      <div class="error-message" *ngIf="employeeForm.get('department')?.invalid && employeeForm.get('department')?.touched">
+        {{ getErrorMessage('department') }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="address">Endereço</label>
+      <input 
+        type="text" 
+        id="address" 
+        formControlName="address" 
+        placeholder="Digite o endereço completo"
+        [class.error]="employeeForm.get('address')?.invalid && employeeForm.get('address')?.touched"
+      >
+      <div class="error-message" *ngIf="employeeForm.get('address')?.invalid && employeeForm.get('address')?.touched">
+        {{ getErrorMessage('address') }}
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn-secondary" (click)="router.navigate(['/employees'])">
+        Cancelar
+      </button>
+      <button type="submit" class="btn-primary" [disabled]="employeeForm.invalid">
+        {{ isEditMode ? 'Salvar' : 'Criar' }}
+      </button>
+    </div>
+  </form>
+</div> 

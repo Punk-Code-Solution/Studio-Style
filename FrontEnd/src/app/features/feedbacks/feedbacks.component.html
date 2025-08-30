@@ -1,0 +1,145 @@
+<div class="page-container">
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <span>Carregando feedbacks...</span>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">
+    <i class="material-icons">error_outline</i>
+    {{ errorMessage }}
+    <button class="retry-btn" (click)="loadFeedbacks()">
+      <i class="material-icons">refresh</i>
+      Tentar Novamente
+    </button>
+  </div>
+
+  <div class="content" *ngIf="!isLoading && !errorMessage">
+    <div class="header">
+      <h2>Feedbacks</h2>
+    </div>
+
+    <div class="feedbacks-container">
+      <div class="filters">
+        <div class="filter-group">
+          <label for="ratingFilter">Avaliação:</label>
+          <select 
+            id="ratingFilter" 
+            [(ngModel)]="filters.rating" 
+            (change)="applyFilters()"
+          >
+            <option value="">Todas</option>
+            <option value="5">5 estrelas</option>
+            <option value="4">4 estrelas</option>
+            <option value="3">3 estrelas</option>
+            <option value="2">2 estrelas</option>
+            <option value="1">1 estrela</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="statusFilter">Status:</label>
+          <select 
+            id="statusFilter" 
+            [(ngModel)]="filters.status" 
+            (change)="applyFilters()"
+          >
+            <option value="">Todos</option>
+            <option value="pendente">Pendente</option>
+            <option value="respondido">Respondido</option>
+            <option value="arquivado">Arquivado</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="searchFilter">Buscar:</label>
+          <input 
+            type="text" 
+            id="searchFilter" 
+            [(ngModel)]="filters.search" 
+            (input)="applyFilters()"
+            placeholder="Nome do paciente ou médico"
+          >
+        </div>
+      </div>
+
+      <div class="feedbacks-list">
+        <div class="feedback-card" *ngFor="let feedback of filteredFeedbacks">
+          <div class="feedback-header">
+            <div class="patient-info">
+              <h3>{{ feedback.patientName }}</h3>
+              <p class="doctor">Médico: {{ feedback.doctorName }}</p>
+              <p class="date">{{ feedback.date | date:'dd/MM/yyyy' }}</p>
+            </div>
+            <div class="rating">
+              <span 
+                class="star" 
+                *ngFor="let star of [1,2,3,4,5]"
+                [class.filled]="star <= feedback.rating"
+              >★</span>
+            </div>
+          </div>
+
+          <div class="feedback-content">
+            <p class="comment">{{ feedback.comment }}</p>
+            
+            <div class="response" *ngIf="feedback.response">
+              <h4>Resposta:</h4>
+              <p>{{ feedback.response }}</p>
+            </div>
+          </div>
+
+          <div class="feedback-actions">
+            <button 
+              class="respond-btn" 
+              (click)="showResponseForm(feedback)"
+              *ngIf="feedback.status === 'pendente' && canEditField('all')"
+            >
+              <i class="material-icons">reply</i>
+              Responder
+            </button>
+            <button 
+              class="archive-btn" 
+              (click)="archiveFeedback(feedback)"
+              *ngIf="feedback.status !== 'arquivado' && canEditField('all')"
+            >
+              <i class="material-icons">archive</i>
+              Arquivar
+            </button>
+            <button 
+              class="delete-btn" 
+              (click)="deleteFeedback(feedback.id)"
+              *ngIf="canEditField('all')"
+            >
+              <i class="material-icons">delete</i>
+              Excluir
+            </button>
+          </div>
+
+          <div class="response-form" *ngIf="feedback.id === selectedFeedbackId">
+            <textarea 
+              [(ngModel)]="newResponse" 
+              placeholder="Digite sua resposta..."
+              rows="4"
+            ></textarea>
+            <div class="response-actions">
+              <button 
+                class="send-btn" 
+                (click)="submitResponse(feedback)"
+              >
+                <i class="material-icons">send</i>
+                Enviar
+              </button>
+              <button 
+                class="cancel-btn" 
+                (click)="cancelResponse()"
+              >
+                <i class="material-icons">close</i>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

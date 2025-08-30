@@ -1,0 +1,54 @@
+@use '../styles/variables' as vars;
+
+:host {
+  display: block;
+  height: 100vh;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  background-color: vars.$background-color;
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #e3f0ff;
+}
+
+app-sidebar {
+  flex: 0 0 240px;
+  height: 100vh;
+  background: vars.$background-hover;
+  box-shadow: 2px 0 12px rgba(30, 80, 180, 0.07);
+  z-index: 10;
+}
+
+.main-content {
+  flex: 1;
+  height: 50vh;
+  transition: margin-left 0.3s ease;
+  background: vars.$background-light;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .main-content {
+    padding: 1.2rem 0.5rem;
+  }
+  app-sidebar {
+    min-width: 60px;
+    padding: 1rem 0.2rem;
+  }
+}
+
+.footer {
+  background: vars.$background-color;
+}
