@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const rota = Router()
-const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
+const { authorizeRoles } = require('../middlewares/auth');
 const ServiceController = require("../controllers/service.controller");
 const servicecontroller = new ServiceController()
 

@@ -5,7 +5,7 @@ module.exports = class emailRepository{
 
   async findAll(){
 
-    return await Email.findAll({
+    let result = await Email.findAll({
       attributes: [ 
         "id",
         "name",
@@ -14,6 +14,8 @@ module.exports = class emailRepository{
         "account_id_email" 
       ]
     });
+    
+    return result;
 
   }
 

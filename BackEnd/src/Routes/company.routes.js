@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const CompanyController = require('../controllers/Company.controller');
-const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
+const { authorizeRoles } = require('../middlewares/auth');
 const { handleValidationErrors } = require('../middlewares/validation');
 
 const router = Router();
@@ -17,7 +17,7 @@ const companyController = new CompanyController();
  *       200:
  *         description: Lista de empresas retornada com sucesso
  */
-router.get('/', authenticateToken, companyController.getAllCompanies.bind(companyController));
+router.get('/', companyController.getAllCompanies.bind(companyController));
 
 /**
  * @swagger
