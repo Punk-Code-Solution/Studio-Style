@@ -50,7 +50,7 @@ export class AuthService {
       'documents': ['admin', 'medico', 'enfermeiro', 'recepcionista', 'administrativo'],
       'employees': ['admin'],
       'feedbacks': ['admin', 'medico'],
-      'consultations': ['admin', 'medico', 'enfermeiro'],
+      'services': ['admin', 'medico', 'enfermeiro'],
 
       // Sub-rotas de pacientes
       'patients/new': ['admin', 'medico', 'recepcionista'],
@@ -58,8 +58,8 @@ export class AuthService {
       'patients/:id/edit': ['admin', 'medico'],
 
       // Sub-rotas de consultas
-      'consultations/new': ['admin', 'medico'],
-      'consultations/:id': ['admin', 'medico', 'enfermeiro'],
+      'services/new': ['admin', 'medico'],
+      'services/:id': ['admin', 'medico', 'enfermeiro'],
 
       // Sub-rotas de funcionários
       'employees/new': ['admin'],
@@ -237,4 +237,4 @@ export class AuthService {
       }
     }
   }
-} 
+}

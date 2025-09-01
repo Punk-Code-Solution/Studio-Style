@@ -6,8 +6,8 @@ import { NotificationService } from '../../../core/services/notification.service
 
 @Component({
   selector: 'app-consultation-form',
-  templateUrl: './consultation-form.component.html',
-  styleUrls: ['./consultation-form.component.scss'],
+  templateUrl: './service-form.component.html',
+  styleUrls: ['./service-form.component.scss'],
   standalone: true,
   imports: [
     CommonModule,
@@ -80,4 +80,4 @@ export class ConsultationFormComponent implements OnInit {
 
     return '';
   }
-} 
+}

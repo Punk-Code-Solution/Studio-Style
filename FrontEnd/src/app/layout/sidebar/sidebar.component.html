@@ -1,34 +1,61 @@
-<div class="sidebar" *ngIf="authService.isAuthenticated()">
-  <div class="sidebar-header">
-    <img src="assets/images/logo.png" alt="ExperienceMed Logo" class="logo">
-  </div>
+<aside class="sidebar">
+<div class="logo">
+  <img src="logo3.png">
+</div>
 
-  <div class="sidebar-content">
-    <nav>
-      <a *ngFor="let item of menuItems"
-         [routerLink]="item.route"
-         routerLinkActive="active"
-         [class.active]="isActive(item.route)"
-         class="nav-item"
-         *ngIf="canAccessMenuItem(item)">
-        <i class="material-icons">{{item.icon}}</i>
-        <span>{{item.label}}</span>
-      </a>
-    </nav>
-  </div>
+<nav class="nav">
+  <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/dashboard')">
+    <i class="fas fa-chart-line"></i>
+    <span>Dashboard</span>
+  </a>
 
-  <div class="sidebar-footer">
-    <div class="user-info" *ngIf="getCurrentUser()">
-      <div class="user-avatar">
-        <i class="material-icons">account_circle</i>
-      </div>
-      <div class="user-details">
-        <span class="user-name">{{getCurrentUser()?.nome}}</span>
-        <span class="user-role">{{getCurrentUserRole()}}</span>
-      </div>
-      <button class="logout-button" (click)="logout()">
-        <i class="material-icons">exit_to_app</i>
-      </button>
+  <a routerLink="/services" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/services')">
+    <i class="fas fa-calendar-check"></i>
+    <span>Serviços</span>
+  </a>
+
+  <a routerLink="/patients" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/patients')">
+    <i class="fas fa-users"></i>
+    <span>Clientes</span>
+  </a>
+
+  <a routerLink="/calendar" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/calendar')">
+    <i class="fas fa-calendar-alt"></i>
+    <span>Calendário</span>
+  </a>
+
+  <a routerLink="/messages" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/messages')">
+    <i class="fas fa-comments"></i>
+    <span>Mensagens</span>
+  </a>
+
+  <!-- <a routerLink="/documents" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/documents')">
+    <i class="fas fa-file-alt"></i>
+    <span>Documentos</span>
+  </a> -->
+
+  <a routerLink="/employees" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/employees')">
+    <i class="fas fa-user-md"></i>
+    <span>Colaboradores</span>
+  </a>
+
+  <a routerLink="/feedbacks" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/feedbacks')">
+    <i class="fas fa-star"></i>
+    <span>Feedbacks</span>
+  </a>
+</nav>
+
+<div class="sidebar-footer">
+  <div class="user-info">
+    <img [src]="userAvatar" alt="User Avatar" class="avatar">
+    <div class="user-details">
+      <span class="user-name">{{ currentUser?.nome }}</span>
+      <span class="user-role">{{ userRole }}</span>
     </div>
   </div>
-</div> 
+  <button class="logout-btn" (click)="logout()">
+    <i class="fas fa-sign-out-alt"></i>
+    <span>Sair</span>
+  </button>
+</div>
+</aside>
