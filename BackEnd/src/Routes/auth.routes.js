@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const { body } = require('express-validator');
 const AuthController = require('../controllers/auth.controller');
-const { authenticateToken } = require('../middlewares/auth');
+
 const { handleValidationErrors } = require('../middlewares/validation');
 
 const router = Router();
@@ -113,7 +113,7 @@ router.post('/register', registerValidation, authController.register.bind(authCo
  *       401:
  *         description: Unauthorized
  */
-router.get('/profile', authenticateToken, authController.getProfile.bind(authController));
+router.get('/profile', authController.getProfile.bind(authController));
 
 /**
  * @swagger
@@ -141,7 +141,7 @@ router.get('/profile', authenticateToken, authController.getProfile.bind(authCon
  *       401:
  *         description: Unauthorized
  */
-router.put('/profile', authenticateToken, authController.updateProfile.bind(authController));
+router.put('/profile', authController.updateProfile.bind(authController));
 
 /**
  * @swagger
@@ -172,7 +172,7 @@ router.put('/profile', authenticateToken, authController.updateProfile.bind(auth
  *       401:
  *         description: Unauthorized or incorrect current password
  */
-router.post('/change-password', authenticateToken, changePasswordValidation, authController.changePassword.bind(authController));
+router.post('/change-password', changePasswordValidation, authController.changePassword.bind(authController));
 
 /**
  * @swagger
@@ -186,7 +186,7 @@ router.post('/change-password', authenticateToken, changePasswordValidation, aut
  *       200:
  *         description: Logged out successfully
  */
-router.post('/logout', authenticateToken, authController.logout.bind(authController));
+router.post('/logout', authController.logout.bind(authController));
 
 /**
  * @swagger
@@ -202,6 +202,6 @@ router.post('/logout', authenticateToken, authController.logout.bind(authControl
  *       401:
  *         description: Unauthorized
  */
-router.post('/refresh', authenticateToken, authController.refreshToken.bind(authController));
+router.post('/refresh', authController.refreshToken.bind(authController));
 
 module.exports = router;

@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const rota = Router()
-const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
+const { authorizeRoles } = require('../middlewares/auth');
 const ProductController = require("../controllers/product.controller");
 const productcontroller = new ProductController()
 
@@ -47,7 +47,7 @@ const productcontroller = new ProductController()
  *       400:
  *         description: Erro na requisição
  */
-rota.post("/product", authenticateToken, productcontroller.addProduct.bind(productcontroller));
+rota.post("/product", productcontroller.addProduct.bind(productcontroller));
 
 /**
  * @swagger
@@ -83,7 +83,7 @@ rota.put("/product", async (request, response) => { await productcontroller.upda
  *       400:
  *         description: Erro na requisição
  */
-rota.get("/products", authenticateToken, productcontroller.findAll.bind(productcontroller));
+rota.get("/", productcontroller.findAll.bind(productcontroller));
 
 /**
  * @swagger

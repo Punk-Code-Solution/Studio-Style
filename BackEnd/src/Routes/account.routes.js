@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const { body } = require('express-validator');
 const AccountController = require('../controllers/account.controller');
-const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
+const { authorizeRoles } = require('../middlewares/auth');
 const { handleValidationErrors } = require('../middlewares/validation');
 
 const router = Router();
@@ -27,7 +27,7 @@ const typeAccountValidation = [
 
 /**
  * @swagger
- * /api/accounts:
+ * /api/account:
  *   get:
  *     summary: Get all accounts
  *     tags: [Accounts]
@@ -39,11 +39,11 @@ const typeAccountValidation = [
  *       401:
  *         description: Unauthorized
  */
-router.get('/', authenticateToken, accountController.getAllAccounts.bind(accountController));
+router.get('/', accountController.getAllAccounts.bind(accountController));
 
 /**
  * @swagger
- * /api/accounts:
+ * /api/account:
  *   post:
  *     summary: Create a new account
  *     tags: [Accounts]
@@ -79,11 +79,11 @@ router.get('/', authenticateToken, accountController.getAllAccounts.bind(account
  *       401:
  *         description: Unauthorized
  */
-router.post('/', authenticateToken, accountValidation, accountController.createAccount.bind(accountController));
+router.post('/', accountValidation, accountController.createAccount.bind(accountController));
 
 /**
  * @swagger
- * /api/accounts/{id}:
+ * /api/account/{id}:
  *   get:
  *     summary: Get account by ID
  *     tags: [Accounts]
@@ -103,11 +103,11 @@ router.post('/', authenticateToken, accountValidation, accountController.createA
  *       401:
  *         description: Unauthorized
  */
-router.get('/:id', authenticateToken, accountController.getAccountById.bind(accountController));
+router.get('/id', accountController.getAccountById.bind(accountController));
 
 /**
  * @swagger
- * /api/accounts/{id}:
+ * /api/account/{id}:
  *   put:
  *     summary: Update account
  *     tags: [Accounts]
@@ -141,11 +141,11 @@ router.get('/:id', authenticateToken, accountController.getAccountById.bind(acco
  *       401:
  *         description: Unauthorized
  */
-router.put('/:id', authenticateToken, accountValidation, accountController.updateAccount.bind(accountController));
+router.put('/id', accountValidation, accountController.updateAccount.bind(accountController));
 
 /**
  * @swagger
- * /api/accounts/{id}:
+ * /api/account/{id}:
  *   delete:
  *     summary: Delete account by ID
  *     tags: [Accounts]
@@ -165,11 +165,11 @@ router.put('/:id', authenticateToken, accountValidation, accountController.updat
  *       401:
  *         description: Unauthorized
  */
-router.delete('/:id', authenticateToken, accountController.deleteAccountById.bind(accountController));
+router.delete('/id', accountController.deleteAccountById.bind(accountController));
 
 /**
  * @swagger
- * /api/accounts/cpf/{cpf}:
+ * /api/account/cpf/{cpf}:
  *   get:
  *     summary: Get account by CPF
  *     tags: [Accounts]
@@ -189,11 +189,11 @@ router.delete('/:id', authenticateToken, accountController.deleteAccountById.bin
  *       401:
  *         description: Unauthorized
  */
-router.get('/cpf/:cpf', authenticateToken, accountController.getAccountByCpf.bind(accountController));
+router.get('/cpf', accountController.getAccountByCpf.bind(accountController));
 
 /**
  * @swagger
- * /api/accounts/cpf/{cpf}:
+ * /api/account/cpf/{cpf}:
  *   delete:
  *     summary: Delete account by CPF
  *     tags: [Accounts]
@@ -213,12 +213,12 @@ router.get('/cpf/:cpf', authenticateToken, accountController.getAccountByCpf.bin
  *       401:
  *         description: Unauthorized
  */
-router.delete('/cpf/:cpf', authenticateToken, accountController.deleteAccountByCpf.bind(accountController));
+router.delete('/cpf/cpf', accountController.deleteAccountByCpf.bind(accountController));
 
 // Hair types routes
 /**
  * @swagger
- * /api/accounts/hair:
+ * /api/account/hair:
  *   get:
  *     summary: Get all hair types
  *     tags: [Hair Types]
@@ -230,11 +230,11 @@ router.delete('/cpf/:cpf', authenticateToken, accountController.deleteAccountByC
  *       401:
  *         description: Unauthorized
  */
-router.get('/hair', authenticateToken, accountController.getAllHair.bind(accountController));
+router.get('/hair', accountController.getAllHair.bind(accountController));
 
 /**
  * @swagger
- * /api/accounts/hair:
+ * /api/account/hair:
  *   post:
  *     summary: Create a new hair type
  *     tags: [Hair Types]
@@ -259,11 +259,11 @@ router.get('/hair', authenticateToken, accountController.getAllHair.bind(account
  *       401:
  *         description: Unauthorized
  */
-router.post('/hair', authenticateToken, hairValidation, accountController.createHair.bind(accountController));
+router.post('/hair', hairValidation, accountController.createHair.bind(accountController));
 
 /**
  * @swagger
- * /api/accounts/hair/{id}:
+ * /api/account/hair/{id}:
  *   put:
  *     summary: Update hair type
  *     tags: [Hair Types]
@@ -292,11 +292,11 @@ router.post('/hair', authenticateToken, hairValidation, accountController.create
  *       401:
  *         description: Unauthorized
  */
-router.put('/hair/:id', authenticateToken, hairValidation, accountController.updateHair.bind(accountController));
+router.put('/hair/id', hairValidation, accountController.updateHair.bind(accountController));
 
 /**
  * @swagger
- * /api/accounts/hair/{id}:
+ * /api/account/hair/{id}:
  *   delete:
  *     summary: Delete hair type
  *     tags: [Hair Types]
@@ -316,12 +316,12 @@ router.put('/hair/:id', authenticateToken, hairValidation, accountController.upd
  *       401:
  *         description: Unauthorized
  */
-router.delete('/hair/:id', authenticateToken, accountController.deleteHair.bind(accountController));
+router.delete('/hair/id', accountController.deleteHair.bind(accountController));
 
 // Type accounts routes
 /**
  * @swagger
- * /api/accounts/type-accounts:
+ * /api/account/type-accounts:
  *   get:
  *     summary: Get all type accounts
  *     tags: [Type Accounts]
@@ -333,11 +333,11 @@ router.delete('/hair/:id', authenticateToken, accountController.deleteHair.bind(
  *       401:
  *         description: Unauthorized
  */
-router.get('/type-accounts', authenticateToken, accountController.getAllTypeAccounts.bind(accountController));
+router.get('/type-accounts', accountController.getAllTypeAccounts.bind(accountController));
 
 /**
  * @swagger
- * /api/accounts/type-accounts:
+ * /api/account/type-accounts:
  *   post:
  *     summary: Create a new type account
  *     tags: [Type Accounts]
@@ -362,11 +362,11 @@ router.get('/type-accounts', authenticateToken, accountController.getAllTypeAcco
  *       401:
  *         description: Unauthorized
  */
-router.post('/type-accounts', authenticateToken, typeAccountValidation, accountController.createTypeAccount.bind(accountController));
+router.post('/type-account', typeAccountValidation, accountController.createTypeAccount.bind(accountController));
 
 /**
  * @swagger
- * /api/accounts/type-accounts/{id}:
+ * /api/account/type-accounts/{id}:
  *   put:
  *     summary: Update type account
  *     tags: [Type Accounts]
@@ -395,11 +395,11 @@ router.post('/type-accounts', authenticateToken, typeAccountValidation, accountC
  *       401:
  *         description: Unauthorized
  */
-router.put('/type-accounts/:id', authenticateToken, typeAccountValidation, accountController.updateTypeAccount.bind(accountController));
+router.put('/type-accounts/id', typeAccountValidation, accountController.updateTypeAccount.bind(accountController));
 
 /**
  * @swagger
- * /api/accounts/type-accounts/{id}:
+ * /api/account/type-accounts/{id}:
  *   delete:
  *     summary: Delete type account
  *     tags: [Type Accounts]
@@ -419,12 +419,12 @@ router.put('/type-accounts/:id', authenticateToken, typeAccountValidation, accou
  *       401:
  *         description: Unauthorized
  */
-router.delete('/type-accounts/:id', authenticateToken, accountController.deleteTypeAccount.bind(accountController));
+router.delete('/type-accounts/id', accountController.deleteTypeAccount.bind(accountController));
 
 // Email routes
 /**
  * @swagger
- * /api/accounts/emails:
+ * /api/account/emails:
  *   get:
  *     summary: Get all emails
  *     tags: [Emails]
@@ -436,11 +436,11 @@ router.delete('/type-accounts/:id', authenticateToken, accountController.deleteT
  *       401:
  *         description: Unauthorized
  */
-router.get('/emails', authenticateToken, accountController.getAllEmails.bind(accountController));
+router.get('/emails', accountController.getAllEmails.bind(accountController));
 
 /**
  * @swagger
- * /api/accounts/emails/{id}:
+ * /api/account/emails/{id}:
  *   delete:
  *     summary: Delete email
  *     tags: [Emails]
@@ -460,6 +460,6 @@ router.get('/emails', authenticateToken, accountController.getAllEmails.bind(acc
  *       401:
  *         description: Unauthorized
  */
-router.delete('/emails/:id', authenticateToken, accountController.deleteEmail.bind(accountController));
+router.delete('/emails/:id', accountController.deleteEmail.bind(accountController));
 
 module.exports = router;

@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const PurchaseSaleController = require("../controllers/purchase_sale.controller");
-const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
+const { authorizeRoles } = require('../middlewares/auth');
 const purchase_salecontroller = new PurchaseSaleController()
 
 const rota = Router()

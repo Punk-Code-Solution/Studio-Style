@@ -2,7 +2,7 @@ const { TypeAccount, Account } = require("../Database/models");
 
 class typeAccountRepository{
 
-  async findAllTypeAccount(){
+  async findAll(){
 
     return await TypeAccount.findAll({
       include: [

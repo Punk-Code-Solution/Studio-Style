@@ -22,8 +22,6 @@ const purchaseRoutes = require('./src/Routes/purchase_sale.routes');
 const serviceRoutes = require('./src/Routes/service.routes');
 const loginRoutes = require('./src/Routes/login.routes');
 
-
-
 const app = express();
 const PORT = process.env.PORT || 3001;
 
