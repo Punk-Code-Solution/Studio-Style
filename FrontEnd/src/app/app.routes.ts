@@ -53,23 +53,23 @@ const patientRoutes: Routes = [
 // Rotas de consultas
 const consultationRoutes: Routes = [
   {
-    path: 'consultations',
+    path: 'services',
     canActivate: [RoleGuard],
     children: [
       {
         path: '',
         canActivate: [RoleGuard],
-        loadComponent: () => import('./features/consultations/consultations.component').then(m => m.ConsultationsComponent)
+        loadComponent: () => import('./features/services/services.component').then(m => m.ConsultationsComponent)
       },
       {
         path: 'new',
         canActivate: [RoleGuard],
-        loadComponent: () => import('./features/consultations/consultation-form/consultation-form.component').then(m => m.ConsultationFormComponent)
+        loadComponent: () => import('./features/services/service-form/service-form.component').then(m => m.ConsultationFormComponent)
       },
       {
         path: ':id',
         canActivate: [RoleGuard],
-        loadComponent: () => import('./features/consultations/consultation-details/consultation-details.component').then(m => m.ConsultationDetailsComponent)
+        loadComponent: () => import('./features/services/services-details/services-details.component').then(m => m.ConsultationDetailsComponent)
       }
     ]
   }

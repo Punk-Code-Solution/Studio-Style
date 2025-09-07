@@ -67,7 +67,7 @@ export class DashboardComponent implements OnInit {
         date: today,
         time: '14:00',
         status: 'scheduled',
-        doctor: 'Dr. Maria Oliveira'
+        doctor: 'Elena'
       },
       {
         id: '2',
@@ -75,7 +75,7 @@ export class DashboardComponent implements OnInit {
         date: today,
         time: '15:30',
         status: 'confirmed',
-        doctor: 'Dr. Pedro Santos'
+        doctor: 'Thiago'
       },
       {
         id: '3',
@@ -83,7 +83,7 @@ export class DashboardComponent implements OnInit {
         date: today,
         time: '10:00',
         status: 'scheduled',
-        doctor: 'Dr. João Silva'
+        doctor: 'Miliam'
       }
     ];
   }
@@ -95,7 +95,7 @@ export class DashboardComponent implements OnInit {
   async updateStatus(appointment: Appointment, event: Event) {
     const select = event.target as HTMLSelectElement;
     const newStatus = select.value as 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
-    
+
     try {
       // TODO: Implementar chamada à API para atualizar status
       appointment.status = newStatus;
@@ -118,7 +118,7 @@ export class DashboardComponent implements OnInit {
 
   getRoleLabel(role: string | undefined): string {
     if (!role) return 'Usuário';
-    
+
     const roles: { [key: string]: string } = {
       'admin': 'Administrador',
       'doctor': 'Médico',
@@ -128,4 +128,4 @@ export class DashboardComponent implements OnInit {
     };
     return roles[role] || role;
   }
-} 
+}

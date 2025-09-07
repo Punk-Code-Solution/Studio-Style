@@ -34,7 +34,7 @@ interface Consultation {
     <div class="consultations">
       <div class="consultations-header">
         <div class="header-left">
-          <h2>Consultas</h2>
+          <h2>Serviços</h2>
           <div class="search">
             <i class="fas fa-search"></i>
             <input type="text" placeholder="Buscar consultas..." [(ngModel)]="searchTerm" (input)="filterConsultations()">
@@ -615,7 +615,7 @@ export class ConsultationsComponent implements OnInit {
     }
 
     // Status filter
-    if (!this.filters.status.scheduled || !this.filters.status.in_progress || 
+    if (!this.filters.status.scheduled || !this.filters.status.in_progress ||
         !this.filters.status.completed || !this.filters.status.cancelled) {
       filtered = filtered.filter(consultation => {
         if (this.filters.status.scheduled && consultation.status === 'scheduled') return true;
@@ -731,4 +731,4 @@ export class ConsultationsComponent implements OnInit {
   deleteConsultation(consultation: Consultation): void {
     this.router.navigate(['/consultations/delete', consultation.id]);
   }
-} 
+}
