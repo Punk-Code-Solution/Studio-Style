@@ -1,6 +1,7 @@
 ﻿const WhatsAppService = require("../services/whatsapp.service");
 const { Schedules, Service, Account } = require("../Database/models");
 const moment = require('moment');
+const { Op } = require('sequelize');
 
 class WhatsAppController {
   constructor() {
@@ -17,7 +18,7 @@ class WhatsAppController {
     const challenge = req.query['hub.challenge'];
 
     const result = this.whatsappService.verifyWebhook(mode, token, challenge);
-    
+
     if (result) {
       res.status(200).send(result);
     } else {
@@ -31,16 +32,16 @@ class WhatsAppController {
   async handleWebhook(req, res) {
     try {
       const messageData = this.whatsappService.processIncomingMessage(req.body);
-      
+
       if (!messageData) {
         return res.status(200).json({ status: 'ok' });
       }
 
       const { from, text, contact } = messageData;
-      
+
       // Processa a mensagem baseada no estado da sessao do usuario
       await this.processMessage(from, text, contact);
-      
+
       res.status(200).json({ status: 'ok' });
     } catch (error) {
       console.error('Erro no webhook:', error);
@@ -57,14 +58,14 @@ class WhatsAppController {
 
     // Comandos principais
     if (cleanText === 'menu' || cleanText === 'inicio' || cleanText === 'comecar') {
-      await this.sendMainMenu(phone, contact.name);
+      await this.sendMainMenu(phone, contact && contact.name ? contact.name : '');
       this.setUserSession(phone, { step: 'main_menu' });
     }
     else if (cleanText === 'agendar' || cleanText === 'marcar') {
-      await this.startSchedulingProcess(phone, contact.name);
+      await this.startSchedulingProcess(phone, contact && contact.name ? contact.name : '');
     }
     else if (cleanText === 'meus agendamentos' || cleanText === 'agendamentos') {
-      await this.showUserSchedules(phone, contact.name);
+      await this.showUserSchedules(phone, contact && contact.name ? contact.name : '');
     }
     else if (cleanText === 'cancelar' || cleanText === 'sair') {
       await this.cancelProcess(phone);
@@ -115,15 +116,15 @@ class WhatsAppController {
       { id: '6', name: 'Tratamento Capilar', duration: 90 }
     ];
 
-    const message = Ola ! \n\nEscolha o servico que deseja agendar:\n\n +
-      services.map(s => ${s.id}.  (min)).join('\n') +
-      '\n\nDigite o numero do servico desejado.';
+    const message = `Olá${userName ? ' ' + userName : ''}! \n\nEscolha o serviço que deseja agendar:\n\n` +
+      services.map(s => `${s.id}. ${s.name} (${s.duration} min)`).join('\n') +
+      '\n\nDigite o número do serviço desejado.';
 
     await this.whatsappService.sendTextMessage(phone, message);
-    this.setUserSession(phone, { 
-      step: 'select_service', 
+    this.setUserSession(phone, {
+      step: 'select_service',
       services: services,
-      userName: userName 
+      userName: userName
     });
   }
 
@@ -135,24 +136,24 @@ class WhatsAppController {
     const selectedService = session.services.find(s => s.id === serviceId);
 
     if (!selectedService) {
-      await this.whatsappService.sendTextMessage(phone, 
-        ' Opcao invalida. Digite o numero do servico desejado.');
+      await this.whatsappService.sendTextMessage(phone,
+        'Opção inválida. Digite o número do serviço desejado.');
       return;
     }
 
     // Busca datas disponiveis (proximos 30 dias)
     const availableDates = this.getAvailableDates();
-    
-    const message =  Servico selecionado: \n\n +
-      Escolha uma data:\n\n +
-      availableDates.map((date, index) => 
-        ${index + 1}.  ()
+
+    const message = `Serviço selecionado: ${selectedService.name}\n\n` +
+      'Escolha uma data:\n\n' +
+      availableDates.map((date, index) =>
+        `${index + 1}. ${date.format('DD/MM/YYYY')}`
       ).join('\n') +
-      '\n\nDigite o numero da data desejada.';
+      '\n\nDigite o número da data desejada.';
 
     await this.whatsappService.sendTextMessage(phone, message);
-    this.setUserSession(phone, { 
-      ...session, 
+    this.setUserSession(phone, {
+      ...session,
       step: 'select_date',
       selectedService: selectedService,
       availableDates: availableDates
@@ -167,30 +168,30 @@ class WhatsAppController {
     const selectedDate = session.availableDates[dateIndex];
 
     if (!selectedDate) {
-      await this.whatsappService.sendTextMessage(phone, 
-        ' Data invalida. Digite o numero da data desejada.');
+      await this.whatsappService.sendTextMessage(phone,
+        'Data inválida. Digite o número da data desejada.');
       return;
     }
 
     // Busca horarios disponiveis para a data selecionada
     const availableTimes = await this.getAvailableTimes(selectedDate, session.selectedService.duration);
-    
+
     if (availableTimes.length === 0) {
-      await this.whatsappService.sendTextMessage(phone, 
-        ' Nao ha horarios disponiveis para esta data. Escolha outra data.');
+      await this.whatsappService.sendTextMessage(phone,
+        'Não há horários disponíveis para esta data. Escolha outra data.');
       return;
     }
 
-    const message =  Data selecionada: \n\n +
-      Horarios disponiveis:\n\n +
-      availableTimes.map((time, index) => 
-        ${index + 1}. 
+    const message = `Data selecionada: ${selectedDate.format('DD/MM/YYYY')}\n\n` +
+      'Horários disponíveis:\n\n' +
+      availableTimes.map((time, index) =>
+        `${index + 1}. ${time.format('HH:mm')}`
       ).join('\n') +
-      '\n\nDigite o numero do horario desejado.';
+      '\n\nDigite o número do horário desejado.';
 
     await this.whatsappService.sendTextMessage(phone, message);
-    this.setUserSession(phone, { 
-      ...session, 
+    this.setUserSession(phone, {
+      ...session,
       step: 'select_time',
       selectedDate: selectedDate,
       availableTimes: availableTimes
@@ -205,33 +206,33 @@ class WhatsAppController {
     const selectedTime = session.availableTimes[timeIndex];
 
     if (!selectedTime) {
-      await this.whatsappService.sendTextMessage(phone, 
-        ' Horario invalido. Digite o numero do horario desejado.');
+      await this.whatsappService.sendTextMessage(phone,
+        'Horário inválido. Digite o número do horário desejado.');
       return;
     }
 
     const appointmentDateTime = session.selectedDate.clone().hour(selectedTime.hour()).minute(selectedTime.minute());
-    
+
     // Verifica se ainda ha vagas disponiveis
     const isAvailable = await this.checkAvailability(appointmentDateTime, session.selectedService.duration);
-    
+
     if (!isAvailable) {
-      await this.whatsappService.sendTextMessage(phone, 
-        ' Este horario nao esta mais disponivel. Escolha outro horario.');
+      await this.whatsappService.sendTextMessage(phone,
+        'Este horário não está mais disponível. Escolha outro horário.');
       return;
     }
 
-    const message =  Confirmacao do Agendamento:\n\n +
-       Cliente: \n +
-       Servico: \n +
-       Data: \n +
-       Horario: \n +
-       Duracao:  minutos\n\n +
-      Digite "CONFIRMAR" para confirmar ou "CANCELAR" para cancelar.;
+    const message = `Confirmação do Agendamento:\n\n` +
+      `Cliente: ${session.userName}\n` +
+      `Serviço: ${session.selectedService.name}\n` +
+      `Data: ${appointmentDateTime.format('DD/MM/YYYY')}\n` +
+      `Horário: ${appointmentDateTime.format('HH:mm')}\n` +
+      `Duração: ${session.selectedService.duration} minutos\n\n` +
+      `Digite "CONFIRMAR" para confirmar ou "CANCELAR" para cancelar.`;
 
     await this.whatsappService.sendTextMessage(phone, message);
-    this.setUserSession(phone, { 
-      ...session, 
+    this.setUserSession(phone, {
+      ...session,
       step: 'confirm_booking',
       appointmentDateTime: appointmentDateTime
     });
@@ -248,15 +249,15 @@ class WhatsAppController {
         // Cria o agendamento
         const schedule = await this.createSchedule(session);
         
-        // Cria o servico
-        const service = await this.createService(session);
+        // Cria o servico LIGADO AO SCHEDULE
+        const service = await this.createService(session, schedule.id);
         
-        const message =  Agendamento confirmado com sucesso!\n\n +
-           Codigo: \n +
-           Data: \n +
-           Horario: \n +
-           Servico: \n\n +
-          Obrigado por escolher nosso salao! ;
+        const message = `✅ Agendamento confirmado com sucesso!\n\n` +
+          ` Código: ${schedule.id.substring(0, 8)}\n` +
+          `📅 Data: ${session.appointmentDateTime.format('DD/MM/YYYY')}\n` +
+          ` Horário: ${session.appointmentDateTime.format('HH:mm')}\n` +
+          `✂️ Serviço: ${session.selectedService.name}\n\n` +
+          `Obrigado por escolher nosso salão!✨`;
 
         await this.whatsappService.sendTextMessage(phone, message);
         
@@ -266,12 +267,12 @@ class WhatsAppController {
       } catch (error) {
         console.error('Erro ao criar agendamento:', error);
         await this.whatsappService.sendTextMessage(phone, 
-          ' Erro ao confirmar agendamento. Tente novamente mais tarde.');
+          '❌ Erro ao confirmar agendamento. Tente novamente mais tarde.');
       }
     } else if (cleanText === 'cancelar') {
       await this.cancelProcess(phone);
     } else {
-      await this.whatsappService.sendTextMessage(phone, 
+      await this.whatsappService.sendTextMessage(phone,
         'Digite "CONFIRMAR" para confirmar ou "CANCELAR" para cancelar.');
     }
   }
@@ -286,40 +287,40 @@ class WhatsAppController {
         where: {
           client_id_schedules: phone, // Assumindo que o phone e usado como ID
           date_and_houres: {
-            [require('sequelize').Op.gte]: new Date(),
-            [require('sequelize').Op.lte]: moment().add(30, 'days').toDate()
+            [Op.gte]: new Date(),
+            [Op.lte]: moment().add(30, 'days').toDate()
           }
         },
         include: [{
           model: Service,
-          as: 'services'
+          as: 'Services'  // ✅ CORRIGIR NOME DA ASSOCIAÇÃO
         }],
         order: [['date_and_houres', 'ASC']]
       });
 
-      if (schedules.length === 0) {
-        await this.whatsappService.sendTextMessage(phone, 
-          'Voce nao possui agendamentos nos proximos 30 dias.');
+      if (!schedules || schedules.length === 0) {
+        await this.whatsappService.sendTextMessage(phone,
+          'Você não possui agendamentos nos próximos 30 dias.');
         return;
       }
 
-      let message =  Seus Agendamentos:\n\n;
-      
+      let message = 'Seus Agendamentos:\n\n';
+
       schedules.forEach((schedule, index) => {
         const date = moment(schedule.date_and_houres);
-        message += ${index + 1}. \n;
-        if (schedule.services && schedule.services.length > 0) {
-          message +=    Servicos: \n;
+        message += `${index + 1}. ${date.format('DD/MM/YYYY')} às ${date.format('HH:mm')}\n`;
+        if (schedule.Services && Array.isArray(schedule.Services) && schedule.Services.length > 0) {
+          message += `  Serviços: ${schedule.Services.map(s => s.service).join(', ')}\n`;
         }
-        message +=    Status: \n\n;
+        message += `  Status: ${schedule.active ? (schedule.finished ? 'Finalizado' : 'Ativo') : 'Cancelado'}\n\n`;
       });
 
       await this.whatsappService.sendTextMessage(phone, message);
-      
+
     } catch (error) {
       console.error('Erro ao buscar agendamentos:', error);
-      await this.whatsappService.sendTextMessage(phone, 
-        ' Erro ao buscar agendamentos. Tente novamente mais tarde.');
+      await this.whatsappService.sendTextMessage(phone,
+        'Erro ao buscar agendamentos. Tente novamente mais tarde.');
     }
   }
 
@@ -328,22 +329,22 @@ class WhatsAppController {
    */
   async cancelProcess(phone) {
     this.clearUserSession(phone);
-    await this.whatsappService.sendTextMessage(phone, 
-      ' Processo cancelado. Digite "MENU" para ver as opcoes disponiveis.');
+    await this.whatsappService.sendTextMessage(phone,
+      'Processo cancelado. Digite "MENU" para ver as opções disponíveis.');
   }
 
   /**
    * Envia menu principal
    */
   async sendMainMenu(phone, userName = '') {
-    const greeting = userName ? Ola !  : 'Ola! ';
-    
-    const message = ${greeting}\n\n +
-      Escolha uma opcao:\n\n +
-      1 AGENDAR - Marcar um servico\n +
-      2 AGENDAMENTOS - Ver meus agendamentos\n +
-      3 CANCELAR - Cancelar processo atual\n\n +
-      Digite o numero da opcao desejada.;
+    const greeting = userName ? `Olá ${userName}!` : 'Olá!';
+
+    const message = `${greeting}\n\n` +
+      'Escolha uma opção:\n\n' +
+      '1 AGENDAR - Marcar um serviço\n' +
+      '2 AGENDAMENTOS - Ver meus agendamentos\n' +
+      '3 CANCELAR - Cancelar processo atual\n\n' +
+      'Digite o número da opção desejada.';
 
     await this.whatsappService.sendTextMessage(phone, message);
   }
@@ -365,13 +366,14 @@ class WhatsAppController {
   /**
    * Cria servico no banco
    */
-  async createService(session) {
+  async createService(session, scheduleId) {
     return await Service.create({
       service: session.selectedService.name,
       date_service: session.appointmentDateTime.toDate(),
-      additionalComments: Agendado via WhatsApp - ,
+      additionalComments: `Agendado via WhatsApp - ${session.userName}`,
       client_id_service: session.phone,
-      provider_id_service: process.env.DEFAULT_PROVIDER_ID || 'default-provider'
+      provider_id_service: process.env.DEFAULT_PROVIDER_ID || 'default-provider',
+      schedule_id: scheduleId
     });
   }
 
@@ -380,14 +382,13 @@ class WhatsAppController {
    */
   async checkAvailability(dateTime, duration) {
     const endTime = moment(dateTime).add(duration, 'minutes');
-    
-    // Conta quantos agendamentos existem no mesmo horario
-    const count = await Schedules.count({
+
+    // Conta quantos SERVICOS existem no mesmo horario
+    const count = await Service.count({
       where: {
-        date_and_houres: {
-          [require('sequelize').Op.between]: [dateTime.toDate(), endTime.toDate()]
-        },
-        active: true
+        date_service: {
+          [Op.between]: [dateTime.toDate(), endTime.toDate()]
+        }
       }
     });
 
@@ -401,7 +402,7 @@ class WhatsAppController {
   getAvailableDates() {
     const dates = [];
     const today = moment();
-    
+
     for (let i = 1; i <= 30; i++) {
       const date = today.clone().add(i, 'days');
       // Exclui domingos
@@ -409,7 +410,7 @@ class WhatsAppController {
         dates.push(date);
       }
     }
-    
+
     return dates;
   }
 
@@ -420,18 +421,18 @@ class WhatsAppController {
     const times = [];
     const startHour = 8; // 8:00
     const endHour = 18; // 18:00
-    
+
     for (let hour = startHour; hour < endHour; hour++) {
       for (let minute = 0; minute < 60; minute += 30) { // Intervalos de 30 min
-        const time = moment(date).hour(hour).minute(minute);
+        const time = moment(date).hour(hour).minute(minute).second(0).millisecond(0);
         const isAvailable = await this.checkAvailability(time, duration);
-        
+
         if (isAvailable) {
           times.push(time);
         }
       }
     }
-    
+
     return times;
   }
 
