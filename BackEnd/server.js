@@ -8,20 +8,20 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
 // Import database connection
-const db = require('./src/Database/models');
+const db = require('./src/database/models');
 
 // Import middlewares
 const errorHandler = require('./src/middlewares/errorHandler');
 
 // Import routes
-const authRoutes = require('./src/Routes/auth.routes');
-const accountRoutes = require('./src/Routes/account.routes');
-const companyRoutes = require('./src/Routes/company.routes');
-const productRoutes = require('./src/Routes/product.routes');
-const purchaseRoutes = require('./src/Routes/purchase_sale.routes');
-const serviceRoutes = require('./src/Routes/service.routes');
-const loginRoutes = require('./src/Routes/login.routes');
-const whatsappRoutes = require('./src/Routes/whatsapp.routes');
+const authRoutes = require('./src/routes/auth.routes');
+const accountRoutes = require('./src/routes/account.routes');
+const companyRoutes = require('./src/routes/company.routes');
+const productRoutes = require('./src/routes/product.routes');
+const purchaseRoutes = require('./src/routes/purchase_sale.routes');
+const serviceRoutes = require('./src/routes/service.routes');
+const loginRoutes = require('./src/routes/login.routes');
+const whatsappRoutes = require('./src/routes/whatsapp.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -55,7 +55,7 @@ const swaggerOptions = {
       }
     }
   },
-  apis: ['./src/Routes/*.js']
+  apis: ['./src/routes/*.js']
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
@@ -84,11 +84,11 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Logging middleware
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-} else {
-  app.use(morgan('combined'));
-}
+// if (process.env.NODE_ENV === 'development') {
+//   app.use(morgan('dev'));
+// } else {
+//   app.use(morgan('combined'));
+// }
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -98,14 +98,14 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Server is running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
+// app.get('/health', (req, res) => {
+//   res.status(200).json({
+//     success: true,
+//     message: 'Server is running',
+//     timestamp: new Date().toISOString(),
+//     environment: process.env.NODE_ENV || 'development'
+//   });
+// });
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -118,53 +118,53 @@ app.use('/api/login', loginRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 
 // 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Route not found'
-  });
-});
+// app.use('*', (req, res) => {
+//   res.status(404).json({
+//     success: false,
+//     message: 'Route not found'
+//   });
+// });
 
 // Global error handler (must be last)
 app.use(errorHandler);
 
 // Database connection and server startup
-const startServer = async () => {
-  try {
-    // Test database connection
-    await db.sequelize.authenticate();
-    console.log('✅ Database connection established successfully.');
+// const startServer = async () => {
+//   try {
+//     // Test database connection
+//     await db.sequelize.authenticate();
+//     console.log('✅ Database connection established successfully.');
 
-    // Sync database (in development)
-    if (process.env.NODE_ENV === 'development') {
-      await db.sequelize.sync({ alter: true });
-      console.log('✅ Database synchronized.');
-    }
+//     // Sync database (in development)
+//     if (process.env.NODE_ENV === 'development') {
+//       await db.sequelize.sync({ alter: true });
+//       console.log('✅ Database synchronized.');
+//     }
 
-    // Start server
-    app.listen(PORT, () => {
-      console.log(`🚀 Server is running on port ${PORT}`);
-      console.log(`📚 API Documentation available at http://localhost:${PORT}/api-docs`);
-      console.log(`🏥 Health check available at http://localhost:${PORT}/health`);
-    });
-  } catch (error) {
-    console.error('❌ Unable to start server:', error);
-    process.exit(1);
-  }
-};
+//     // Start server
+//     app.listen(PORT, () => {
+//       console.log(`🚀 Server is running on port ${PORT}`);
+//       console.log(`📚 API Documentation available at http://localhost:${PORT}/api-docs`);
+//       console.log(`🏥 Health check available at http://localhost:${PORT}/health`);
+//     });
+//   } catch (error) {
+//     console.error('❌ Unable to start server:', error);
+//     process.exit(1);
+//   }
+// };
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  await db.sequelize.close();
-  process.exit(0);
-});
+// process.on('SIGTERM', async () => {
+//   console.log('SIGTERM received, shutting down gracefully');
+//   await db.sequelize.close();
+//   process.exit(0);
+// });
 
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully');
-  await db.sequelize.close();
-  process.exit(0);
-});
+// process.on('SIGINT', async () => {
+//   console.log('SIGINT received, shutting down gracefully');
+//   await db.sequelize.close();
+//   process.exit(0);
+// });
 
-// Start the server
-startServer();
+// // Start the server
+// startServer();
