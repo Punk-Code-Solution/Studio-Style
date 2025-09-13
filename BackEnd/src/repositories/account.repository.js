@@ -10,7 +10,7 @@ const {
   Purchase,
   Purchase_Material,
   Phone,
-  Adress } = require("../Database/models");
+  Adress } = require("../database/models");
 const { v4: uuidv4 } = require('uuid');
 const bkrypt = require('bcryptjs');
 

@@ -21,6 +21,7 @@ const productRoutes = require('./src/Routes/product.routes');
 const purchaseRoutes = require('./src/Routes/purchase_sale.routes');
 const serviceRoutes = require('./src/Routes/service.routes');
 const loginRoutes = require('./src/Routes/login.routes');
+const whatsappRoutes = require('./src/Routes/whatsapp.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -114,6 +115,7 @@ app.use('/api/product', productRoutes);
 app.use('/api/purchase', purchaseRoutes);
 app.use('/api/service', serviceRoutes);
 app.use('/api/login', loginRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
