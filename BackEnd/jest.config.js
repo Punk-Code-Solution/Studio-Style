@@ -3,7 +3,7 @@ module.exports = {
   testMatch: ['**/__tests__/**/*.js', '**/?(*.)+(spec|test).js'],
   collectCoverageFrom: [
     'src/**/*.js',
-    '!src/Database/**',
+    '!src/database/**',
     '!src/migrations/**',
     '!src/seeders/**',
     '!**/node_modules/**'

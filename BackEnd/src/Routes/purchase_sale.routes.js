@@ -22,7 +22,7 @@ const rota = Router()
  *       200:
  *         description: Venda adicionada com sucesso
  */
-rota.post("/account/sale", async (request, response) => { await purchase_salecontroller.addSale( request, response ); });
+rota.post("/account/sale", purchase_salecontroller.addSale.bind(purchase_salecontroller));
 
 /**
  * @swagger
@@ -35,7 +35,7 @@ rota.post("/account/sale", async (request, response) => { await purchase_salecon
  *       200:
  *         description: Lista de vendas do colaborador
  */
-rota.get("/account/sale", async (request, response) => { await purchase_salecontroller.findSaleAccount( request, response ); });
+rota.get("/account/sale", purchase_salecontroller.findSaleAccount.bind(purchase_salecontroller));
 
 /**
  * @swagger
@@ -48,7 +48,7 @@ rota.get("/account/sale", async (request, response) => { await purchase_salecont
  *       200:
  *         description: Lista de todas as vendas
  */
-rota.get("/sales", async (request, response) => { await purchase_salecontroller.findAllSale( request, response ) });
+rota.get("/sales", purchase_salecontroller.findAllSale.bind( purchase_salecontroller ) );
 
 /**
  * @swagger
@@ -68,7 +68,7 @@ rota.get("/sales", async (request, response) => { await purchase_salecontroller.
  *       200:
  *         description: Detalhes da venda
  */
-rota.get("/sale", async (request, response) => { await purchase_salecontroller.findSale( request, response ) });
+rota.get("/sale", purchase_salecontroller.findSale.bind( purchase_salecontroller ));
 
 /**
  * @swagger
@@ -88,7 +88,7 @@ rota.get("/sale", async (request, response) => { await purchase_salecontroller.f
  *       200:
  *         description: Venda deletada com sucesso
  */
-rota.delete("/sale", async (request, response) => { await purchase_salecontroller.deleteSale( request, response ) })
+rota.delete("/sale", purchase_salecontroller.deleteSale.bind( purchase_salecontroller ))
 
 
 /**
@@ -108,7 +108,7 @@ rota.delete("/sale", async (request, response) => { await purchase_salecontrolle
  *       200:
  *         description: Compra adicionada com sucesso
  */
-rota.post("/account/purchase", async (request, response) => { await purchase_salecontroller.addSale( request, response ); });
+rota.post("/account/purchase", purchase_salecontroller.addSale.bind( purchase_salecontroller ));
 
 /**
  * @swagger
@@ -121,7 +121,7 @@ rota.post("/account/purchase", async (request, response) => { await purchase_sal
  *       200:
  *         description: Lista de compras do colaborador
  */
-rota.get("/account/purchase", async (request, response) => { await purchase_salecontroller.findSaleAccount( request, response ); });
+rota.get("/account/purchase", purchase_salecontroller.findSaleAccount.bind( purchase_salecontroller ));
 
 /**
  * @swagger
@@ -134,7 +134,7 @@ rota.get("/account/purchase", async (request, response) => { await purchase_sale
  *       200:
  *         description: Lista de todas as compras
  */
-rota.get("/purchases", async (request, response) => { await purchase_salecontroller.findAllSale( request, response ) });
+rota.get("/purchases", purchase_salecontroller.findAllSale.bind( purchase_salecontroller ) );
 
 /**
  * @swagger
@@ -154,7 +154,7 @@ rota.get("/purchases", async (request, response) => { await purchase_salecontrol
  *       200:
  *         description: Detalhes da compra
  */
-rota.get("/purchase", async (request, response) => { await purchase_salecontroller.findSale( request, response ) });
+rota.get("/purchase", purchase_salecontroller.findSale.bind( purchase_salecontroller ));
 
 /**
  * @swagger
@@ -174,7 +174,7 @@ rota.get("/purchase", async (request, response) => { await purchase_salecontroll
  *       200:
  *         description: Compra deletada com sucesso
  */
-rota.delete("/purchase", async (request, response) => { await purchase_salecontroller.deleteSale( request, response ); });
+rota.delete("/purchase", purchase_salecontroller.deleteSale.bind( purchase_salecontroller ));
 
 
 module.exports = rota
