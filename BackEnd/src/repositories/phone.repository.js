@@ -1,4 +1,4 @@
-const { Phone } = require("../Database/models");
+const { Phone } = require("../database/models");
 
 class phoneRepository{
 
