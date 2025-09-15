@@ -1,4 +1,4 @@
-const { Purchase_sale } = require("../Database/models");
+const { Purchase_sale } = require("../database/models");
 
 class purchaseRepository{
 

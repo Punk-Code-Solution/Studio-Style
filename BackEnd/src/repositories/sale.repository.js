@@ -1,4 +1,4 @@
-const { Sale, Account } = require("../Database/models");
+const { Sale, Account } = require("../database/models");
 const bkrypt = require('bcryptjs');
 
 class SaleRepository{
