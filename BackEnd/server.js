@@ -64,13 +64,13 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use(helmet());
 
 // CORS configuration
-const corsOptions = {
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000', 'http://localhost:3001'],
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true,
-  optionsSuccessStatus: 204
-};
-app.use(cors(corsOptions));
+// const corsOptions = {
+//   origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000', 'http://localhost:3001'],
+//   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+//   credentials: true,
+//   optionsSuccessStatus: 204
+// };
+// app.use(cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
