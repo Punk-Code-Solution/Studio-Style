@@ -1,7 +1,7 @@
-const account = require('./Account.controller');
+import account from './account.controller.js';
 const accountControl = new account();
 
-module.exports = class login {
+export default class login {
 
   async logar( request, response ) {
 
