@@ -8,7 +8,7 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
 // Import database connection
-const db = require('./src/database/models');
+const db = require('./src/Database/models');
 
 // Import middlewares
 const errorHandler = require('./src/middlewares/errorHandler');

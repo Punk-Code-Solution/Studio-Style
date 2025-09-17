@@ -1,4 +1,4 @@
-const { Service, Account } = require("../database/models");
+const { Service, Account } = require("../Database/models");
 const { v4: uuidv4 } = require('uuid');
 
 class serviceRepository{

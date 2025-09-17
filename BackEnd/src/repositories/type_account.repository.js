@@ -1,4 +1,4 @@
-const { TypeAccount, Account } = require("../database/models");
+const { TypeAccount, Account } = require("../Database/models");
 
 class typeAccountRepository{
 

@@ -1,5 +1,5 @@
-const { Hair } = require("../database/models");
-const { Account } = require("../database/models");
+const { Hair } = require("../Database/models");
+const { Account } = require("../Database/models");
 const { v4: uuidv4 } = require('uuid');
 const bkrypt = require('bcryptjs');
 
