@@ -98,14 +98,14 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Server is running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
+// app.get('/health', (req, res) => {
+//   res.status(200).json({
+//     success: true,
+//     message: 'Server is running',
+//     timestamp: new Date().toISOString(),
+//     environment: process.env.NODE_ENV || 'development'
+//   });
+// });
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -118,53 +118,53 @@ app.use('/api/login', loginRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 
 // 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Route not found'
-  });
-});
+// app.use('*', (req, res) => {
+//   res.status(404).json({
+//     success: false,
+//     message: 'Route not found'
+//   });
+// });
 
 // Global error handler (must be last)
 app.use(errorHandler);
 
 // Database connection and server startup
-const startServer = async () => {
-  try {
-    // Test database connection
-    await db.sequelize.authenticate();
-    console.log('✅ Database connection established successfully.');
+// const startServer = async () => {
+//   try {
+//     // Test database connection
+//     await db.sequelize.authenticate();
+//     console.log('✅ Database connection established successfully.');
 
-    // Sync database (in development)
-    if (process.env.NODE_ENV === 'development') {
-      await db.sequelize.sync({ alter: true });
-      console.log('✅ Database synchronized.');
-    }
+//     // Sync database (in development)
+//     if (process.env.NODE_ENV === 'development') {
+//       await db.sequelize.sync({ alter: true });
+//       console.log('✅ Database synchronized.');
+//     }
 
-    // Start server
-    app.listen(PORT, () => {
-      console.log(`🚀 Server is running on port ${PORT}`);
-      console.log(`📚 API Documentation available at http://localhost:${PORT}/api-docs`);
-      console.log(`🏥 Health check available at http://localhost:${PORT}/health`);
-    });
-  } catch (error) {
-    console.error('❌ Unable to start server:', error);
-    process.exit(1);
-  }
-};
+//     // Start server
+//     app.listen(PORT, () => {
+//       console.log(`🚀 Server is running on port ${PORT}`);
+//       console.log(`📚 API Documentation available at http://localhost:${PORT}/api-docs`);
+//       console.log(`🏥 Health check available at http://localhost:${PORT}/health`);
+//     });
+//   } catch (error) {
+//     console.error('❌ Unable to start server:', error);
+//     process.exit(1);
+//   }
+// };
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  await db.sequelize.close();
-  process.exit(0);
-});
+// // Graceful shutdown
+// process.on('SIGTERM', async () => {
+//   console.log('SIGTERM received, shutting down gracefully');
+//   await db.sequelize.close();
+//   process.exit(0);
+// });
 
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully');
-  await db.sequelize.close();
-  process.exit(0);
-});
+// process.on('SIGINT', async () => {
+//   console.log('SIGINT received, shutting down gracefully');
+//   await db.sequelize.close();
+//   process.exit(0);
+// });
 
-// Start the server
-startServer();
+// // Start the server
+// startServer();
