@@ -1,4 +1,4 @@
-const { Email, Company, Account } = require('../database/models');
+const { Email, Company, Account } = require('../Database/models');
 const { v4: uuidv4 } = require('uuid');
 
 module.exports = class emailRepository{
