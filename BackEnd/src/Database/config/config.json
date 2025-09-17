@@ -15,19 +15,12 @@
     "dialect": "postgres"
   },
   "production": {
-    "username": "ThiagoFreitasFreelancer",
-    "password": "j5sa6dJLNBlK",
-    "database": "neondb",
-    "host": "ep-calm-fire-33130223.us-east-2.aws.neon.tech",
+    "use_env_variable": "DATABASE_URL",
     "dialect": "postgres",
-    "port" : 5432,
     "dialectOptions": {
       "ssl": {
-        "require" : true
+        "require": true
       }
-    },
-    "connection": {
-      "options": "project=ep-calm-fire-33130223"
     }
   }
 }
