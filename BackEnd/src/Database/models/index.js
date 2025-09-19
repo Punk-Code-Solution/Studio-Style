@@ -5,17 +5,24 @@ const path = require('path');
 const Sequelize = require('sequelize');
 const process = require('process');
 const basename = path.basename(__filename);
-const env = process.env.NODE_ENV;
+const env = process.env.NODE_ENV || 'development';
 const config = require(__dirname + '/../config/config.json')[env];
 const db = {};
 
 let sequelize;
-if (config.use_env_variable) {
-  // Se a configuração usa uma variável de ambiente, inicialize a partir dela.
-  // A Vercel usará a variável DATABASE_URL.
-  sequelize = new Sequelize(process.env[config.use_env_variable], config);
+if (env === 'production' && process.env.DATABASE_URL) {
+  // Use the DATABASE_URL variable directly for production
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
+    dialect: 'postgres',
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    }
+  });
 } else {
-  // Caso contrário, use as credenciais de desenvolvimento do config.json.
+  // Use the config.json for local development
   sequelize = new Sequelize(config.database, config.username, config.password, config);
 }
 
