@@ -10,15 +10,14 @@ const config = require(__dirname + '/../config/config.json')[env];
 const db = {};
 
 let sequelize;
-const dbConfig = {
-  database: process.env.DB_DATABASE,
-  username: process.env.DB_USERNAME,
-  password: process.env.DB_PASSWORD,
-  host: process.env.DB_HOST,
-  dialect: 'postgres',
-};
-
-sequelize = new Sequelize(dbConfig);
+if (config.use_env_variable) {
+  // Se a configuração usa uma variável de ambiente, inicialize a partir dela.
+  // A Vercel usará a variável DATABASE_URL.
+  sequelize = new Sequelize(process.env[config.use_env_variable], config);
+} else {
+  // Caso contrário, use as credenciais de desenvolvimento do config.json.
+  sequelize = new Sequelize(config.database, config.username, config.password, config);
+}
 
 fs
   .readdirSync(__dirname)
@@ -42,5 +41,6 @@ Object.keys(db).forEach(modelName => {
 });
 
 db.sequelize = sequelize;
+db.Sequelize = Sequelize;
 
 module.exports = db;
