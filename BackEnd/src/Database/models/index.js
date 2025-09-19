@@ -17,6 +17,8 @@ const dbConfig = {
   dialect: 'postgres',
 };
 
+sequelize = new Sequelize(dbConfig);
+
 fs
   .readdirSync(__dirname)
   .filter(file => {
