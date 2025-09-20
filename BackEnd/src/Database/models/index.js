@@ -19,7 +19,14 @@ if (env === 'production' && process.env.DATABASE_URL) {
         require: true,
         rejectUnauthorized: false
       }
-    }
+    },
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    },
+    logging: false
   });
 } else {
   // Use the config.json for local development

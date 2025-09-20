@@ -1,4 +1,4 @@
-# Dependencies
+# Dependencies (but keep pg and related packages)
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -116,7 +116,6 @@ bower_components
 build/Release
 
 # Dependency directories
-node_modules/
 jspm_packages/
 
 # TypeScript v1 declaration files
@@ -224,3 +223,6 @@ nginx.conf
 
 # Health check
 healthcheck.js
+
+# Build files
+vercel-build.js
