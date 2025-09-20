@@ -14,7 +14,6 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "vercel-build": "node vercel-build.js && npm install --production",
     "build": "echo 'Build completed'"
   },
   "dependencies": {
@@ -36,9 +35,8 @@
     "nodemon": "^2.0.22",
     "passport": "^0.6.0",
     "passport-jwt": "^4.0.1",
-    "pg": "^8.16.3",
+    "pg": "^8.8.0",
     "pg-hstore": "^2.3.4",
-    "pg-native": "^3.0.0",
     "sequelize": "^6.29.0",
     "sequelize-cli": "^6.4.1",
     "swagger-jsdoc": "^6.2.8",
