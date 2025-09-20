@@ -14,14 +14,54 @@ const path = require('path');
 const Sequelize = require('sequelize');
 const process = require('process');
 const basename = path.basename(__filename);
-const createSequelizeInstance = require('./sequelize-config');
-
+const env = process.env.NODE_ENV || 'development';
+const config = require(__dirname + '/../config/config.json')[env];
 const db = {};
 
-// Create Sequelize instance using the new configuration
+// Create Sequelize instance
 let sequelize;
+
+// Debug environment variables
+console.log('Environment:', env);
+console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
+console.log('DATABASE_URL length:', process.env.DATABASE_URL ? process.env.DATABASE_URL.length : 0);
+
 try {
-  sequelize = createSequelizeInstance();
+  if (env === 'production' && process.env.DATABASE_URL) {
+    console.log('📊 Using DATABASE_URL for production');
+    
+    // Parse DATABASE_URL to extract components
+    const url = new URL(process.env.DATABASE_URL);
+    
+    sequelize = new Sequelize({
+      database: url.pathname.slice(1), // Remove leading slash
+      username: url.username,
+      password: url.password,
+      host: url.hostname,
+      port: url.port || 5432,
+      dialect: 'postgres',
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false
+        }
+      },
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
+      },
+      logging: false,
+      define: {
+        timestamps: false
+      }
+    });
+  } else {
+    console.log('🏠 Using local configuration');
+    sequelize = new Sequelize(config.database, config.username, config.password, config);
+  }
+  
   console.log('✅ Sequelize instance created successfully');
 } catch (error) {
   console.error('❌ Failed to create Sequelize instance:', error.message);
