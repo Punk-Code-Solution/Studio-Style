@@ -1,7 +1,7 @@
-import account from './account.controller.js';
-const accountControl = new account();
+const AccountController = require('./account.controller');
+const accountControl = new AccountController();
 
-export default class login {
+class Login {
 
   async logar( request, response ) {
 
@@ -33,3 +33,5 @@ export default class login {
   }
 
 }
+
+module.exports = Login;
