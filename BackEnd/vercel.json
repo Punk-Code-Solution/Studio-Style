@@ -1,8 +1,12 @@
 {
+  "buildCommand": "npm run vercel-build",
   "builds": [
     {
       "src": "server.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["node_modules/**"]
+      }
     }
   ],
   "routes": [
