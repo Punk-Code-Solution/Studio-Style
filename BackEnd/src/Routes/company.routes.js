@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const CompanyController = require('../controllers/Company.controller');
+const CompanyController = require('../controllers/company.controller');
 const { authorizeRoles } = require('../middlewares/auth');
 const { handleValidationErrors } = require('../middlewares/validation');
 
