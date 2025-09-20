@@ -1,36 +1,31 @@
 'use strict';
 
+// Force import of pg module for Vercel compatibility
+try {
+  require('pg');
+  console.log('✅ pg module loaded successfully');
+} catch (error) {
+  console.warn('Warning: pg module not found, using fallback');
+  console.error('pg import error:', error.message);
+}
+
 const fs = require('fs');
 const path = require('path');
 const Sequelize = require('sequelize');
 const process = require('process');
 const basename = path.basename(__filename);
-const env = process.env.NODE_ENV || 'development';
-const config = require(__dirname + '/../config/config.json')[env];
+const createSequelizeInstance = require('./sequelize-config');
+
 const db = {};
 
+// Create Sequelize instance using the new configuration
 let sequelize;
-if (env === 'production' && process.env.DATABASE_URL) {
-  // Use the DATABASE_URL variable directly for production
-  sequelize = new Sequelize(process.env.DATABASE_URL, {
-    dialect: 'postgres',
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    },
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
-    },
-    logging: false
-  });
-} else {
-  // Use the config.json for local development
-  sequelize = new Sequelize(config.database, config.username, config.password, config);
+try {
+  sequelize = createSequelizeInstance();
+  console.log('✅ Sequelize instance created successfully');
+} catch (error) {
+  console.error('❌ Failed to create Sequelize instance:', error.message);
+  throw error;
 }
 
 fs
