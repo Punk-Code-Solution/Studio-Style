@@ -26,6 +26,9 @@ const whatsappRoutes = require('./src/Routes/whatsapp.routes');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy for Vercel (required for rate limiting)
+app.set('trust proxy', 1);
+
 // Swagger configuration
 const swaggerOptions = {
   definition: {
@@ -79,6 +82,12 @@ const limiter = rateLimit({
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.'
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  skip: (req) => {
+    // Skip rate limiting for health checks
+    return req.path === '/health' || req.path === '/api/health';
   }
 });
 app.use(limiter);
