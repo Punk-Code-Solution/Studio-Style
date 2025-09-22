@@ -1,8 +1,8 @@
-# Hairdressing-Management-System (HMS)
+# Studio & Style (SS)
 
-## System aimed at hairdressing management, including business app and web management system
+## Studio & Style, including business app and web management system
 
-### O Sistema de Gerenciamento de Salão de Beleza é uma plataforma online dedicada ao gerenciamento eficaz de salões de beleza. Ele oferece uma variedade de recursos e funcionalidades projetados especificamente para atender às necessidades do setor de cabeleireiro.
+### O Studio & Style é uma plataforma online dedicada ao gerenciamento eficaz de salões de beleza. Ele oferece uma variedade de recursos e funcionalidades projetados especificamente para atender às necessidades do setor de cabeleireiro.
 
 ### Com este sistema, os proprietários de salões de beleza podem controlar e supervisionar todas as atividades relacionadas ao negócio de forma centralizada. Através de uma interface intuitiva e fácil de usar, os usuários podem realizar tarefas essenciais, como agendamento de compromissos, gestão de clientes, controle de estoque de produtos e acompanhamento financeiro.
 
