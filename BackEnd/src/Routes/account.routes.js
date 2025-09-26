@@ -39,7 +39,7 @@ const typeAccountValidation = [
  *       401:
  *         description: Unauthorized
  */
-router.get('/', accountController.getAllAccounts.bind(accountController));
+router.get('/', authorizeRoles, accountController.getAllAccounts.bind(accountController));
 
 /**
  * @swagger
@@ -79,7 +79,7 @@ router.get('/', accountController.getAllAccounts.bind(accountController));
  *       401:
  *         description: Unauthorized
  */
-router.post('/', accountValidation, accountController.createAccount.bind(accountController));
+router.post('/', accountController.createAccount.bind(accountController));
 
 /**
  * @swagger
@@ -103,7 +103,7 @@ router.post('/', accountValidation, accountController.createAccount.bind(account
  *       401:
  *         description: Unauthorized
  */
-router.get('/id', accountController.getAccountById.bind(accountController));
+router.get('/id', authorizeRoles, accountController.getAccountById.bind(accountController));
 
 /**
  * @swagger
@@ -165,7 +165,7 @@ router.put('/id', accountValidation, accountController.updateAccount.bind(accoun
  *       401:
  *         description: Unauthorized
  */
-router.delete('/id', accountController.deleteAccountById.bind(accountController));
+router.delete('/id', authorizeRoles, accountController.deleteAccountById.bind(accountController));
 
 /**
  * @swagger
@@ -189,7 +189,7 @@ router.delete('/id', accountController.deleteAccountById.bind(accountController)
  *       401:
  *         description: Unauthorized
  */
-router.get('/cpf', accountController.getAccountByCpf.bind(accountController));
+router.get('/cpf', authorizeRoles, accountController.getAccountByCpf.bind(accountController));
 
 /**
  * @swagger
@@ -213,7 +213,7 @@ router.get('/cpf', accountController.getAccountByCpf.bind(accountController));
  *       401:
  *         description: Unauthorized
  */
-router.delete('/cpf/cpf', accountController.deleteAccountByCpf.bind(accountController));
+router.delete('/cpf/cpf', authorizeRoles, accountController.deleteAccountByCpf.bind(accountController));
 
 // Hair types routes
 /**
@@ -230,7 +230,7 @@ router.delete('/cpf/cpf', accountController.deleteAccountByCpf.bind(accountContr
  *       401:
  *         description: Unauthorized
  */
-router.get('/hair', accountController.getAllHair.bind(accountController));
+router.get('/hair', authorizeRoles, accountController.getAllHair.bind(accountController));
 
 /**
  * @swagger
@@ -259,7 +259,7 @@ router.get('/hair', accountController.getAllHair.bind(accountController));
  *       401:
  *         description: Unauthorized
  */
-router.post('/hair', hairValidation, accountController.createHair.bind(accountController));
+router.post('/hair', authorizeRoles, hairValidation, accountController.createHair.bind(accountController));
 
 /**
  * @swagger
@@ -292,7 +292,7 @@ router.post('/hair', hairValidation, accountController.createHair.bind(accountCo
  *       401:
  *         description: Unauthorized
  */
-router.put('/hair/id', hairValidation, accountController.updateHair.bind(accountController));
+router.put('/hair/id', authorizeRoles, hairValidation, accountController.updateHair.bind(accountController));
 
 /**
  * @swagger
@@ -316,7 +316,7 @@ router.put('/hair/id', hairValidation, accountController.updateHair.bind(account
  *       401:
  *         description: Unauthorized
  */
-router.delete('/hair/id', accountController.deleteHair.bind(accountController));
+router.delete('/hair/id', authorizeRoles, accountController.deleteHair.bind(accountController));
 
 // Type accounts routes
 /**
@@ -333,7 +333,7 @@ router.delete('/hair/id', accountController.deleteHair.bind(accountController));
  *       401:
  *         description: Unauthorized
  */
-router.get('/type-accounts', accountController.getAllTypeAccounts.bind(accountController));
+router.get('/type-accounts', authorizeRoles, accountController.getAllTypeAccounts.bind(accountController));
 
 /**
  * @swagger
@@ -362,7 +362,7 @@ router.get('/type-accounts', accountController.getAllTypeAccounts.bind(accountCo
  *       401:
  *         description: Unauthorized
  */
-router.post('/type-account', typeAccountValidation, accountController.createTypeAccount.bind(accountController));
+router.post('/type-account', authorizeRoles, typeAccountValidation, accountController.createTypeAccount.bind(accountController));
 
 /**
  * @swagger
@@ -395,7 +395,7 @@ router.post('/type-account', typeAccountValidation, accountController.createType
  *       401:
  *         description: Unauthorized
  */
-router.put('/type-accounts/id', typeAccountValidation, accountController.updateTypeAccount.bind(accountController));
+router.put('/type-accounts/id', authorizeRoles, typeAccountValidation, accountController.updateTypeAccount.bind(accountController));
 
 /**
  * @swagger
@@ -419,7 +419,7 @@ router.put('/type-accounts/id', typeAccountValidation, accountController.updateT
  *       401:
  *         description: Unauthorized
  */
-router.delete('/type-accounts/id', accountController.deleteTypeAccount.bind(accountController));
+router.delete('/type-accounts/id', authorizeRoles, accountController.deleteTypeAccount.bind(accountController));
 
 // Email routes
 /**
@@ -436,7 +436,7 @@ router.delete('/type-accounts/id', accountController.deleteTypeAccount.bind(acco
  *       401:
  *         description: Unauthorized
  */
-router.get('/emails', accountController.getAllEmails.bind(accountController));
+router.get('/emails', authorizeRoles, accountController.getAllEmails.bind(accountController));
 
 /**
  * @swagger
@@ -460,6 +460,6 @@ router.get('/emails', accountController.getAllEmails.bind(accountController));
  *       401:
  *         description: Unauthorized
  */
-router.delete('/emails/:id', accountController.deleteEmail.bind(accountController));
+router.delete('/emails/:id', authorizeRoles, accountController.deleteEmail.bind(accountController));
 
 module.exports = router;
