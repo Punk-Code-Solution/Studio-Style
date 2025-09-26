@@ -44,7 +44,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${PORT}`,
+        url: `https://studio-style.vercel.app/api`,
         description: 'Development server'
       }
     ],
@@ -141,14 +141,14 @@ app.use(errorHandler);
 const startServer = async () => {
    try {
      // Test database connection
-     await db.sequelize.authenticate();
-     console.log('✅ Database connection established successfully.');
+    //  await db.sequelize.authenticate();
+    //  console.log('✅ Database connection established successfully.');
 
-     // Sync database (in development)
-     if (process.env.NODE_ENV === 'development') {
-       await db.sequelize.sync({ alter: true });
-       console.log('✅ Database synchronized.');
-     }
+    //  // Sync database (in development)
+    //  if (process.env.NODE_ENV === 'development') {
+    //    await db.sequelize.sync({ alter: true });
+    //    console.log('✅ Database synchronized.');
+    //  }
 
      // Start server
      app.listen(PORT, () => {
