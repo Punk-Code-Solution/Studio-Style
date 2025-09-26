@@ -12,6 +12,7 @@ const db = require('./src/Database/models');
 
 // Import middlewares
 const errorHandler = require('./src/middlewares/errorHandler');
+const { authenticateToken } = require('./src/middlewares/auth');
 
 // Import routes
 const authRoutes = require('./src/Routes/auth.routes');
@@ -20,7 +21,6 @@ const companyRoutes = require('./src/Routes/company.routes');
 const productRoutes = require('./src/Routes/product.routes');
 const purchaseRoutes = require('./src/Routes/purchase_sale.routes');
 const serviceRoutes = require('./src/Routes/service.routes');
-const loginRoutes = require('./src/Routes/login.routes');
 const whatsappRoutes = require('./src/Routes/whatsapp.routes');
 
 const app = express();
@@ -44,7 +44,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${PORT}`,
+        url: `https://studio-style.vercel.app/api`,
         description: 'Development server'
       }
     ],
@@ -67,13 +67,18 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use(helmet());
 
 // CORS configuration
-// const corsOptions = {
-//   origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000', 'http://localhost:3001'],
-//   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-//   credentials: true,
-//   optionsSuccessStatus: 204
-// };
-// app.use(cors(corsOptions));
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [
+    'http://localhost:4200',
+    'http://localhost:3000',
+    'http://localhost:3001'
+  ],
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204
+};
+app.use(cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -119,12 +124,11 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/account', accountRoutes);
-app.use('/api/company', companyRoutes);
-app.use('/api/product', productRoutes);
-app.use('/api/purchase', purchaseRoutes);
-app.use('/api/service', serviceRoutes);
-app.use('/api/login', loginRoutes);
-app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/company', authenticateToken, companyRoutes);
+app.use('/api/product', authenticateToken, productRoutes);
+app.use('/api/purchase', authenticateToken, purchaseRoutes);
+app.use('/api/service', authenticateToken, serviceRoutes);
+app.use('/api/whatsapp', authenticateToken, whatsappRoutes);
 
 // 404 handler
 // app.use('*', (req, res) => {
@@ -141,14 +145,14 @@ app.use(errorHandler);
 const startServer = async () => {
    try {
      // Test database connection
-     await db.sequelize.authenticate();
-     console.log('✅ Database connection established successfully.');
+    //  await db.sequelize.authenticate();
+    //  console.log('✅ Database connection established successfully.');
 
-     // Sync database (in development)
-     if (process.env.NODE_ENV === 'development') {
-       await db.sequelize.sync({ alter: true });
-       console.log('✅ Database synchronized.');
-     }
+    //  // Sync database (in development)
+    //  if (process.env.NODE_ENV === 'development') {
+    //    await db.sequelize.sync({ alter: true });
+    //    console.log('✅ Database synchronized.');
+    //  }
 
      // Start server
      app.listen(PORT, () => {

@@ -3,6 +3,8 @@ import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { delay, tap, map } from 'rxjs/operators';
 import { User, UserService } from './user.service';
 import { isPlatformBrowser } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 // Tipos centralizados
 export type UserRole = 'medico' | 'enfermeiro' | 'recepcionista' | 'administrativo' | 'admin';
@@ -86,7 +88,8 @@ export class AuthService {
 
   constructor(
     @Inject(PLATFORM_ID) platformId: Object,
-    private userService: UserService
+    private userService: UserService,
+    private http: HttpClient
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
     this.loadStoredUser();
@@ -106,25 +109,28 @@ export class AuthService {
 
   // Métodos de autenticação
   login(email: string, senha: string): Observable<{ token: string; user: User }> {
-    try {
-      const user = this.userService.authenticate(email, senha);
-      if (!user) {
-        throw new Error('Email ou senha inválidos');
-      }
+    const url = `${environment.apiUrl}/auth/login`;
+    return this.http.post<any>(url, { email, password: senha }).pipe(
+      map((res) => {
+        // Suporta formatos { token, user } ou envelope { data: { token, user } }
+        const payload = res?.data ?? res;
+        const token = payload?.token as string;
+        const user = payload?.user as User;
 
-      if (!user.ativo) {
-        throw new Error('Usuário inativo');
-      }
+        if (!token || !user) {
+          throw new Error('Resposta de login inválida');
+        }
 
-      const token = btoa(`${user.id}:${user.email}:${Date.now()}`);
-      this.setToken(token);
-      this.setCurrentUser(user);
-      this.clearPermissionCache(); // Limpa cache ao fazer login
+        if (this.isJwtExpired(token)) {
+          throw new Error('Token expirado');
+        }
 
-      return of({ token, user }).pipe(delay(1000));
-    } catch (error) {
-      return throwError(() => error);
-    }
+        this.setToken(token);
+        this.setCurrentUser(user);
+        this.clearPermissionCache();
+        return { token, user };
+      })
+    );
   }
 
   logout(): void {
@@ -180,6 +186,12 @@ export class AuthService {
 
   // Métodos de estado
   isAuthenticated(): boolean {
+    const token = this.getToken();
+    if (!token) return false;
+    if (this.isJwtExpired(token)) {
+      this.logout();
+      return false;
+    }
     return this.authState.value.isAuthenticated;
   }
 
@@ -228,6 +240,11 @@ export class AuthService {
   private loadStoredUser(): void {
     if (this.isBrowser) {
       const storedUser = localStorage.getItem(this.userKey);
+      const token = this.getToken();
+      if (!token || this.isJwtExpired(token)) {
+        this.logout();
+        return;
+      }
       if (storedUser) {
         const user = JSON.parse(storedUser);
         this.authState.next({
@@ -235,6 +252,19 @@ export class AuthService {
           isAuthenticated: true
         });
       }
+    }
+  }
+
+  private isJwtExpired(token: string): boolean {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return true;
+      const payload = JSON.parse(atob(parts[1]));
+      if (!payload?.exp) return true;
+      const nowInSeconds = Math.floor(Date.now() / 1000);
+      return payload.exp <= nowInSeconds;
+    } catch {
+      return true;
     }
   }
 }
