@@ -1,14 +1,8 @@
 {
-  "builds": [
+  "rewrites": [
     {
-      "src": "dist/estudio_style/server/server.mjs",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "dist/estudio_style/server/server.mjs"
+      "source": "/(.*)",
+      "destination": "src/index.html"
     }
   ]
 }
