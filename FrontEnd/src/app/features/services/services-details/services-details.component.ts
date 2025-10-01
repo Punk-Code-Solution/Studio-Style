@@ -678,7 +678,7 @@ export class ConsultationDetailsComponent implements OnInit {
     }
   }
 
-  // downloadDocument(doc: Document) {
+   downloadDocument(doc: Document) {
   //   this.documentService.downloadDocument(doc.id).subscribe({
   //     next: (blob) => {
   //       const url = window.URL.createObjectURL(blob);
@@ -693,9 +693,9 @@ export class ConsultationDetailsComponent implements OnInit {
   //       this.notificationService.error('Erro ao baixar documento.');
   //     }
   //   });
-  // }
+  }
 
-  // previewDocument(doc: Document) {
+  previewDocument(doc: Document) {
   //   this.documentService.downloadDocument(doc.id).subscribe({
   //     next: (blob) => {
   //       const url = window.URL.createObjectURL(blob);
@@ -707,7 +707,7 @@ export class ConsultationDetailsComponent implements OnInit {
   //       this.notificationService.error('Erro ao visualizar documento.');
   //     }
   //   });
-  // }
+  }
 
   sendDocumentByEmail(document: Document) {
     if (this.consultation?.pacienteId) {
