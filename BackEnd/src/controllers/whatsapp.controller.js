@@ -18,6 +18,8 @@ class WhatsAppController {
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
 
+    console.log("Mode: ", mode);
+
     const result = this.whatsappService.verifyWebhook(mode, token, challenge);
 
     if (result) {
