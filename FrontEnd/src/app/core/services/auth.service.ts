@@ -108,7 +108,7 @@ export class AuthService {
 
   // Métodos de autenticação
   login(email: string, senha: string): Observable<{ token: string; user: User }> {
-    const url = process.env.API_URL + "/auth/login";
+    const url = process.env['API_URL'] + "/auth/login";
     return this.http.post<any>(url, { email, password: senha }).pipe(
       map((res) => {
         // Suporta formatos { token, user } ou envelope { data: { token, user } }
