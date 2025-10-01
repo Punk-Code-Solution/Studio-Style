@@ -1,17 +1,5 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "src/index.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "src/index.js"
-    }
-  ],
-  "installCommand": "npm install",
-  "buildCommand": "npm run build"
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/estudio_style/browser"
 }
