@@ -10,8 +10,5 @@
       "src": "/(.*)",
       "dest": "dist/estudio_style/server/server.mjs"
     }
-  ],
-  "installCommand": "npm install",
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist/estudio_style/browser"
+  ]
 }
