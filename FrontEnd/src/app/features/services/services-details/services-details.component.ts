@@ -678,36 +678,36 @@ export class ConsultationDetailsComponent implements OnInit {
     }
   }
 
-  downloadDocument(doc: Document) {
-    this.documentService.downloadDocument(doc.id).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = doc.name;
-        link.click();
-        window.URL.revokeObjectURL(url);
-      },
-      error: (error) => {
-        console.error('Erro ao baixar documento:', error);
-        this.notificationService.error('Erro ao baixar documento.');
-      }
-    });
-  }
+  // downloadDocument(doc: Document) {
+  //   this.documentService.downloadDocument(doc.id).subscribe({
+  //     next: (blob) => {
+  //       const url = window.URL.createObjectURL(blob);
+  //       const link = document.createElement('a');
+  //       link.href = url;
+  //       link.download = doc.name;
+  //       link.click();
+  //       window.URL.revokeObjectURL(url);
+  //     },
+  //     error: (error) => {
+  //       console.error('Erro ao baixar documento:', error);
+  //       this.notificationService.error('Erro ao baixar documento.');
+  //     }
+  //   });
+  // }
 
-  previewDocument(doc: Document) {
-    this.documentService.downloadDocument(doc.id).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        window.URL.revokeObjectURL(url);
-      },
-      error: (error) => {
-        console.error('Erro ao visualizar documento:', error);
-        this.notificationService.error('Erro ao visualizar documento.');
-      }
-    });
-  }
+  // previewDocument(doc: Document) {
+  //   this.documentService.downloadDocument(doc.id).subscribe({
+  //     next: (blob) => {
+  //       const url = window.URL.createObjectURL(blob);
+  //       window.open(url, '_blank');
+  //       window.URL.revokeObjectURL(url);
+  //     },
+  //     error: (error) => {
+  //       console.error('Erro ao visualizar documento:', error);
+  //       this.notificationService.error('Erro ao visualizar documento.');
+  //     }
+  //   });
+  // }
 
   sendDocumentByEmail(document: Document) {
     if (this.consultation?.pacienteId) {

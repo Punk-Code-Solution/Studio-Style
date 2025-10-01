@@ -53,9 +53,9 @@ export class ConsultationFormComponent implements OnInit {
     }
   }
 
-  printConsultation() {
-    window.print();
-  }
+  // printConsultation() {
+  //   window.print();
+  // }
 
   onSubmit() {
     if (this.consultationForm.valid) {
