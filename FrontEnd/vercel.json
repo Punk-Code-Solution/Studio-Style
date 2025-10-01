@@ -12,8 +12,7 @@
       "dest": "dist/estudio_style/server/server.mjs"
     }
   ],
-  "outputDirectory": "dist/estudio_style/browser",
   "installCommand": "npm install",
   "buildCommand": "npm run build",
-  "framework": "angular"
+  "outputDirectory": "dist/estudio_style/browser"
 }
