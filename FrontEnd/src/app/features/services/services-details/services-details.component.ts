@@ -427,7 +427,7 @@ import { AuditLogService } from '../../../core/services/audit-log.service';
         color: white;
 
         &:hover {
-          background: darken($success-color, 10%);
+          background: color-mix(in srgb, $success-color 90%, black 10%);
         }
       }
 
@@ -436,7 +436,7 @@ import { AuditLogService } from '../../../core/services/audit-log.service';
         color: white;
 
         &:hover {
-          background: darken($secondary-color, 10%);
+          background: color-mix(in srgb, $secondary-color 90%, black 10%);
         }
       }
 
@@ -445,7 +445,7 @@ import { AuditLogService } from '../../../core/services/audit-log.service';
         color: white;
 
         &:hover {
-          background: darken($primary-color, 10%);
+          background: color-mix(in srgb, $primary-color 90%, black 10%);
         }
       }
 
@@ -512,7 +512,7 @@ import { AuditLogService } from '../../../core/services/audit-log.service';
 
         &:hover {
           background: rgba($secondary-color, 0.1);
-          color: darken($secondary-color, 10%);
+          color: color-mix(in srgb, $secondary-color 90%, black 10%);
         }
 
         &:focus {

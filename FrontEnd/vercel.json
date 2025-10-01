@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "dist/estudio_style/server/server.mjs",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "dist/estudio_style/server/server.mjs"
+    }
+  ],
+  "outputDirectory": "dist/estudio_style/browser",
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "framework": "angular"
+}

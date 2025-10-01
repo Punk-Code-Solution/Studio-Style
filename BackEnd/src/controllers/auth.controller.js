@@ -46,7 +46,7 @@ class AuthController {
           role: user.role || 'user' 
         },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+        { expiresIn: process.env.JWT_EXPIRES_IN || '5m' }
       );
 
       // Remove password from response
@@ -120,7 +120,7 @@ class AuthController {
           role: user.role 
         },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+        { expiresIn: process.env.JWT_EXPIRES_IN || '5m' }
       );
 
       // Remove password from response
@@ -259,7 +259,7 @@ class AuthController {
           role: user.role 
         },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+        { expiresIn: process.env.JWT_EXPIRES_IN || '5m' }
       );
 
       return ResponseHandler.success(res, 200, 'Token refreshed successfully', { token });
