@@ -4,7 +4,7 @@
   "outputDirectory": "dist/estudio_style/browser",
   "headers": [
     {
-      "source": "/api/(.*)", // Aplica os cabeçalhos a todas as suas rotas /api
+      "source": "/api/(.*)",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
