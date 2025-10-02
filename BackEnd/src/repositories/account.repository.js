@@ -211,7 +211,8 @@ module.exports = class accountRepository{
     })
 
     if(result){
-      return result.dataValues
+      account.id = result.id
+      return account
     }
     return false;
     
