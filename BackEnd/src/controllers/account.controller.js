@@ -220,10 +220,13 @@ class AccountController {
     try {
       const emailData = {
         account_id_email: account.id,
-        email: account.email || `${account.name}@example.com`
+        email: account.email,
+        name: account.name, 
+        active: true, 
+        company_id_email: account.company_id || null
       };
       
-      return await this.emailRepository.addEmail(emailData);
+      return await this.emailRepository.createEmail(emailData);
     } catch (error) {
       console.error('Failed to create email:', error);
       throw error;
