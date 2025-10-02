@@ -4,6 +4,7 @@ import { delay, tap, map } from 'rxjs/operators';
 import { User, UserService } from './user.service';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment.prod';
 
 // Tipos centralizados
 export type UserRole = 'medico' | 'enfermeiro' | 'recepcionista' | 'administrativo' | 'admin';
@@ -108,7 +109,7 @@ export class AuthService {
 
   // Métodos de autenticação
   login(email: string, senha: string): Observable<{ token: string; user: User }> {
-    const url = process.env['API_URL'] + "/auth/login";
+    const url = `${environment.apiUrl}/auth/login`;
     return this.http.post<any>(url, { email, password: senha }).pipe(
       map((res) => {
         // Suporta formatos { token, user } ou envelope { data: { token, user } }
