@@ -71,11 +71,13 @@ const corsOptions = {
   origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [
     'http://localhost:4200',
     'http://localhost:3000',
-    'http://localhost:3001'
+    'http://localhost:3001',
+    'https://studio-style.vercel.app',
+    'https://studio-style-henna.vercel.app'
   ],
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
@@ -145,14 +147,14 @@ app.use(errorHandler);
 const startServer = async () => {
    try {
      // Test database connection
-    //  await db.sequelize.authenticate();
-    //  console.log('✅ Database connection established successfully.');
 
     //  // Sync database (in development)
-    //  if (process.env.NODE_ENV === 'development') {
-    //    await db.sequelize.sync({ alter: true });
-    //    console.log('✅ Database synchronized.');
-    //  }
+     if (process.env.NODE_ENV === 'development') {
+        await db.sequelize.authenticate();
+        console.log('✅ Database connection established successfully.');
+        await db.sequelize.sync({ alter: true });
+        console.log('✅ Database synchronized.');
+     }
 
      // Start server
      app.listen(PORT, () => {
