@@ -42,7 +42,7 @@ class AuthController {
       const token = jwt.sign(
         { 
           id: user.id, 
-          email: this.email, 
+          email: email, 
           role: user.role || 'user' 
         },
         process.env.JWT_SECRET,
