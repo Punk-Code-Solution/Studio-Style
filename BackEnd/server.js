@@ -26,17 +26,17 @@ const whatsappRoutes = require('./src/Routes/whatsapp.routes');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// const corsOptions = {
-//   origin: function (origin, callback) {
-//     // Allow all origins for simplicity
-//     callback(null, true);
-//   },
-//   credentials: true,
-//   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-//   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-//   optionsSuccessStatus: 200
-// };
-// app.use(cors(corsOptions));
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow all origins for simplicity
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 
 // app.options('*', cors(corsOptions), (req, res) => {
 //   // A função cors(corsOptions) já anexou os headers CORS.
