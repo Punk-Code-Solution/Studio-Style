@@ -36,22 +36,19 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   optionsSuccessStatus: 200
 };
-app.use(cors(corsOptions));
+app.use(cors(corsOptions)); // 1. Aplica CORS globalmente
 
-// app.options('*', cors(corsOptions), (req, res) => {
-//   // A função cors(corsOptions) já anexou os headers CORS.
-//   // Basta retornar o status 200 (OK).
-//   res.status(200).send();
-// });
-
-app.options('/api/auth/login', cors(corsOptions), (req, res) => {
-  res.status(200).send();
+app.options('*', cors(corsOptions), (req, res) => {
+    // Tente o '*' novamente como um apanhador universal de OPTIONS.
+    // O Vercel, em builds de Preview, pode mudar a URL.
+    res.status(200).send();
 });
 
-// Trust proxy for Vercel (required for rate limiting)
+// Trust proxy for Vercel
 app.set('trust proxy', 1);
-// Security middleware
-app.use(helmet());
+
+// 2. Mantenha os middlewares de segurança e terceiros *abaixo* do CORS
+app.use(helmet()); 
 
 // Swagger configuration
 const swaggerOptions = {
