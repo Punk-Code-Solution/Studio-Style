@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://studio-style-henna.vercel.app/api'
+  apiUrl: 'https://punk-code-api.vercel.app/api'
 }; 
