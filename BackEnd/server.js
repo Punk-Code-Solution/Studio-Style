@@ -152,6 +152,22 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Root endpoint info
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Studio Style API is running',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      apiHealth: '/api/health',
+      auth: '/api/auth',
+      docs: '/api-docs'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Handle preflight OPTIONS requests globally
 app.options('*', (req, res) => {
   res.status(200).end();
