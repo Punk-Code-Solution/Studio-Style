@@ -1,7 +1,7 @@
 const { Hair } = require("../Database/models");
 const { Account } = require("../Database/models");
 const { v4: uuidv4 } = require('uuid');
-const bkrypt = require('bcryptjs');
+const bkrypt = require('bcrypt');
 
 class hairRepository{
 

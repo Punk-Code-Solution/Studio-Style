@@ -3,7 +3,7 @@ const EmailRepository = require('../repositories/email.repository');
 const HairRepository = require('../repositories/hair.repository');
 const TypeAccountRepository = require('../repositories/type_account.repository');
 const ResponseHandler = require('../utils/responseHandler');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 
 class AccountController {
   constructor() {

@@ -1,6 +1,6 @@
 const AccountRepository = require('../repositories/account.repository');
 const ResponseHandler = require('../utils/responseHandler');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 class AuthController {
