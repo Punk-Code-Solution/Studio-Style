@@ -58,51 +58,27 @@ app.use(helmet());
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    console.log(`🌐 CORS check for origin: ${origin}`);
-    
-    // Don't block requests with no origin (like mobile apps, Postman, etc.)
-    if (!origin) {
-      console.log('✅ Allowing request with no origin');
-      return callback(null, true);
-    }
-    
-    // Allow all localhost origins for development
-    if (origin.startsWith('http://localhost')) {
-      console.log('✅ Allowing localhost origin');
-      return callback(null, true);
-    }
-    
-    // Allow ALL Vercel domains (production deployments)
-    if (origin.includes('.vercel.app')) {
-      console.log('✅ Allowing Vercel domain:', origin);
-      return callback(null, true);
-    }
-    
-    // Allow specific domains (fallback)
-    const allowedOrigins = [
-      'https://studio-style.vercel.app',
-      'https://studio-style-henna.vercel.app'
-    ];
-    
-    if (allowedOrigins.includes(origin)) {
-      console.log('✅ Allowing specific domain:', origin);
-      return callback(null, true);
-    }
-    
-    console.log('❌ Blocking origin:', origin);
-    callback(null, true); // Changed to allow all for now to debug
+    // Allow all origins for simplicity
+    callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
 
-// Request logging middleware
+app.options('*', cors(corsOptions), (req, res) => {
+  // O middleware 'cors' já adicionou os cabeçalhos.
+  // Apenas garantimos o status 200.
+  res.sendStatus(200);
+});
+
+// Basic logging middleware (minimal)
 app.use((req, res, next) => {
-  console.log(`📊 ${req.method} ${req.path} from ${req.get('origin') || 'no-origin'}`);
-  console.log(`📋 Headers: ${JSON.stringify(req.headers, null, 2)}`);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`${req.method} ${req.path}`);
+  }
   next();
 });
 
@@ -147,50 +123,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'API is running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
-
-// OPTIONS handler removed - covered by global handler above
-
-// Test endpoint for auth
-app.get('/api/auth/test', (req, res) => {
-  console.log('🧪 Test endpoint accessed');
-  res.status(200).json({
-    success: true,
-    message: 'Auth endpoint is working',
-    timestamp: new Date().toISOString(),
-    origin: req.get('origin')
-  });
-});
-
-// Test CORS preflight endpoint
-app.get('/api/cors-test', (req, res) => {
-  console.log('🧪 CORS test endpoint accessed');
-  res.status(200).json({
-    success: true,
-    message: 'CORS test successful',
-    origin: req.get('origin'),
-    userAgent: req.get('user-agent'),
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.post('/api/cors-test', (req, res) => {
-  console.log('🧪 CORS POST test endpoint accessed');
-  res.status(200).json({
-    success: true,
-    message: 'CORS POST test successful',
-    body: req.body,
-    origin: req.get('origin'),
-    timestamp: new Date().toISOString()
-  });
-});
+// Test endpoints removed for production
 
 // Root endpoint info
 app.get('/', (req, res) => {
@@ -208,57 +141,26 @@ app.get('/', (req, res) => {
   });
 });
 
-// Debug endpoint
-app.get('/api/debug/routes', (req, res) => {
-  const routes = [];
-  app._router.stack.forEach(middleware => {
-    if (middleware.route) {
-      routes.push({
-        path: middleware.route.path,
-        methods: Object.keys(middleware.route.methods)
-      });
-    } else if (middleware.name === 'router') {
-      if (middleware.regexp.toString().includes('/api/auth')) {
-        routes.push(`Auth router: ${middleware.regexp.toString()}`);
-      }
-    }
-  });
-  
-  res.json({
-    success: true,
-    message: 'Debug routes',
-    routes: routes,
-    timestamp: new Date().toISOString()
-  });
-});
+// Debug endpoint removed for production
 
 // Handle preflight OPTIONS requests globally with CORS headers
 app.options('*', (req, res) => {
-  console.log(`🚀 OPTIONS request received for: ${req.path}`);
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400'); // 24 hours
-  res.status(200).json({ success: true, message: 'Preflight response' });
+  res.header('Access-Control-Max-Age', '86400');
+  res.status(200).json({ success: true });
 });
 
 // API Routes
-console.log('🔧 Setting up API routes...');
 app.use('/api/auth', authRoutes);
-console.log('✅ Auth routes loaded');
 app.use('/api/account', accountRoutes);
-console.log('✅ Account routes loaded');
 app.use('/api/company', authenticateToken, companyRoutes);
-console.log('✅ Company routes loaded');
 app.use('/api/product', authenticateToken, productRoutes);
-console.log('✅ Product routes loaded');
 app.use('/api/purchase', authenticateToken, purchaseRoutes);
-console.log('✅ Purchase routes loaded');
 app.use('/api/service', authenticateToken, serviceRoutes);
-console.log('✅ Service routes loaded');
 app.use('/api/whatsapp', authenticateToken, whatsappRoutes);
-console.log('✅ WhatsApp routes loaded');
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -276,32 +178,21 @@ app.use(errorHandler);
 // Database connection and server startup
 const startServer = async () => {
    try {
-     // Test database connection (optional for Vercel)
+     // Test database connection (only in development)
      if (process.env.NODE_ENV === 'development') {
         await db.sequelize.authenticate();
-        console.log('✅ Database connection established successfully.');
         await db.sequelize.sync({ alter: true });
-        console.log('✅ Database synchronized.');
-     } else {
-        // In production, try to connect but don't fail if DB is not available
-        try {
-          await db.sequelize.authenticate();
-          console.log('✅ Database connection established in production.');
-        } catch (dbError) {
-          console.warn('⚠️ Database connection failed in production, continuing without DB:', dbError.message);
-        }
+        console.log('Database connected and synchronized');
      }
 
-     // For local development only
+     // Start server locally
      if (process.env.NODE_ENV === 'development') {
        app.listen(PORT, () => {
-         console.log(`🚀 Server is running on port ${PORT}`);
-         console.log(`📚 API Documentation available at http://localhost:${PORT}/api-docs`);
-         console.log(`🏥 Health check available at http://localhost:${PORT}/health`);
+         console.log(`Server running on port ${PORT}`);
        });
      }
    } catch (error) {
-     console.error('❌ Unable to start server:', error);
+     console.error('Unable to start server:', error);
      if (process.env.NODE_ENV === 'development') {
        process.exit(1);
      }
@@ -315,19 +206,3 @@ if (process.env.NODE_ENV === 'development') {
 
 // Export app for Vercel (always export for serverless)
 module.exports = app;
-
-// // Graceful shutdown
-// process.on('SIGTERM', async () => {
-//   console.log('SIGTERM received, shutting down gracefully');
-//   await db.sequelize.close();
-//   process.exit(0);
-// });
-
-// process.on('SIGINT', async () => {
-//   console.log('SIGINT received, shutting down gracefully');
-//   await db.sequelize.close();
-//   process.exit(0);
-// });
-
-// // Start the server
-startServer();
