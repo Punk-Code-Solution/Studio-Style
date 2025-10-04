@@ -13,6 +13,7 @@
   ],
   "env": {
     "NODE_ENV": "production",
-    "JWT_EXPIRES_IN": "5m"
+    "JWT_EXPIRES_IN": "5m",
+    "CORS_ORIGIN": "https://studio-style.vercel.app,https://studio-style-henna.vercel.app,http://localhost:4200,http://localhost:3000"
   }
 }

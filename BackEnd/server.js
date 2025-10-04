@@ -68,14 +68,36 @@ app.use(helmet());
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [
-    'http://localhost:4200',
-    'http://localhost:3000',
-    'http://localhost:3001'
-  ],
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  origin: function (origin, callback) {
+    // Don't block requests with no origin (like mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Allow all localhost origins for development
+    if (origin.startsWith('http://localhost')) {
+      return callback(null, true);
+    }
+    
+    // Allow all Vercel app domains
+    if (origin.includes('vercel.app')) {
+      return callback(null, true);
+    }
+    
+    // Allow specific production domains
+    const allowedOrigins = [
+      'https://studio-style.vercel.app',
+      'https://studio-style-henna.vercel.app'
+    ];
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Block everything else
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
@@ -145,14 +167,14 @@ app.use(errorHandler);
 const startServer = async () => {
    try {
      // Test database connection
-    //  await db.sequelize.authenticate();
-    //  console.log('✅ Database connection established successfully.');
 
     //  // Sync database (in development)
-    //  if (process.env.NODE_ENV === 'development') {
-    //    await db.sequelize.sync({ alter: true });
-    //    console.log('✅ Database synchronized.');
-    //  }
+     if (process.env.NODE_ENV === 'development') {
+        await db.sequelize.authenticate();
+        console.log('✅ Database connection established successfully.');
+        await db.sequelize.sync({ alter: true });
+        console.log('✅ Database synchronized.');
+     }
 
      // Start server
      app.listen(PORT, () => {
