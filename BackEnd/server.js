@@ -68,11 +68,7 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-app.options('*', cors(corsOptions), (req, res) => {
-  // O middleware 'cors' já adicionou os cabeçalhos.
-  // Apenas garantimos o status 200.
-  res.sendStatus(200);
-});
+// OPTIONS handled by CORS middleware above
 
 // Basic logging middleware (minimal)
 app.use((req, res, next) => {
@@ -139,18 +135,6 @@ app.get('/', (req, res) => {
     },
     timestamp: new Date().toISOString()
   });
-});
-
-// Debug endpoint removed for production
-
-// Handle preflight OPTIONS requests globally with CORS headers
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400');
-  res.status(200).json({ success: true });
 });
 
 // API Routes
