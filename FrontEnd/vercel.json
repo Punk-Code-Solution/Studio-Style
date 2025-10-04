@@ -8,7 +8,7 @@
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "https://studio-style.vercel.app,https://studio-style-henna.vercel.app"
+          "value": "*"
         },
         {
           "key": "Access-Control-Allow-Methods",
