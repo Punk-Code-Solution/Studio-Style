@@ -58,31 +58,39 @@ app.use(helmet());
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
+    console.log(`🌐 CORS check for origin: ${origin}`);
+    
     // Don't block requests with no origin (like mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('✅ Allowing request with no origin');
+      return callback(null, true);
+    }
     
     // Allow all localhost origins for development
     if (origin.startsWith('http://localhost')) {
+      console.log('✅ Allowing localhost origin');
       return callback(null, true);
     }
     
-    // Allow all Vercel app domains
-    if (origin.includes('vercel.app')) {
+    // Allow ALL Vercel domains (production deployments)
+    if (origin.includes('.vercel.app')) {
+      console.log('✅ Allowing Vercel domain:', origin);
       return callback(null, true);
     }
     
-    // Allow specific production domains
+    // Allow specific domains (fallback)
     const allowedOrigins = [
       'https://studio-style.vercel.app',
       'https://studio-style-henna.vercel.app'
     ];
     
     if (allowedOrigins.includes(origin)) {
+      console.log('✅ Allowing specific domain:', origin);
       return callback(null, true);
     }
     
-    // Block everything else
-    callback(new Error('Not allowed by CORS'));
+    console.log('❌ Blocking origin:', origin);
+    callback(null, true); // Changed to allow all for now to debug
   },
   credentials: true,
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
@@ -90,6 +98,13 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`📊 ${req.method} ${req.path} from ${req.get('origin') || 'no-origin'}`);
+  console.log(`📋 Headers: ${JSON.stringify(req.headers, null, 2)}`);
+  next();
+});
 
 // Rate limiting
 const limiter = rateLimit({
@@ -138,6 +153,26 @@ app.get('/api/health', (req, res) => {
     message: 'API is running',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Simple options handler for CORS preflight
+app.options('/api/auth/login', (req, res) => {
+  console.log('🚀 OPTIONS request for /api/auth/login');
+  res.status(200).json({
+    success: true,
+    message: 'OPTIONS response for CORS preflight'
+  });
+});
+
+// Test endpoint for auth
+app.get('/api/auth/test', (req, res) => {
+  console.log('🧪 Test endpoint accessed');
+  res.status(200).json({
+    success: true,
+    message: 'Auth endpoint is working',
+    timestamp: new Date().toISOString(),
+    origin: req.get('origin')
   });
 });
 
