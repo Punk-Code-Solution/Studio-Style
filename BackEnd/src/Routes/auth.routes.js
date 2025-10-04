@@ -58,30 +58,23 @@ const changePasswordValidation = [
  *       401:
  *         description: Invalid credentials
  */
-// Debug middleware for all auth routes
-router.use('*', (req, res, next) => {
-  console.log(`🔍 Auth route accessed: ${req.method} /api/auth${req.path}`);
-  console.log('Request body:', req.body);
-  next();
-});
+// Debug logging removed for production
 
 // Handle OPTIONS requests for auth routes
 router.options('/login', (req, res) => {
-  console.log('🚀 OPTIONS /login in auth routes');
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
-  res.status(200).json({ success: true, message: 'Auth OPTIONS response' });
+  res.status(200).json({ success: true });
 });
 
 router.options('/register', (req, res) => {
-  console.log('🚀 OPTIONS /register in auth routes');
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
-  res.status(200).json({ success: true, message: 'Auth OPTIONS response' });
+  res.status(200).json({ success: true });
 });
 
 router.post('/login', loginValidation, authController.login.bind(authController));
