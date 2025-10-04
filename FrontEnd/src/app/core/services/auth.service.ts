@@ -4,7 +4,7 @@ import { delay, tap, map } from 'rxjs/operators';
 import { User, UserService } from './user.service';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
+import { environment } from '../../../environments/environment.prod';
 
 // Tipos centralizados
 export type UserRole = 'medico' | 'enfermeiro' | 'recepcionista' | 'administrativo' | 'admin';
