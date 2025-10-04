@@ -26,6 +26,8 @@ class AuthController {
       // Find user by email
       let userAllDate = await this.accountRepository.findEmail(email);
 
+      console.log("userAllDate: ", userAllDate)
+
       if (!userAllDate) {
         return ResponseHandler.unauthorized(res, 'Invalid credentials');
       }
@@ -33,6 +35,8 @@ class AuthController {
       const user = userAllDate.Account;
       // Check password
       const isValidPassword = bcrypt.compareSync(password, user.dataValues.password);
+
+      console.log("isValidPassword: ", isValidPassword)
       
       if (!isValidPassword) {
         return ResponseHandler.unauthorized(res, 'Invalid credentials');
