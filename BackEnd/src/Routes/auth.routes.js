@@ -58,24 +58,6 @@ const changePasswordValidation = [
  *       401:
  *         description: Invalid credentials
  */
-// Debug logging removed for production
-
-// Handle OPTIONS requests for auth routes
-router.options('/login', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.status(200).json({ success: true });
-});
-
-router.options('/register', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.status(200).json({ success: true });
-});
 
 router.post('/login', loginValidation, authController.login.bind(authController));
 
