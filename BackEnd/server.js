@@ -38,6 +38,12 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
+app.options('*', cors(corsOptions), (req, res) => {
+  // A função cors(corsOptions) já anexou os headers CORS.
+  // Basta retornar o status 200 (OK).
+  res.status(200).send();
+});
+
 // Trust proxy for Vercel (required for rate limiting)
 app.set('trust proxy', 1);
 
