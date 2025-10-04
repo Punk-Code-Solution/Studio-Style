@@ -26,26 +26,32 @@ const whatsappRoutes = require('./src/Routes/whatsapp.routes');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow all origins for simplicity
-    callback(null, true);
-  },
-  credentials: true,
-  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 200
-};
-app.use(cors(corsOptions));
+// const corsOptions = {
+//   origin: function (origin, callback) {
+//     // Allow all origins for simplicity
+//     callback(null, true);
+//   },
+//   credentials: true,
+//   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+//   optionsSuccessStatus: 200
+// };
+// app.use(cors(corsOptions));
 
-app.options('*', cors(corsOptions), (req, res) => {
-  // A função cors(corsOptions) já anexou os headers CORS.
-  // Basta retornar o status 200 (OK).
+// app.options('*', cors(corsOptions), (req, res) => {
+//   // A função cors(corsOptions) já anexou os headers CORS.
+//   // Basta retornar o status 200 (OK).
+//   res.status(200).send();
+// });
+
+app.options('/api/auth/login', cors(corsOptions), (req, res) => {
   res.status(200).send();
 });
 
 // Trust proxy for Vercel (required for rate limiting)
 app.set('trust proxy', 1);
+// Security middleware
+app.use(helmet());
 
 // Swagger configuration
 const swaggerOptions = {
@@ -69,9 +75,6 @@ const swaggerOptions = {
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
-
-// Security middleware
-app.use(helmet());
 
 
 // Basic logging middleware (minimal)
