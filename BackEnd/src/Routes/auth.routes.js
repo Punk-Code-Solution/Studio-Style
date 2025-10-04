@@ -65,6 +65,25 @@ router.use('*', (req, res, next) => {
   next();
 });
 
+// Handle OPTIONS requests for auth routes
+router.options('/login', (req, res) => {
+  console.log('🚀 OPTIONS /login in auth routes');
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(200).json({ success: true, message: 'Auth OPTIONS response' });
+});
+
+router.options('/register', (req, res) => {
+  console.log('🚀 OPTIONS /register in auth routes');
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(200).json({ success: true, message: 'Auth OPTIONS response' });
+});
+
 router.post('/login', loginValidation, authController.login.bind(authController));
 
 /**

@@ -156,14 +156,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Simple options handler for CORS preflight
-app.options('/api/auth/login', (req, res) => {
-  console.log('🚀 OPTIONS request for /api/auth/login');
-  res.status(200).json({
-    success: true,
-    message: 'OPTIONS response for CORS preflight'
-  });
-});
+// OPTIONS handler removed - covered by global handler above
 
 // Test endpoint for auth
 app.get('/api/auth/test', (req, res) => {
@@ -173,6 +166,29 @@ app.get('/api/auth/test', (req, res) => {
     message: 'Auth endpoint is working',
     timestamp: new Date().toISOString(),
     origin: req.get('origin')
+  });
+});
+
+// Test CORS preflight endpoint
+app.get('/api/cors-test', (req, res) => {
+  console.log('🧪 CORS test endpoint accessed');
+  res.status(200).json({
+    success: true,
+    message: 'CORS test successful',
+    origin: req.get('origin'),
+    userAgent: req.get('user-agent'),
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.post('/api/cors-test', (req, res) => {
+  console.log('🧪 CORS POST test endpoint accessed');
+  res.status(200).json({
+    success: true,
+    message: 'CORS POST test successful',
+    body: req.body,
+    origin: req.get('origin'),
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -216,9 +232,15 @@ app.get('/api/debug/routes', (req, res) => {
   });
 });
 
-// Handle preflight OPTIONS requests globally
+// Handle preflight OPTIONS requests globally with CORS headers
 app.options('*', (req, res) => {
-  res.status(200).end();
+  console.log(`🚀 OPTIONS request received for: ${req.path}`);
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400'); // 24 hours
+  res.status(200).json({ success: true, message: 'Preflight response' });
 });
 
 // API Routes

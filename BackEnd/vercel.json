@@ -23,16 +23,5 @@
       "src": "/api-docs/(.*)",
       "dest": "server.js"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production",
-    "JWT_EXPIRES_IN": "24h",
-    "CORS_ORIGIN": "https://studio-style.vercel.app,https://studio-style-henna.vercel.app,http://localhost:4200,http://localhost:3000",
-    "JWT_SECRET": "your-super-secret-jwt-key-change-this-in-production",
-    "DB_HOST": "localhost",
-    "DB_PORT": "5432",
-    "DB_NAME": "hmsdb",
-    "DB_USER": "postgres",
-    "DB_PASSWORD": "your-db-password"
-  }
+  ]
 }
