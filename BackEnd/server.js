@@ -36,27 +36,16 @@ const swaggerOptions = {
     info: {
       title: 'Studio & Style API',
       version: '1.0.0',
-      description: 'Studio & Style API Documentation',
-      contact: {
-        name: 'API Support',
-        email: 'punkcodesolution@gmail.com'
-      }
+      description: 'Studio & Style API Documentation'
     },
     servers: [
       {
-        url: `https://studio-style.vercel.app/api`,
-        description: 'Development server'
+        url: process.env.NODE_ENV === 'production' 
+          ? 'https://studio-style-henna.vercel.app/api'
+          : 'http://localhost:3001/api',
+        description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server'
       }
-    ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT'
-        }
-      }
-    }
+    ]
   },
   apis: ['./src/Routes/*.js']
 };
@@ -168,19 +157,51 @@ app.get('/', (req, res) => {
   });
 });
 
+// Debug endpoint
+app.get('/api/debug/routes', (req, res) => {
+  const routes = [];
+  app._router.stack.forEach(middleware => {
+    if (middleware.route) {
+      routes.push({
+        path: middleware.route.path,
+        methods: Object.keys(middleware.route.methods)
+      });
+    } else if (middleware.name === 'router') {
+      if (middleware.regexp.toString().includes('/api/auth')) {
+        routes.push(`Auth router: ${middleware.regexp.toString()}`);
+      }
+    }
+  });
+  
+  res.json({
+    success: true,
+    message: 'Debug routes',
+    routes: routes,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Handle preflight OPTIONS requests globally
 app.options('*', (req, res) => {
   res.status(200).end();
 });
 
 // API Routes
+console.log('🔧 Setting up API routes...');
 app.use('/api/auth', authRoutes);
+console.log('✅ Auth routes loaded');
 app.use('/api/account', accountRoutes);
+console.log('✅ Account routes loaded');
 app.use('/api/company', authenticateToken, companyRoutes);
+console.log('✅ Company routes loaded');
 app.use('/api/product', authenticateToken, productRoutes);
+console.log('✅ Product routes loaded');
 app.use('/api/purchase', authenticateToken, purchaseRoutes);
+console.log('✅ Purchase routes loaded');
 app.use('/api/service', authenticateToken, serviceRoutes);
+console.log('✅ Service routes loaded');
 app.use('/api/whatsapp', authenticateToken, whatsappRoutes);
+console.log('✅ WhatsApp routes loaded');
 
 // 404 handler
 app.use('*', (req, res) => {
