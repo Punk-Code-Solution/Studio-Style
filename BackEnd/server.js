@@ -152,6 +152,22 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Root endpoint info
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Studio Style API is running',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      apiHealth: '/api/health',
+      auth: '/api/auth',
+      docs: '/api-docs'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Handle preflight OPTIONS requests globally
 app.options('*', (req, res) => {
   res.status(200).end();
@@ -182,27 +198,45 @@ app.use(errorHandler);
 // Database connection and server startup
 const startServer = async () => {
    try {
-     // Test database connection
-
-    //  // Sync database (in development)
+     // Test database connection (optional for Vercel)
      if (process.env.NODE_ENV === 'development') {
         await db.sequelize.authenticate();
         console.log('✅ Database connection established successfully.');
         await db.sequelize.sync({ alter: true });
         console.log('✅ Database synchronized.');
+     } else {
+        // In production, try to connect but don't fail if DB is not available
+        try {
+          await db.sequelize.authenticate();
+          console.log('✅ Database connection established in production.');
+        } catch (dbError) {
+          console.warn('⚠️ Database connection failed in production, continuing without DB:', dbError.message);
+        }
      }
 
-     // Start server
-     app.listen(PORT, () => {
-       console.log(`🚀 Server is running on port ${PORT}`);
-       console.log(`📚 API Documentation available at http://localhost:${PORT}/api-docs`);
-       console.log(`🏥 Health check available at http://localhost:${PORT}/health`);
-     });
+     // For local development only
+     if (process.env.NODE_ENV === 'development') {
+       app.listen(PORT, () => {
+         console.log(`🚀 Server is running on port ${PORT}`);
+         console.log(`📚 API Documentation available at http://localhost:${PORT}/api-docs`);
+         console.log(`🏥 Health check available at http://localhost:${PORT}/health`);
+       });
+     }
    } catch (error) {
      console.error('❌ Unable to start server:', error);
-     process.exit(1);
+     if (process.env.NODE_ENV === 'development') {
+       process.exit(1);
+     }
    }
  };
+
+// Initialize server
+if (process.env.NODE_ENV === 'development') {
+  startServer();
+}
+
+// Export app for Vercel (always export for serverless)
+module.exports = app;
 
 // // Graceful shutdown
 // process.on('SIGTERM', async () => {
