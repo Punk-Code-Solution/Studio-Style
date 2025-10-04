@@ -58,6 +58,13 @@ const changePasswordValidation = [
  *       401:
  *         description: Invalid credentials
  */
+// Debug middleware for all auth routes
+router.use('*', (req, res, next) => {
+  console.log(`🔍 Auth route accessed: ${req.method} /api/auth${req.path}`);
+  console.log('Request body:', req.body);
+  next();
+});
+
 router.post('/login', loginValidation, authController.login.bind(authController));
 
 /**
