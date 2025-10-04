@@ -120,11 +120,11 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Logging middleware
-// if (process.env.NODE_ENV === 'development') {
-//   app.use(morgan('dev'));
-// } else {
-//   app.use(morgan('combined'));
-// }
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+} else {
+  app.use(morgan('combined'));
+}
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -134,14 +134,28 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Health check endpoint
-// app.get('/health', (req, res) => {
-//   res.status(200).json({
-//     success: true,
-//     message: 'Server is running',
-//     timestamp: new Date().toISOString(),
-//     environment: process.env.NODE_ENV || 'development'
-//   });
-// });
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Handle preflight OPTIONS requests globally
+app.options('*', (req, res) => {
+  res.status(200).end();
+});
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -153,12 +167,14 @@ app.use('/api/service', authenticateToken, serviceRoutes);
 app.use('/api/whatsapp', authenticateToken, whatsappRoutes);
 
 // 404 handler
-// app.use('*', (req, res) => {
-//   res.status(404).json({
-//     success: false,
-//     message: 'Route not found'
-//   });
-// });
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
+    path: req.originalUrl,
+    method: req.method
+  });
+});
 
 // Global error handler (must be last)
 app.use(errorHandler);
