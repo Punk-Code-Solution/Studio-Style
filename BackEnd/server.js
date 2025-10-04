@@ -68,6 +68,12 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
+app.options('*', cors(corsOptions), (req, res) => {
+  // O middleware 'cors' já adicionou os cabeçalhos.
+  // Apenas garantimos o status 200.
+  res.sendStatus(200);
+});
+
 // Basic logging middleware (minimal)
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'development') {
