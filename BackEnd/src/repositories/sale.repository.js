@@ -1,5 +1,5 @@
 const { Sale, Account } = require("../Database/models");
-const bkrypt = require('bcryptjs');
+const bkrypt = require('bcrypt');
 
 class SaleRepository{
 
