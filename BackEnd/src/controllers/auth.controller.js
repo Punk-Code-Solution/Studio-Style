@@ -15,9 +15,6 @@ class AuthController {
     try {
       const { email, password } = req.body;
 
-      console.log("Email:", email)
-      console.log("Password:", password)
-
       // Validate input
       if (!email || !password) {
         return ResponseHandler.validationError(res, 'Email and password are required');
@@ -26,8 +23,6 @@ class AuthController {
       // Find user by email
       let userAllDate = await this.accountRepository.findEmail(email);
 
-      console.log("userAllDate: ", userAllDate)
-
       if (!userAllDate) {
         return ResponseHandler.unauthorized(res, 'Invalid credentials');
       }
@@ -35,8 +30,6 @@ class AuthController {
       const user = userAllDate.Account;
       // Check password
       const isValidPassword = bcrypt.compareSync(password, user.dataValues.password);
-
-      console.log("isValidPassword: ", isValidPassword)
       
       if (!isValidPassword) {
         return ResponseHandler.unauthorized(res, 'Invalid credentials');
@@ -61,7 +54,6 @@ class AuthController {
         token
       });
     } catch (error) {
-      console.log(error);
       return ResponseHandler.error(res, 500, 'Login failed', error);
     }
   }
@@ -72,9 +64,6 @@ class AuthController {
   async register(req, res) {
     try {
       const { name, email, password, cpf, role } = req.body;
-
-      console.log("Email:", email)
-      console.log("Password:", password)
 
       // Validate input
       if (!name || !email || !password || !cpf) {
