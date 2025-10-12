@@ -64,15 +64,21 @@ module.exports = class accountRepository{
   async findEmail( eMail ){
 
     const result = await Email.findOne({
-
       where: {
-        email : eMail
+      email: eMail
       },
-      include: [{ 
+      include: [
+      { 
         model: Account,
-        attributes: [ 'password' ]
-      }]
-
+        attributes: ['password'],
+        include: [
+        {
+          model: TypeAccount,
+          attributes: ['type']
+        }
+        ]
+      }
+      ]
     });
 
     if( result ){

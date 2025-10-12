@@ -167,22 +167,22 @@ import { takeUntil } from 'rxjs/operators';
             </div>
             <div class="message-actions">
               <div class="message-status" *ngIf="isRecipient(message)">
-                <button 
-                  class="mark-read-btn" 
+                <button
+                  class="mark-read-btn"
                   *ngIf="!isMessageRead(message)"
                   (click)="markAsRead(message.id.toString())"
                 >
                   <i class="fas fa-check"></i>
                   Marcar como lida
                 </button>
-                <button 
+                <button
                   class="reply-btn"
                   (click)="replyToMessage(message)"
                 >
                   <i class="fas fa-reply"></i>
                   Responder
                 </button>
-                <button 
+                <button
                   class="reply-all-btn"
                   (click)="replyToAll(message)"
                 >
@@ -190,8 +190,8 @@ import { takeUntil } from 'rxjs/operators';
                   Responder a todos
                 </button>
               </div>
-              <button 
-                class="delete-btn" 
+              <button
+                class="delete-btn"
                 *ngIf="canDeleteMessage(message)"
                 (click)="deleteMessage(message.id.toString())"
               >
@@ -205,15 +205,15 @@ import { takeUntil } from 'rxjs/operators';
 
       <!-- Paginação -->
       <div class="pagination" *ngIf="totalPages > 1">
-        <button 
-          class="page-btn" 
+        <button
+          class="page-btn"
           [disabled]="currentPage === 1"
           (click)="changePage(currentPage - 1)"
         >
           <i class="fas fa-chevron-left"></i>
         </button>
         <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
-        <button 
+        <button
           class="page-btn"
           [disabled]="currentPage === totalPages"
           (click)="changePage(currentPage + 1)"
@@ -670,10 +670,10 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
   organizeRecipientGroups() {
     const groups = [
-      { label: 'Médicos', users: this.users.filter(u => u.perfil === 'medico') },
-      { label: 'Enfermeiros', users: this.users.filter(u => u.perfil === 'enfermeiro') },
-      { label: 'Recepcionistas', users: this.users.filter(u => u.perfil === 'recepcionista') },
-      { label: 'Administradores', users: this.users.filter(u => u.perfil === 'admin') }
+      { label: 'Médicos', users: this.users.filter(u => u.TypeAccount.type === 'medico') },
+      { label: 'Enfermeiros', users: this.users.filter(u => u.TypeAccount.type === 'enfermeiro') },
+      { label: 'Recepcionistas', users: this.users.filter(u => u.TypeAccount.type === 'recepcionista') },
+      { label: 'Administradores', users: this.users.filter(u => u.TypeAccount.type === 'admin') }
     ];
 
     this.recipientGroups = groups.filter(group => group.users.length > 0);
@@ -694,7 +694,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
   }
 
   updateUnreadCount() {
-    this.unreadCount = this.messages.filter(m => 
+    this.unreadCount = this.messages.filter(m =>
       this.isRecipient(m) && !this.isMessageRead(m)
     ).length;
   }
@@ -744,7 +744,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
       criadoPor: this.authService.currentUser!,
       destinatarios: [] as MessageRecipient[]
       };
-      
+
     this.messageService.createMessage(message)
       .pipe(takeUntil(this.destroy$))
       .subscribe({

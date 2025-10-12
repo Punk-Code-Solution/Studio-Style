@@ -4,7 +4,7 @@ import { delay, tap, map } from 'rxjs/operators';
 import { User, UserService } from './user.service';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../environments/environment.prod';
+import { environment } from '../../../environments/environment';
 
 // Tipos centralizados
 export type UserRole = 'medico' | 'enfermeiro' | 'recepcionista' | 'administrativo' | 'admin';
@@ -96,7 +96,7 @@ export class AuthService {
   }
 
   // Getters públicos
-  get currentUser(): User | null {
+  get currentUser(){
     return this.authState.value.user;
   }
 
@@ -116,6 +116,8 @@ export class AuthService {
         const payload = res?.data ?? res;
         const token = payload?.token as string;
         const user = payload?.user as User;
+
+        console.log('Resposta de login recebida:', payload);
 
         if (!token || !user) {
           throw new Error('Resposta de login inválida');
@@ -177,11 +179,13 @@ export class AuthService {
 
   // Verificações de role
   hasRole(role: UserRole): boolean {
-    return this.currentUser?.perfil === role;
+    return this.currentUser?.TypeAccount.type === role;
   }
 
   hasAnyRole(roles: UserRole[]): boolean {
-    return this.currentUser ? roles.includes(this.currentUser.perfil) : false;
+    return this.currentUser
+      ? roles.includes(this.currentUser.TypeAccount.type)
+      : false;
   }
 
   // Métodos de estado
@@ -204,14 +208,14 @@ export class AuthService {
     const user = this.currentUser;
     if (!user) return false;
 
-    const cacheKey = `${type}:${key}:${user.perfil}`;
+    const cacheKey = `${type}:${key}:${user.TypeAccount.type}`;
     if (this.permissionCache.has(cacheKey)) {
       return this.permissionCache.get(cacheKey)!;
     }
 
     const normalizedKey = key.startsWith('/') ? key.substring(1) : key;
     const allowedRoles = this.permissions[type][normalizedKey];
-    const result = allowedRoles?.includes(user.perfil) ?? false;
+    const result = allowedRoles?.includes(user.TypeAccount.type) ?? false;
 
     this.permissionCache.set(cacheKey, result);
     return result;
@@ -228,6 +232,10 @@ export class AuthService {
   }
 
   private setCurrentUser(user: User): void {
+    // Garante que o campo 'perfil' seja preenchido com o tipo de conta
+    if (user['TypeAccount']?.type) {
+      user.TypeAccount.type = user['TypeAccount'].type;
+    }
     if (this.isBrowser) {
       localStorage.setItem(this.userKey, JSON.stringify(user));
     }

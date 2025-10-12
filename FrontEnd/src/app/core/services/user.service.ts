@@ -3,11 +3,13 @@ import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { delay, tap } from 'rxjs/operators';
 
 export interface User {
+  TypeAccount: {
+    type: 'medico' | 'enfermeiro' | 'recepcionista' | 'administrativo' | 'admin';
+  },
   id: number;
   nome: string;
   email: string;
   telefone: string;
-  perfil: 'medico' | 'enfermeiro' | 'recepcionista' | 'administrativo' | 'admin';
   ativo: boolean;
   crm?: string;
   senha: string;
@@ -22,54 +24,9 @@ interface ValidationResult {
   providedIn: 'root'
 })
 export class UserService {
-  private users: User[] = [
-    {
-      id: 1,
-      nome: 'Admin',
-      email: 'admin@experiencemed.com',
-      telefone: '(11) 97777-7777',
-      perfil: 'admin',
-      ativo: true,
-      senha: 'admin123'
-    },
-    {
-      id: 2,
-      nome: 'Dr. João Silva',
-      email: 'joao.silva@experiencemed.com',
-      telefone: '(11) 99999-9999',
-      perfil: 'medico',
-      ativo: true,
-      crm: '12345-SP',
-      senha: 'medico123'
-    },
-    {
-      id: 3,
-      nome: 'Ana Costa',
-      email: 'ana.costa@experiencemed.com',
-      telefone: '(11) 98888-8888',
-      perfil: 'enfermeiro',
-      ativo: true,
-      senha: 'enfermeiro123'
-    },
-    {
-      id: 4,
-      nome: 'Maria Santos',
-      email: 'maria.santos@experiencemed.com',
-      telefone: '(11) 98888-8888',
-      perfil: 'recepcionista',
-      ativo: true,
-      senha: 'recepcionista123'
-    },
-    {
-      id: 5,
-      nome: 'Carlos Oliveira',
-      email: 'carlos.oliveira@experiencemed.com',
-      telefone: '(11) 96666-6666',
-      perfil: 'administrativo',
-      ativo: true,
-      senha: 'admin123'
-    }
-  ];
+
+  private users: User[] = [];
+
 
   private usersSubject = new BehaviorSubject<User[]>(this.users);
   users$ = this.usersSubject.asObservable();
@@ -149,11 +106,11 @@ export class UserService {
       errors.push('Telefone inválido');
     }
 
-    if (!user.perfil) {
+    if (!user.TypeAccount || !user.TypeAccount.type) {
       errors.push('Perfil é obrigatório');
     }
 
-    if (user.perfil === 'medico' && !user.crm) {
+    if (!user.TypeAccount || !user.TypeAccount.type || user.TypeAccount.type === 'medico' && !user.crm) {
       errors.push('CRM é obrigatório para médicos');
     }
 
@@ -174,7 +131,7 @@ export class UserService {
   }
 
   private isEmailUnique(email: string, excludeId?: number): boolean {
-    return !this.users.some(user => 
+    return !this.users.some(user =>
       user.email === email && (!excludeId || user.id !== excludeId)
     );
   }
@@ -219,8 +176,8 @@ export class UserService {
     return of(updatedUser).pipe(delay(500));
   }
 
-  getUsersByRole(role: User['perfil']): Observable<User[]> {
-    const filteredUsers = this.users.filter(u => u.perfil === role);
+  getUsersByRole(role: User['TypeAccount']): Observable<User[]> {
+    const filteredUsers = this.users.filter(u => u.TypeAccount.type === role.type);
     return of(filteredUsers).pipe(delay(500));
   }
 
@@ -238,4 +195,4 @@ export class UserService {
     );
     return of(filteredUsers).pipe(delay(500));
   }
-} 
+}

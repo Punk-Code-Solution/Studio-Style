@@ -25,7 +25,7 @@ export class SidebarComponent implements OnInit {
   userAvatar = 'assets/images/avatar.png';
 
   get userRole(): string {
-    return this.currentUser?.perfil ? ROLE_LABELS[this.currentUser.perfil] : '';
+    return this.currentUser?.TypeAccount.type ? ROLE_LABELS[this.currentUser.TypeAccount.type] : '';
   }
 
   constructor(
