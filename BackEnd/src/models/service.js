@@ -10,20 +10,14 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-
-      this.belongsTo( models.Account, { foreignKey: "client_id_service", constraints: false } ),
-      this.belongsTo( models.Account, { foreignKey: "provider_id_service", constraints: false } ),
-      this.hasMany( models.Action, { foreignKey: "client_id_service", constraints: false } ),
-      this.hasMany( models.Payment, { foreignKey: "payment_id_action", constraints: false } );
+      this.belongsTo( models.Schedules, { foreignKey: "schedules_id", constraints: false } );
+      this.belongsTo( models.Schedules, { through: 'Schedule_Service' } );
 
     }
   }
   Service.init({
     service: DataTypes.STRING,
-    date_service: DataTypes.DATE,
-    additionalComments: DataTypes.STRING,
-    client_id_service: DataTypes.UUID,
-    provider_id_service: DataTypes.UUID
+    additionalComments: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'Service',

@@ -10,9 +10,12 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      
-      this.belongsTo( models.Service, { foreignKey: { name: "service_id_payment" }, constraints: false } )
-
+      // Payment pertence a Schedules
+      this.belongsTo(models.Schedules, { 
+        foreignKey: "service_id_payment",
+        as: 'schedule',
+        constraints: false 
+      });
     }
   }
   Payment.init({

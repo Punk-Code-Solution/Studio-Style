@@ -1,16 +1,16 @@
 const { Router } = require("express");
 const rota = Router()
 const { authorizeRoles } = require('../middlewares/auth');
-const ServiceController = require("../controllers/service.controller");
-const servicecontroller = new ServiceController()
+const SchedulesController = require("../controllers/schedules.controller");
+const schedulesController = new SchedulesController()
 
 /**
  * @swagger
- * /service:
+ * /schedules:
  *   post:
- *     summary: Cria um novo serviço
+ *     summary: Cria um novo schedules
  *     tags:
- *       - Service
+ *       - Schedules
  *     requestBody:
  *       required: true
  *       content:
@@ -19,19 +19,19 @@ const servicecontroller = new ServiceController()
  *             type: object
  *     responses:
  *       201:
- *         description: Serviço criado com sucesso
+ *         description: Schedules criado com sucesso
  *       400:
  *         description: Erro na requisição
  */
-rota.post("/", async (request, response) => { await servicecontroller.addService( request, response ); });
+rota.post("/", async (request, response) => { await schedulesController.createSchedules( request, response ); });
 
 /**
  * @swagger
- * /service:
+ * /schedules:
  *   put:
  *     summary: Atualiza um serviço existente
  *     tags:
- *       - Service
+ *       - Schedules
  *     requestBody:
  *       required: true
  *       content:
@@ -44,28 +44,28 @@ rota.post("/", async (request, response) => { await servicecontroller.addService
  *       400:
  *         description: Erro na requisição
  */
-rota.put("/",  async (request, response) => {  await servicecontroller.updateService( request, response ); });
+rota.put("/",  async (request, response) => {  await schedulesController.updateSchedule( request, response ); });
 
 /**
  * @swagger
- * /service:
+ * /schedules:
  *   get:
  *     summary: Retorna todos os serviços
  *     tags:
- *       - Service
+ *       - Schedules
  *     responses:
  *       200:
  *         description: Lista de serviços
  */
-rota.get("/", async (request, response) => { await servicecontroller.findAll( request, response ) });
+rota.get("/", async (request, response) => { await schedulesController.getAllSchedules( request, response ) });
 
 /**
  * @swagger
- * /service/one:
+ * /schedules/id:
  *   get:
  *     summary: Retorna um serviço específico
  *     tags:
- *       - Service
+ *       - Schedules
  *     parameters:
  *       - in: query
  *         name: id
@@ -79,15 +79,15 @@ rota.get("/", async (request, response) => { await servicecontroller.findAll( re
  *       404:
  *         description: Serviço não encontrado
  */
-rota.get("/service/one", async (request, response) => { await servicecontroller.findService( request, response ); });
+rota.get("/schedules/id", async (request, response) => { await schedulesController.getSchedulesById( request, response ); });
 
 /**
  * @swagger
- * /service:
+ * /schedules:
  *   delete:
  *     summary: Deleta um serviço
  *     tags:
- *       - Service
+ *       - Schedules
  *     parameters:
  *       - in: query
  *         name: id
@@ -101,19 +101,6 @@ rota.get("/service/one", async (request, response) => { await servicecontroller.
  *       404:
  *         description: Serviço não encontrado
  */
-rota.delete("/service", async (request, response) => { await servicecontroller.deleteService( request, response ); });
-
-/**
- * @swagger
- * /service/status:
- *   get:
- *     summary: Retorna status dos serviços
- *     tags:
- *       - Service
- *     responses:
- *       200:
- *         description: Status dos serviços
- */
-rota.get("/service/status", async (request, response) =>{ await servicecontroller.findServiceStatus( request, response ); })
+rota.delete("/schedules", async (request, response) => { await schedulesController.deleteScheduleById( request, response ); });
 
 module.exports = rota

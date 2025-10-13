@@ -268,11 +268,16 @@ class AccountController {
    */
   async createTypeAccount(req, res) {
     try {
+      console.log('Controller: createTypeAccount called with body:', req.body);
       const typeAccount = req.body;
+      
+      console.log('Controller: Calling repository addTypeAccount...');
       const result = await this.typeAccountRepository.addTypeAccount(typeAccount);
+      console.log('Controller: Repository call completed, result:', result);
       
       return ResponseHandler.success(res, 201, 'Type account created successfully', result);
     } catch (error) {
+      console.error('Controller: Error in createTypeAccount:', error);
       return ResponseHandler.error(res, 500, 'Failed to create type account', error);
     }
   }
@@ -282,6 +287,9 @@ class AccountController {
    */
   async getAllTypeAccounts(req, res) {
     try {
+
+      console.log('Fetching all type accounts...');
+
       const result = await this.typeAccountRepository.findAll();
       return ResponseHandler.success(res, 200, 'Type accounts retrieved successfully', result);
     } catch (error) {

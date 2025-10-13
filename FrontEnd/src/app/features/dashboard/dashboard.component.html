@@ -13,7 +13,7 @@
   <div *ngIf="!isLoading && !error">
     <div class="welcome-section">
       <h1>Bem-vindo, {{ currentUser?.nome }}</h1>
-      <p class="role">{{ getRoleLabel(currentUser?.perfil) }}</p>
+      <p class="role">{{ getRoleLabel(currentUser?.TypeAccount?.type)}}</p>
     </div>
 
     <div class="stats-grid">

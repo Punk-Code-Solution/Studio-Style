@@ -2,32 +2,30 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Payments', {
+    await queryInterface.createTable('Schedule_Services', {
       id: {
         allowNull: false,
+        autoIncrement: true,
         primaryKey: true,
+        type: Sequelize.INTEGER
+      },
+      schedules_id: {
         type: Sequelize.UUID,
-        defaultValue: Sequelize.UUIDV4
+        references: {
+          model: 'Schedules',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
       },
-      valueTotal: {
-        type: Sequelize.FLOAT
-      },
-      discountValue: {
-        type: Sequelize.FLOAT
-      },
-      tipePayment: {
-        type: Sequelize.STRING
-      },
-      date: {
-        type: Sequelize.DATE
-      },
-      service_id_payment: {
+      service_id: {
         type: Sequelize.UUID,
-        defaultValue: Sequelize.UUIDV4,
         references: {
           model: 'Services',
           key: 'id'
-        }
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
       },
       createdAt: {
         allowNull: false,
@@ -40,6 +38,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Payments');
+    await queryInterface.dropTable('Schedule_Services');
   }
 };

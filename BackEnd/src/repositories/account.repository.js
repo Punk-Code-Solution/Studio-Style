@@ -49,7 +49,6 @@ module.exports = class accountRepository{
         { model: Company },
         { model: Email },
         { model: Hair },
-        { model: Service },
         { model: Schedules },
         { model: Sale },
         { model: Purchase },

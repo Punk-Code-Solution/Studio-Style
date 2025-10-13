@@ -1,11 +1,11 @@
-const { Service } = require("../Database/models");
+const { Schedules } = require("../Database/models");
 const { v4: uuidv4 } = require('uuid');
 
-class serviceRepository{
+class schedulesRepository{
 
   async findAll(limit = 10, base = 0){
 
-    return await Service.findAll({
+    return await Schedules.findAll({
 
       limit: limit,
       offset: base
@@ -14,30 +14,36 @@ class serviceRepository{
     
   }
 
-  async findService(id) {
-    return await Service.findOne({ 
+  async findSchedules(id) {
+    return await Schedules.findOne({ 
       where:{
         id : id
       }
      });
   }
     
-  async addService( services ) {
+  async addSchedules( schedules ) {
 
     const { 
 
-      service,
-      additionalComments,
-      price
+        name_client,
+        date_and_houres,
+        active,
+        finished,
+        provider_id_schedules,
+        client_id_schedules,
 
-    } = services
+    } = schedules
 
-    const result = await Service.create({
+    const result = await Schedules.create({
 
         id: uuidv4(),
-        service,
-        additionalComments,
-        price
+        name_client,
+        date_and_houres,
+        active,
+        finished,
+        provider_id_schedules,
+        client_id_schedules
 
       });
 
@@ -48,9 +54,9 @@ class serviceRepository{
 
   }
     
-  async updateService(service) {
+  async updateSchedules(service) {
 
-    await Service.update(
+    await Schedules.update(
       {
 
         name_client: service.name_client ? service.name_client : Service.name_client,
@@ -71,16 +77,16 @@ class serviceRepository{
 
     );
   
-    return await Service.findOne({
+    return await Schedules.findOne({
       where:{
         id : id
         }
     });
   }
     
-  async deleteService(id) {
+  async deleteSchedules(id) {
 
-    await Service.destroy({
+    await Schedules.destroy({
       where: {
         id: id,
       },
@@ -89,4 +95,4 @@ class serviceRepository{
   }
 }
 
-module.exports = serviceRepository
+module.exports = schedulesRepository
