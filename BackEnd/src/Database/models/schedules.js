@@ -26,7 +26,8 @@ module.exports = (sequelize, DataTypes) => {
       this.belongsToMany(models.Service, {
         through: 'Schedule_Service',
         foreignKey: 'schedules_id',
-        otherKey: 'service_id'
+        otherKey: 'service_id',
+        as: 'Services'
       });
       
       // Relação com Payment (Schedules tem muitos Payments)

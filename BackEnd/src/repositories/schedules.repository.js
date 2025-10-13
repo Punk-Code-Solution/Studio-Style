@@ -1,17 +1,30 @@
-const { Schedules } = require("../Database/models");
+const { Schedules, Service } = require("../Database/models");
 const { v4: uuidv4 } = require('uuid');
 
 class schedulesRepository{
 
-  async findAll(limit = 10, base = 0){
+  async findAll(limit = 10, offset = 0) {
+    try {
+      const schedules = await Schedules.findAll({
+        limit,
+        offset,
+        include: [
+          {
+            model: Service,
+            as: 'Services',
+            through: {
+              attributes: [] // Não incluir atributos da tabela de junção
+            }
+          }
+        ],
+        order: [['date_and_houres', 'ASC']]
+      });
 
-    return await Schedules.findAll({
-
-      limit: limit,
-      offset: base
-
-    });
-    
+      return schedules;
+    } catch (error) {
+      console.error('Erro ao buscar agendamentos:', error);
+      throw error;
+    }
   }
 
   async findSchedules(id) {

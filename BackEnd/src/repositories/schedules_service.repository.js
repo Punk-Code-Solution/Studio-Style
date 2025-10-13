@@ -7,8 +7,12 @@ class schedules_serviceRepository{
 
     return await Schedule_Service.findAll({
 
-      limit: limit,
-      offset: base
+        limit: limit,
+        offset: base,
+        include: [
+            { model: Service },
+            { model: Schedules }
+        ]
 
     });
     
@@ -22,30 +26,26 @@ class schedules_serviceRepository{
      });
   }
     
-  async addSchedule_Service( Schedule_Services ) {
+  async addSchedule_Service(schedules_id, services) {
+    if (!Array.isArray(services) || services.length === 0) {
+      return false;
+    }
 
-    const { 
+    // Criar array de objetos para bulkCreate
+    const scheduleServicesData = services.map(service => ({
+      id: uuidv4(),
+      schedules_id,
+      service_id: service
+    }));
 
-      Schedule_Service,
-      additionalComments,
-      price
-
-    } = Schedule_Services
-
-    const result = await Schedule_Service.create({
-
-        id: uuidv4(),
-        Schedule_Service,
-        additionalComments,
-        price
-
-      });
-
-      if(result){
-        return result
-      }
-      return false
-
+    try {
+      // Adiciona todos os relacionamentos de uma só vez
+      const result = await Schedule_Service.bulkCreate(scheduleServicesData, { returning: true });
+      return result;
+    } catch (error) {
+      console.error('Erro ao adicionar Schedule_Service:', error);
+      return false;
+    }
   }
     
   async updateSchedule_Service(Schedule_Service) {

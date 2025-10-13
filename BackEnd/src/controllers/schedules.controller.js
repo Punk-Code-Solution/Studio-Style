@@ -8,6 +8,7 @@ class SchedulesController {
     constructor() {
         this.schedulesRepository = new SchedulesRepository();
         this.servicesRepository = new ServiceRepository();
+        this.schedules_serviceRepository = new Schedules_Service();
     }
 
     /**
@@ -21,16 +22,22 @@ class SchedulesController {
         const schedules = req.body;
         const result = await this.schedulesRepository.addSchedules(schedules);
 
-        console.log("resulte: ", result.dataValues.id)
+        if(!result){
+          return ResponseHandler.error(res, 400, 'Failed to create schedule');
+        }
 
+        const result_services = await this.schedules_serviceRepository.addSchedule_Service(result.dataValues.id, schedules.services);
 
-        
-        return ResponseHandler.success(res, 201, 'Service created successfully', result);
+        if(!result_services){
+          return ResponseHandler.error(res, 400, 'Failed to create service')
+        }
+
+        return ResponseHandler.success(res, 201, 'Schedules created successfully', result);
       } else {
-        return ResponseHandler.error(res, 400, 'Failed to create service');
+        return ResponseHandler.error(res, 400, 'Failed to create schedules');
       }
     } catch (error) {
-      return ResponseHandler.error(res, 500, 'Failed to create service', error);
+      return ResponseHandler.error(res, 500, 'Failed to create schedules', error);
     }
   }
 
