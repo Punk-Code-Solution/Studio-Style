@@ -3,15 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { User } from '../../core/services/user.service';
-
-interface Appointment {
-  id: string;
-  patientName: string;
-  date: string;
-  time: string;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
-  doctor: string;
-}
+import { SchedulesService, Schedule } from '../../core/services/schedules.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -24,14 +16,15 @@ interface Appointment {
   ]
 })
 export class DashboardComponent implements OnInit {
-  appointments: Appointment[] = [];
+  appointments: Schedule[] = [];
   currentUser: User | null = null;
   isLoading = true;
   error: string | null = null;
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private schedulesService: SchedulesService
   ) {
     this.currentUser = this.authService.currentUser;
   }
@@ -58,62 +51,82 @@ export class DashboardComponent implements OnInit {
   }
 
   private async loadAppointments() {
-    const today = new Date().toISOString().split('T')[0];
-    // TODO: Substituir por chamada real à API
-    this.appointments = [
-      {
-        id: '1',
-        patientName: 'João Silva',
-        date: today,
-        time: '14:00',
-        status: 'scheduled',
-        doctor: 'Elena'
-      },
-      {
-        id: '2',
-        patientName: 'Maria Oliveira',
-        date: today,
-        time: '15:30',
-        status: 'confirmed',
-        doctor: 'Thiago'
-      },
-      {
-        id: '3',
-        patientName: 'Pedro Santos',
-        date: today,
-        time: '10:00',
-        status: 'scheduled',
-        doctor: 'Miliam'
-      }
-    ];
+    try {
+      this.schedulesService.getAllSchedules().subscribe({
+        next: (schedules) => {
+          // Filtrar apenas os agendamentos de hoje
+          const today = new Date().toISOString().split('T')[0];
+          this.appointments = schedules.filter(schedule => {
+            const scheduleDate = new Date(schedule.date_and_houres).toISOString().split('T')[0];
+            return scheduleDate === today;
+          });
+        },
+        error: (error) => {
+          console.error('Erro ao carregar agendamentos:', error);
+          this.error = 'Erro ao carregar agendamentos';
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao carregar agendamentos:', error);
+      this.error = 'Erro ao carregar agendamentos';
+    }
   }
 
   formatDate(date: string): string {
     return new Date(date).toLocaleDateString('pt-BR');
   }
 
-  async updateStatus(appointment: Appointment, event: Event) {
+  async updateStatus(appointment: Schedule, event: Event) {
     const select = event.target as HTMLSelectElement;
-    const newStatus = select.value as 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
+    const newStatus = select.value;
 
     try {
-      // TODO: Implementar chamada à API para atualizar status
-      appointment.status = newStatus;
+      // Mapear os status do select para os campos do Schedule
+      let active = true;
+      let finished = false;
+
+      switch (newStatus) {
+        case 'scheduled':
+        case 'confirmed':
+          active = true;
+          finished = false;
+          break;
+        case 'completed':
+          active = true;
+          finished = true;
+          break;
+        case 'cancelled':
+          active = false;
+          finished = false;
+          break;
+      }
+
+      // Atualizar o agendamento via API
+      this.schedulesService.updateSchedule(appointment.id, { active, finished }).subscribe({
+        next: () => {
+          // Atualizar localmente
+          appointment.active = active;
+          appointment.finished = finished;
+        },
+        error: (error) => {
+          console.error('Erro ao atualizar status:', error);
+          // Reverter para o status anterior
+          select.value = this.getStatusValue(appointment);
+        }
+      });
     } catch (err) {
       console.error('Erro ao atualizar status:', err);
       // Reverter para o status anterior
-      select.value = appointment.status;
+      select.value = this.getStatusValue(appointment);
     }
   }
 
-  navigateToConsultation(appointment: Appointment) {
-    this.router.navigate(['/consultations', appointment.id]);
+  navigateToConsultation(appointment: Schedule) {
+    this.router.navigate(['/schedules'], { queryParams: { id: appointment.id } });
   }
 
   navigateToNewConsultation() {
-    this.router.navigate(['/consultations/new'], {
-      queryParams: { from: '/dashboard' }
-    });
+    this.router.navigate(['/schedules'], { queryParams: { new: true } });
   }
 
   getRoleLabel(role: string | undefined): string {
@@ -127,5 +140,38 @@ export class DashboardComponent implements OnInit {
       'medico': 'Médico'
     };
     return roles[role] || role;
+  }
+
+  getStatusValue(schedule: Schedule): string {
+    if (schedule.finished) return 'completed';
+    if (!schedule.active) return 'cancelled';
+    return 'scheduled';
+  }
+
+  getStatusLabel(schedule: Schedule): string {
+    if (schedule.finished) return 'Concluído';
+    if (!schedule.active) return 'Cancelado';
+    return 'Agendado';
+  }
+
+  getProviderName(schedule: Schedule): string {
+    if (schedule.provider) {
+      return `${schedule.provider.name} ${schedule.provider.lastname}`;
+    }
+    return 'N/A';
+  }
+
+  getServicesList(schedule: Schedule): string {
+    if (schedule.Services && schedule.Services.length > 0) {
+      return schedule.Services.map(s => s.service).join(', ');
+    }
+    return 'Nenhum serviço';
+  }
+
+  formatTime(dateTime: string): string {
+    return new Date(dateTime).toLocaleTimeString('pt-BR', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
   }
 }

@@ -68,20 +68,21 @@
             <i class="fas fa-plus"></i>
             Novo Serviço
           </button>
-          <a routerLink="/calendar" class="view-all">Ver todas</a>
+          <a routerLink="/schedules" class="view-all">Ver todas</a>
         </div>
       </div>
       <div class="appointments-list">
         <div class="appointment-card" *ngFor="let appointment of appointments" (click)="navigateToConsultation(appointment)">
           <div class="appointment-info">
-            <h3>{{ appointment.patientName }}</h3>
-            <p class="time">Horário: {{ appointment.time }}</p>
-            <p class="doctor">Colaborador: {{ appointment.doctor }}</p>
+            <h3>{{ appointment.name_client }}</h3>
+            <p class="time">Horário: {{ formatTime(appointment.date_and_houres) }}</p>
+            <p class="doctor">Prestador: {{ getProviderName(appointment) }}</p>
+            <p class="services">Serviços: {{ getServicesList(appointment) }}</p>
           </div>
           <div class="appointment-status">
             <p class="status-label">Status:</p>
             <select
-              [value]="appointment.status"
+              [value]="getStatusValue(appointment)"
               (change)="updateStatus(appointment, $event)"
               (click)="$event.stopPropagation()"
             >
@@ -91,6 +92,12 @@
               <option value="cancelled">Cancelado</option>
             </select>
           </div>
+        </div>
+        
+        <!-- Mensagem quando não há agendamentos -->
+        <div *ngIf="appointments.length === 0" class="no-appointments">
+          <i class="fas fa-calendar-times"></i>
+          <p>Nenhum agendamento para hoje</p>
         </div>
       </div>
     </div>

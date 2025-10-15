@@ -64,12 +64,12 @@ const consultationRoutes: Routes = [
       {
         path: 'new',
         canActivate: [RoleGuard],
-        loadComponent: () => import('./features/services/service-form/service-form.component').then(m => m.ConsultationFormComponent)
+        loadComponent: () => import('./features/schedules/schedule-view-modal/schedule-view-modal.component').then(m => m.ScheduleViewModalComponent)
       },
       {
         path: ':id',
         canActivate: [RoleGuard],
-        loadComponent: () => import('./features/services/services-details/services-details.component').then(m => m.ConsultationDetailsComponent)
+        loadComponent: () => import('./features/schedules/schedule-view-modal/schedule-view-modal.component').then(m => m.ScheduleViewModalComponent)
       }
     ]
   }
