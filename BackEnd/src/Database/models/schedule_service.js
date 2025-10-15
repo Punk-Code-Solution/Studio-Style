@@ -24,6 +24,11 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Schedule_Service.init({
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
+    },
     schedules_id: DataTypes.UUID,
     service_id: DataTypes.UUID
   }, {

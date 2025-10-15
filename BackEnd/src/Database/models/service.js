@@ -19,6 +19,11 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Service.init({
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
+    },
     service: DataTypes.STRING,
     additionalComments: DataTypes.STRING,
     price: DataTypes.FLOAT

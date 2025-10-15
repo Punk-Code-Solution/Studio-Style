@@ -18,6 +18,11 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Purchase.init({
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
+    },
     nameproduct: DataTypes.STRING,
     amount_product: DataTypes.INTEGER,
     value_product: DataTypes.FLOAT,

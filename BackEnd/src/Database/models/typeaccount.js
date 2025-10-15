@@ -15,6 +15,11 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   TypeAccount.init({
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
+    },
     type: DataTypes.STRING,
     edit: DataTypes.BOOLEAN,
     creat: DataTypes.BOOLEAN,

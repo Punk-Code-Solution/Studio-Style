@@ -7,7 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
 // Tipos centralizados
-export type UserRole = 'medico' | 'enfermeiro' | 'recepcionista' | 'administrativo' | 'admin';
+export type UserRole =  | 'admin' | 'ninguem';
 
 interface AuthState {
   user: User | null;
@@ -21,13 +21,13 @@ interface Permissions {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthService {
   // Estado de autenticação centralizado
   private authState = new BehaviorSubject<AuthState>({
     user: null,
-    isAuthenticated: false
+    isAuthenticated: false,
   });
 
   // Observable público do estado
@@ -45,45 +45,47 @@ export class AuthService {
   private readonly permissions: Permissions = {
     routes: {
       // Rotas principais
-      'dashboard': ['admin', 'medico', 'enfermeiro', 'recepcionista', 'administrativo'],
-      'patients': ['admin', 'medico', 'enfermeiro', 'recepcionista'],
-      'calendar': ['admin', 'medico', 'enfermeiro', 'recepcionista'],
-      'messages': ['admin', 'medico', 'enfermeiro', 'recepcionista', 'administrativo'],
-      'documents': ['admin', 'medico', 'enfermeiro', 'recepcionista', 'administrativo'],
-      'employees': ['admin'],
-      'feedbacks': ['admin', 'medico'],
-      'services': ['admin', 'medico', 'enfermeiro'],
+      dashboard: ['admin'],
+      patients: ['ninguem'],
+      calendar: ['ninguem'],
+      messages: ['ninguem'],
+      documents: ['ninguem'],
+      employees: ['ninguem'],
+      feedbacks: ['ninguem'],
+      services: ['admin'],
 
       // Sub-rotas de pacientes
-      'patients/new': ['admin', 'medico', 'recepcionista'],
-      'patients/:id': ['admin', 'medico'],
-      'patients/:id/edit': ['admin', 'medico'],
+      'patients/new': ['ninguem'],
+      'patients/:id': ['ninguem'],
+      'patients/:id/edit': ['ninguem'],
 
       // Sub-rotas de consultas
-      'services/new': ['admin', 'medico'],
-      'services/:id': ['admin', 'medico', 'enfermeiro'],
+      'services/new': ['ninguem'],
+      'services/:id': ['ninguem'],
 
       // Sub-rotas de funcionários
-      'employees/new': ['admin'],
-      'employees/:id': ['admin']
+      'employees/new': ['ninguem'],
+      'employees/:id': ['ninguem'],
     },
     fields: {
-      'patient.medicalRecord': ['admin', 'medico', 'enfermeiro'],
-      'patient.prescriptions': ['admin', 'medico'],
-      'patient.appointments': ['admin', 'medico', 'enfermeiro', 'recepcionista'],
-      'patient.billing': ['admin', 'administrativo', 'medico'],
-      'patient.personal': ['admin', 'medico', 'enfermeiro', 'recepcionista'],
-      'patient.contact': ['admin', 'medico', 'enfermeiro', 'recepcionista']
+      'patient.medicalRecord': ['ninguem'],
+      'patient.prescriptions': ['ninguem'],
+      'patient.appointments': [
+        'ninguem',
+      ],
+      'patient.billing': ['ninguem'],
+      'patient.personal': ['ninguem'],
+      'patient.contact': ['ninguem'],
     },
     actions: {
-      'edit.all': ['admin', 'medico'],
-      'edit.email': ['admin', 'medico', 'recepcionista'],
-      'edit.phone': ['admin', 'medico', 'recepcionista'],
-      'edit.appointments': ['admin', 'medico', 'recepcionista'],
-      'edit.medicalRecord': ['admin', 'medico'],
-      'view.fullPatientDetails': ['admin', 'medico'],
-      'edit.patientData': ['admin', 'medico']
-    }
+      'edit.all': ['ninguem'],
+      'edit.email': ['ninguem'],
+      'edit.phone': ['ninguem'],
+      'edit.appointments': ['ninguem'],
+      'edit.medicalRecord': ['ninguem'],
+      'view.fullPatientDetails': ['ninguem'],
+      'edit.patientData': ['ninguem'],
+    },
   };
 
   constructor(
@@ -96,19 +98,22 @@ export class AuthService {
   }
 
   // Getters públicos
-  get currentUser(){
+  get currentUser() {
     return this.authState.value.user;
   }
 
   get currentUser$(): Observable<User | null> {
     return this.authState$.pipe(
-      map(state => state.user),
-      tap(user => console.log('Estado do usuário atualizado:', user))
+      map((state) => state.user),
+      tap((user) => console.log('Estado do usuário atualizado:', user))
     );
   }
 
   // Métodos de autenticação
-  login(email: string, senha: string): Observable<{ token: string; user: User }> {
+  login(
+    email: string,
+    senha: string
+  ): Observable<{ token: string; user: User }> {
     const url = `${environment.apiUrl}/auth/login`;
     return this.http.post<any>(url, { email, password: senha }).pipe(
       map((res) => {
@@ -143,7 +148,7 @@ export class AuthService {
     this.clearPermissionCache(); // Limpa cache ao fazer logout
     this.authState.next({
       user: null,
-      isAuthenticated: false
+      isAuthenticated: false,
     });
   }
 
@@ -241,7 +246,7 @@ export class AuthService {
     }
     this.authState.next({
       user,
-      isAuthenticated: true
+      isAuthenticated: true,
     });
   }
 
@@ -257,7 +262,7 @@ export class AuthService {
         const user = JSON.parse(storedUser);
         this.authState.next({
           user,
-          isAuthenticated: true
+          isAuthenticated: true,
         });
       }
     }

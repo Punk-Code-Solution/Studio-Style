@@ -39,6 +39,11 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Schedules.init({
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
+    },
     name_client: DataTypes.STRING,
     date_and_houres: DataTypes.DATE,
     active: DataTypes.BOOLEAN,

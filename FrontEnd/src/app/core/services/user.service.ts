@@ -4,8 +4,10 @@ import { delay, tap } from 'rxjs/operators';
 
 export interface User {
   TypeAccount: {
-    type: 'medico' | 'enfermeiro' | 'recepcionista' | 'administrativo' | 'admin';
-  },
+    type:
+      | 'admin'
+      | 'ninguem';
+  };
   id: number;
   nome: string;
   email: string;
@@ -110,7 +112,7 @@ export class UserService {
       errors.push('Perfil é obrigatório');
     }
 
-    if (!user.TypeAccount || !user.TypeAccount.type || user.TypeAccount.type === 'medico' && !user.crm) {
+    if (!user.TypeAccount || !user.TypeAccount.type || user.TypeAccount.type === 'admin' && !user.crm) {
       errors.push('CRM é obrigatório para médicos');
     }
 

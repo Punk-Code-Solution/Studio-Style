@@ -19,6 +19,11 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Payment.init({
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
+    },
     valueTotal: DataTypes.FLOAT,
     discountValue: DataTypes.FLOAT,
     tipePayment: DataTypes.STRING,
