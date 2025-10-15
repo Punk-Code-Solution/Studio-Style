@@ -101,8 +101,9 @@ class SchedulesController {
    */
   async deleteScheduleById(req, res) {
     try {
-      const { id } = req.params;
-      const result = await this.schedulesRepository.deleteAccountById(id);
+      const { id } = req.query;
+      const result = await this.schedulesRepository.deleteSchedules(id);
+      console.log(result)
       
       if (!result) {
         return ResponseHandler.notFound(res, 'Service not found');

@@ -2,15 +2,18 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 interface Consultation {
   id: number;
-  patient: {
+  cliente: {
     id: number;
     name: string;
     avatar: string;
   };
-  doctor: {
+  responsavel: {
     id: number;
     name: string;
     avatar: string;
@@ -29,12 +32,12 @@ interface Consultation {
 @Component({
   selector: 'app-consultations',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, HttpClientModule],
   template: `
     <div class="consultations">
       <div class="consultations-header">
         <div class="header-left">
-          <h2>Serviços</h2>
+          <h2>Agendamentos</h2>
           <div class="search">
             <i class="fas fa-search"></i>
             <input type="text" placeholder="Buscar consultas..." [(ngModel)]="searchTerm" (input)="filterConsultations()">
@@ -48,7 +51,7 @@ interface Consultation {
           </button>
           <button class="add-btn" (click)="openConsultationModal()">
             <i class="fas fa-plus"></i>
-            Nova Consulta
+            Nova Agendamento
           </button>
         </div>
       </div>
@@ -122,11 +125,11 @@ interface Consultation {
           <table>
             <thead>
               <tr>
-                <th>Paciente</th>
-                <th>Médico</th>
+                <th>Cliente</th>
+                <th>Responsavel</th>
                 <th>Data</th>
                 <th>Horário</th>
-                <th>Tipo</th>
+                <th>Serviço</th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
@@ -135,14 +138,14 @@ interface Consultation {
               <tr *ngFor="let consultation of filteredConsultations">
                 <td>
                   <div class="user-info">
-                    <img [src]="consultation.patient.avatar" [alt]="consultation.patient.name" class="avatar">
-                    <span>{{ consultation.patient.name }}</span>
+                    <img [src]="consultation.cliente.avatar" [alt]="consultation.cliente.name" class="avatar">
+                    <span>{{ consultation.cliente.name }}</span>
                   </div>
                 </td>
                 <td>
                   <div class="user-info">
-                    <img [src]="consultation.doctor.avatar" [alt]="consultation.doctor.name" class="avatar">
-                    <span>{{ consultation.doctor.name }}</span>
+                    <img [src]="consultation.responsavel.avatar" [alt]="consultation.responsavel.name" class="avatar">
+                    <span>{{ consultation.responsavel.name }}</span>
                   </div>
                 </td>
                 <td>{{ consultation.date }}</td>
@@ -527,94 +530,65 @@ export class ConsultationsComponent implements OnInit {
     }
   };
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private http: HttpClient) {}
 
   ngOnInit(): void {
     this.loadConsultations();
   }
 
   loadConsultations(): void {
-    // Simulated data
-    this.consultations = [
-      {
-        id: 1,
-        patient: {
-          id: 1,
-          name: 'Maria Silva',
-          avatar: 'https://via.placeholder.com/32x32'
-        },
-        doctor: {
-          id: 1,
-          name: 'Dr. João Santos',
-          avatar: 'https://via.placeholder.com/32x32'
-        },
-        date: '2024-03-20',
-        time: '14:00',
-        status: 'scheduled',
-        type: 'first_visit'
+    const token = localStorage.getItem('auth_token');
+    console.log('Using token:', token); // Log do token para depuração
+    const headers = token
+      ? { Authorization: `Bearer ${token}` }
+      : undefined;
+    this.http.get<any>(environment.apiUrl + "/schedules", { headers }).subscribe({
+      next: (response) => {
+        if (response.success && Array.isArray(response.data)) {
+          this.consultations = response.data.map((item: any) => ({
+            id: item.id,
+            cliente: {
+              id: item.client?.id,
+              name: item.client?.name + ' ' + item.client?.name,
+              avatar: item.client?.avatar || 'https://via.placeholder.com/32x32'
+            },
+            responsavel: {
+              id: item.provider?.id,
+              name: item.provider?.name + ' ' + item.provider?.name,
+              avatar: item.provider?.avatar || 'https://via.placeholder.com/32x32'
+            },
+            date: item.date_and_houres ? item.date_and_houres.substring(0, 10) : '',
+            time: item.date_and_houres ? new Date(item.date_and_houres).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+            status: item.finished ? 'completed' : item.active ? 'scheduled' : 'cancelled',
+            type: item.Services?.[0]?.service === 'Escova' ? 'first_visit' : 'follow_up',
+            symptoms: item.Services?.[0]?.additionalComments,
+            diagnosis: '',
+            prescription: '',
+            notes: '',
+            attachments: []
+          }));
+          this.filterConsultations();
+        }
       },
-      {
-        id: 2,
-        patient: {
-          id: 2,
-          name: 'João Oliveira',
-          avatar: 'https://via.placeholder.com/32x32'
-        },
-        doctor: {
-          id: 2,
-          name: 'Dra. Ana Costa',
-          avatar: 'https://via.placeholder.com/32x32'
-        },
-        date: '2024-03-20',
-        time: '15:30',
-        status: 'in_progress',
-        type: 'follow_up',
-        symptoms: 'Dor de cabeça e febre',
-        diagnosis: 'Gripe',
-        prescription: 'Paracetamol 500mg',
-        notes: 'Paciente apresentou melhora após 3 dias',
-        attachments: ['exame_sangue.pdf', 'raio_x.jpg']
-      },
-      {
-        id: 3,
-        patient: {
-          id: 3,
-          name: 'Carlos Souza',
-          avatar: 'https://via.placeholder.com/32x32'
-        },
-        doctor: {
-          id: 1,
-          name: 'Dr. João Santos',
-          avatar: 'https://via.placeholder.com/32x32'
-        },
-        date: '2024-03-21',
-        time: '09:00',
-        status: 'completed',
-        type: 'emergency',
-        symptoms: 'Dor no peito',
-        diagnosis: 'Ansiedade',
-        prescription: 'Ansiolítico',
-        notes: 'Paciente com quadro de ansiedade',
-        attachments: ['eletrocardiograma.pdf']
+      error: () => {
+        this.consultations = [];
+        this.filterConsultations();
       }
-    ];
-
-    this.filterConsultations();
+    });
   }
 
   filterConsultations(): void {
+    // igual ao original
     let filtered = [...this.consultations];
 
-    // Search filter
     if (this.searchTerm) {
       const search = this.searchTerm.toLowerCase();
       filtered = filtered.filter(consultation =>
-        consultation.patient.name.toLowerCase().includes(search) ||
-        consultation.doctor.name.toLowerCase().includes(search)
+        consultation.cliente.name.toLowerCase().includes(search) ||
+        consultation.responsavel.name.toLowerCase().includes(search)
       );
     }
 
-    // Status filter
     if (!this.filters.status.scheduled || !this.filters.status.in_progress ||
         !this.filters.status.completed || !this.filters.status.cancelled) {
       filtered = filtered.filter(consultation => {
@@ -626,7 +600,6 @@ export class ConsultationsComponent implements OnInit {
       });
     }
 
-    // Type filter
     if (!this.filters.type.first_visit || !this.filters.type.follow_up || !this.filters.type.emergency) {
       filtered = filtered.filter(consultation => {
         if (this.filters.type.first_visit && consultation.type === 'first_visit') return true;
@@ -636,7 +609,6 @@ export class ConsultationsComponent implements OnInit {
       });
     }
 
-    // Date filter
     const now = new Date();
     if (this.filters.date.today || this.filters.date.week || this.filters.date.month) {
       filtered = filtered.filter(consultation => {
@@ -660,7 +632,7 @@ export class ConsultationsComponent implements OnInit {
     }
 
     this.totalPages = Math.ceil(filtered.length / this.itemsPerPage);
-    this.currentPage = Math.min(this.currentPage, this.totalPages);
+    this.currentPage = Math.min(this.currentPage, this.totalPages || 1);
     const start = (this.currentPage - 1) * this.itemsPerPage;
     this.filteredConsultations = filtered.slice(start, start + this.itemsPerPage);
   }

@@ -1,4 +1,4 @@
-const { Schedules, Service } = require("../Database/models");
+const { Schedules, Service, Account } = require("../Database/models");
 const { v4: uuidv4 } = require('uuid');
 
 class schedulesRepository{
@@ -15,6 +15,16 @@ class schedulesRepository{
             through: {
               attributes: [] // Não incluir atributos da tabela de junção
             }
+          },
+          { 
+            model: Account, 
+            as: 'provider', // Must match the alias in your association definition
+            attributes: { exclude: ['password', 'email', 'role', 'createdAt', 'updatedAt']  }
+          },
+          { 
+            model: Account, 
+            as: 'client', // Must match the alias in your association definition
+            attributes: { exclude: ['password', 'email', 'role', 'createdAt', 'updatedAt']  }
           }
         ],
         order: [['date_and_houres', 'ASC']]
@@ -99,7 +109,7 @@ class schedulesRepository{
     
   async deleteSchedules(id) {
 
-    await Schedules.destroy({
+    return await Schedules.destroy({
       where: {
         id: id,
       },

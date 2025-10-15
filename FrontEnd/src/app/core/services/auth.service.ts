@@ -60,8 +60,8 @@ export class AuthService {
       'patients/:id/edit': ['ninguem'],
 
       // Sub-rotas de consultas
-      'services/new': ['ninguem'],
-      'services/:id': ['ninguem'],
+      'services/new': ['admin'],
+      'services/:id': ['admin'],
 
       // Sub-rotas de funcionários
       'employees/new': ['ninguem'],

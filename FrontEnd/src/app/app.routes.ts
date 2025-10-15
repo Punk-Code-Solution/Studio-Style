@@ -59,7 +59,7 @@ const consultationRoutes: Routes = [
       {
         path: '',
         canActivate: [RoleGuard],
-        loadComponent: () => import('./features/services/services.component').then(m => m.ConsultationsComponent)
+        loadComponent: () => import('./features/schedules/schedules.component').then(m => m.SchedulesComponent)
       },
       {
         path: 'new',

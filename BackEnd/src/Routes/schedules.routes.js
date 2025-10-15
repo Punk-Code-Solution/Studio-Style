@@ -101,6 +101,6 @@ rota.get("/schedules/id", async (request, response) => { await schedulesControll
  *       404:
  *         description: Serviço não encontrado
  */
-rota.delete("/schedules", async (request, response) => { await schedulesController.deleteScheduleById( request, response ); });
+rota.delete("/", async (request, response) => { await schedulesController.deleteScheduleById(request, response); });
 
 module.exports = rota

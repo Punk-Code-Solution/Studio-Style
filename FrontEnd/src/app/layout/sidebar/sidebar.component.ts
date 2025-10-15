@@ -7,10 +7,7 @@ import { User } from '../../core/services/user.service';
 // Constante centralizada para labels de roles
 const ROLE_LABELS: Record<UserRole, string> = {
   'admin': 'Administrador',
-  'medico': 'Médico',
-  'enfermeiro': 'Enfermeiro',
-  'recepcionista': 'Recepcionista',
-  'administrativo': 'Administrativo'
+  'ninguem': 'Usuário'
 };
 
 @Component({

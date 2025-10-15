@@ -2,31 +2,22 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-
-interface Schedule {
-  id: number;
-  patient: {
-    id: number;
-    name: string;
-    avatar: string;
-  };
-  doctor: {
-    id: number;
-    name: string;
-    specialty: string;
-    avatar: string;
-  };
-  date: string;
-  time: string;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
-  type: 'first_visit' | 'follow_up' | 'exam' | 'procedure';
-  notes?: string;
-}
+import { SchedulesService, Schedule, Service, Account, CreateScheduleRequest } from '../../core/services/schedules.service';
+import { ScheduleViewModalComponent } from './schedule-view-modal/schedule-view-modal.component';
+import { ScheduleFormModalComponent } from './schedule-form-modal/schedule-form-modal.component';
+import { ScheduleDeleteModalComponent } from './schedule-delete-modal/schedule-delete-modal.component';
 
 @Component({
   selector: 'app-schedules',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [
+    CommonModule, 
+    RouterModule, 
+    FormsModule,
+    ScheduleViewModalComponent,
+    ScheduleFormModalComponent,
+    ScheduleDeleteModalComponent
+  ],
   template: `
     <div class="schedules">
       <div class="schedules-header">
@@ -55,42 +46,16 @@ interface Schedule {
           <label>Status</label>
           <div class="filter-options">
             <label class="checkbox">
-              <input type="checkbox" [(ngModel)]="filters.status.scheduled" (change)="filterSchedules()">
-              <span>Agendado</span>
+              <input type="checkbox" [(ngModel)]="filters.status.active" (change)="filterSchedules()">
+              <span>Ativo</span>
             </label>
             <label class="checkbox">
-              <input type="checkbox" [(ngModel)]="filters.status.confirmed" (change)="filterSchedules()">
-              <span>Confirmado</span>
-            </label>
-            <label class="checkbox">
-              <input type="checkbox" [(ngModel)]="filters.status.completed" (change)="filterSchedules()">
-              <span>Concluído</span>
+              <input type="checkbox" [(ngModel)]="filters.status.finished" (change)="filterSchedules()">
+              <span>Finalizado</span>
             </label>
             <label class="checkbox">
               <input type="checkbox" [(ngModel)]="filters.status.cancelled" (change)="filterSchedules()">
               <span>Cancelado</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="filter-group">
-          <label>Tipo</label>
-          <div class="filter-options">
-            <label class="checkbox">
-              <input type="checkbox" [(ngModel)]="filters.type.first_visit" (change)="filterSchedules()">
-              <span>Primeira Consulta</span>
-            </label>
-            <label class="checkbox">
-              <input type="checkbox" [(ngModel)]="filters.type.follow_up" (change)="filterSchedules()">
-              <span>Retorno</span>
-            </label>
-            <label class="checkbox">
-              <input type="checkbox" [(ngModel)]="filters.type.exam" (change)="filterSchedules()">
-              <span>Exame</span>
-            </label>
-            <label class="checkbox">
-              <input type="checkbox" [(ngModel)]="filters.type.procedure" (change)="filterSchedules()">
-              <span>Procedimento</span>
             </label>
           </div>
         </div>
@@ -109,16 +74,30 @@ interface Schedule {
         </div>
       </div>
 
-      <div class="schedules-grid">
+      <!-- Loading indicator -->
+      <div *ngIf="loading" class="loading-container">
+        <div class="loading-spinner">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>Carregando agendamentos...</span>
+        </div>
+      </div>
+
+      <!-- Error message -->
+      <div *ngIf="error" class="error-message">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>{{ error }}</span>
+        <button class="retry-btn" (click)="loadSchedules()">Tentar novamente</button>
+      </div>
+
+      <div class="schedules-grid" *ngIf="!loading && !error">
         <div class="schedules-table">
           <table>
             <thead>
               <tr>
-                <th>Paciente</th>
-                <th>Médico</th>
-                <th>Data</th>
-                <th>Horário</th>
-                <th>Tipo</th>
+                <th>Cliente</th>
+                <th>Prestador</th>
+                <th>Data/Hora</th>
+                <th>Serviços</th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
@@ -127,33 +106,33 @@ interface Schedule {
               <tr *ngFor="let schedule of filteredSchedules">
                 <td>
                   <div class="user-info">
-                    <img [src]="schedule.patient.avatar" [alt]="schedule.patient.name" class="avatar">
-                    <span>{{ schedule.patient.name }}</span>
+                    <img [src]="schedule.client?.avatar || 'https://via.placeholder.com/32x32'" [alt]="schedule.name_client" class="avatar">
+                    <span>{{ schedule.name_client }}</span>
                   </div>
                 </td>
                 <td>
                   <div class="user-info">
-                    <img [src]="schedule.doctor.avatar" [alt]="schedule.doctor.name" class="avatar">
+                    <img [src]="schedule.provider?.avatar || 'https://via.placeholder.com/32x32'" [alt]="schedule.provider?.name" class="avatar">
                     <div class="doctor-details">
-                      <span>{{ schedule.doctor.name }}</span>
-                      <small>{{ schedule.doctor.specialty }}</small>
+                      <span>{{ schedule.provider?.name || 'N/A' }}</span>
+                      <small>{{ schedule.provider?.lastname || '' }}</small>
                     </div>
                   </div>
                 </td>
-                <td>{{ schedule.date | date:'dd/MM/yyyy' }}</td>
-                <td>{{ schedule.time }}</td>
+                <td>{{ schedule.date_and_houres | date:'dd/MM/yyyy HH:mm' }}</td>
                 <td>
-                  <span class="type-badge" [class]="schedule.type">
-                    {{ schedule.type === 'first_visit' ? 'Primeira Consulta' :
-                       schedule.type === 'follow_up' ? 'Retorno' :
-                       schedule.type === 'exam' ? 'Exame' : 'Procedimento' }}
+                  <div class="services-list" *ngIf="schedule.Services && schedule.Services.length > 0">
+                    <span *ngFor="let service of schedule.Services" class="service-badge">
+                      {{ service.service }}
+                    </span>
+                  </div>
+                  <span *ngIf="!schedule.Services || schedule.Services.length === 0" class="no-services">
+                    Nenhum serviço
                   </span>
                 </td>
                 <td>
-                  <span class="status-badge" [class]="schedule.status">
-                    {{ schedule.status === 'scheduled' ? 'Agendado' :
-                       schedule.status === 'confirmed' ? 'Confirmado' :
-                       schedule.status === 'completed' ? 'Concluído' : 'Cancelado' }}
+                  <span class="status-badge" [class]="getStatusClass(schedule)">
+                    {{ getStatusText(schedule) }}
                   </span>
                 </td>
                 <td>
@@ -185,6 +164,33 @@ interface Schedule {
         </button>
       </div>
     </div>
+
+    <!-- Modais -->
+    <app-schedule-view-modal 
+      *ngIf="showViewModal" 
+      [schedule]="selectedSchedule"
+      (close)="closeViewModal()"
+      (edit)="openEditModal($event)"
+    ></app-schedule-view-modal>
+
+    <app-schedule-form-modal 
+      *ngIf="showFormModal" 
+      [schedule]="editingSchedule"
+      [availableServices]="availableServices"
+      [providers]="providers"
+      [clients]="clients"
+      [loading]="formLoading"
+      (close)="closeFormModal()"
+      (save)="saveSchedule($event)"
+    ></app-schedule-form-modal>
+
+    <app-schedule-delete-modal 
+      *ngIf="showDeleteModal" 
+      [schedule]="scheduleToDelete"
+      [loading]="deleteLoading"
+      (close)="closeDeleteModal()"
+      (confirm)="confirmDelete($event)"
+    ></app-schedule-delete-modal>
   `,
   styles: [`
     @import '../../../styles/variables';
@@ -504,6 +510,87 @@ interface Schedule {
       @include typography($font-size-base);
     }
 
+    .loading-container {
+      @include flex(column, center, center);
+      padding: $spacing-xl;
+      text-align: center;
+    }
+
+    .loading-spinner {
+      @include flex(row, center, center);
+      gap: $spacing-md;
+      color: $text-secondary;
+      @include typography($font-size-base);
+
+      i {
+        font-size: $font-size-large;
+        color: $primary-color;
+      }
+    }
+
+    .error-message {
+      @include flex(row, center, center);
+      gap: $spacing-md;
+      padding: $spacing-lg;
+      background-color: rgba($error-color, 0.1);
+      border: 1px solid rgba($error-color, 0.3);
+      border-radius: $border-radius-lg;
+      color: $error-color;
+      @include typography($font-size-base);
+
+      i {
+        font-size: $font-size-large;
+      }
+
+      .retry-btn {
+        @include button($error-color, $text-light);
+        padding: $spacing-xs $spacing-sm;
+        font-size: $font-size-small;
+        margin-left: $spacing-md;
+      }
+    }
+
+    .services-list {
+      @include flex(row, flex-start, center);
+      gap: $spacing-xs;
+      flex-wrap: wrap;
+    }
+
+    .service-badge {
+      padding: $spacing-xs $spacing-sm;
+      background-color: rgba($primary-color, 0.1);
+      color: $primary-color;
+      border-radius: $border-radius-sm;
+      @include typography($font-size-small, $font-weight-medium);
+    }
+
+    .no-services {
+      color: $text-secondary;
+      @include typography($font-size-small);
+      font-style: italic;
+    }
+
+    .status-badge {
+      padding: $spacing-xs $spacing-sm;
+      border-radius: $border-radius-sm;
+      @include typography($font-size-small, $font-weight-medium);
+
+      &.active {
+        background-color: rgba($info-color, 0.1);
+        color: $info-color;
+      }
+
+      &.completed {
+        background-color: rgba($success-color, 0.1);
+        color: $success-color;
+      }
+
+      &.cancelled {
+        background-color: rgba($error-color, 0.1);
+        color: $error-color;
+      }
+    }
+
     @include responsive(lg) {
       .header-left {
         flex-direction: column;
@@ -553,19 +640,29 @@ export class SchedulesComponent implements OnInit {
   currentPage = 1;
   itemsPerPage = 10;
   totalPages = 1;
+  loading = false;
+  error = '';
+
+  // Modal states
+  showViewModal = false;
+  showFormModal = false;
+  showDeleteModal = false;
+  selectedSchedule: Schedule | null = null;
+  editingSchedule: Schedule | null = null;
+  scheduleToDelete: Schedule | null = null;
+  formLoading = false;
+  deleteLoading = false;
+
+  // Data for forms
+  availableServices: Service[] = [];
+  providers: Account[] = [];
+  clients: Account[] = [];
 
   filters = {
     status: {
-      scheduled: true,
-      confirmed: true,
-      completed: true,
+      active: true,
+      finished: true,
       cancelled: false
-    },
-    type: {
-      first_visit: true,
-      follow_up: true,
-      exam: true,
-      procedure: true
     },
     dateRange: {
       start: '',
@@ -573,75 +670,68 @@ export class SchedulesComponent implements OnInit {
     }
   };
 
-  constructor() {}
+  constructor(private schedulesService: SchedulesService) {}
 
   ngOnInit(): void {
     this.loadSchedules();
+    this.loadFormData();
+  }
+
+  loadFormData(): void {
+    // Carregar serviços disponíveis
+    this.schedulesService.getAllSchedules().subscribe({
+      next: (schedules) => {
+        // Extrair serviços únicos dos agendamentos
+        const allServices: Service[] = [];
+        schedules.forEach(schedule => {
+          if (schedule.Services) {
+            schedule.Services.forEach(service => {
+              if (!allServices.find(s => s.id === service.id)) {
+                allServices.push(service);
+              }
+            });
+          }
+        });
+        this.availableServices = allServices;
+      },
+      error: (error) => {
+        console.error('Erro ao carregar serviços:', error);
+      }
+    });
+
+    // TODO: Implementar carregamento de providers e clients
+    // Por enquanto, usando dados mock
+    this.providers = [
+      { id: '1', name: 'João', lastname: 'Silva', cpf: '123.456.789-00', typeaccount_id: 'provider', company_id_account: '1' },
+      { id: '2', name: 'Maria', lastname: 'Santos', cpf: '987.654.321-00', typeaccount_id: 'provider', company_id_account: '1' }
+    ];
+
+    this.clients = [
+      { id: '1', name: 'Ana', lastname: 'Costa', cpf: '111.222.333-44', typeaccount_id: 'client', company_id_account: '1' },
+      { id: '2', name: 'Carlos', lastname: 'Oliveira', cpf: '555.666.777-88', typeaccount_id: 'client', company_id_account: '1' },
+      { id: '3', name: 'Fernanda', lastname: 'Lima', cpf: '999.888.777-66', typeaccount_id: 'client', company_id_account: '1' }
+    ];
   }
 
   loadSchedules(): void {
-    // Simulated data
-    this.schedules = [
-      {
-        id: 1,
-        patient: {
-          id: 1,
-          name: 'Maria Silva',
-          avatar: 'https://via.placeholder.com/32x32'
-        },
-        doctor: {
-          id: 1,
-          name: 'Dr. João Santos',
-          specialty: 'Clínico Geral',
-          avatar: 'https://via.placeholder.com/32x32'
-        },
-        date: '2024-03-20',
-        time: '09:00',
-        status: 'scheduled',
-        type: 'first_visit',
-        notes: 'Primeira consulta de rotina'
+    this.loading = true;
+    this.error = '';
+    
+    this.schedulesService.getAllSchedules().subscribe({
+      next: (schedules) => {
+        console.log('Agendamentos carregados:', schedules);
+        this.schedules = Array.isArray(schedules) ? schedules : [];
+        this.filterSchedules();
+        this.loading = false;
       },
-      {
-        id: 2,
-        patient: {
-          id: 2,
-          name: 'João Santos',
-          avatar: 'https://via.placeholder.com/32x32'
-        },
-        doctor: {
-          id: 2,
-          name: 'Dra. Ana Costa',
-          specialty: 'Cardiologia',
-          avatar: 'https://via.placeholder.com/32x32'
-        },
-        date: '2024-03-20',
-        time: '10:00',
-        status: 'confirmed',
-        type: 'follow_up',
-        notes: 'Retorno para avaliação de exames'
-      },
-      {
-        id: 3,
-        patient: {
-          id: 3,
-          name: 'Ana Costa',
-          avatar: 'https://via.placeholder.com/32x32'
-        },
-        doctor: {
-          id: 3,
-          name: 'Dr. Carlos Oliveira',
-          specialty: 'Neurologia',
-          avatar: 'https://via.placeholder.com/32x32'
-        },
-        date: '2024-03-21',
-        time: '14:00',
-        status: 'completed',
-        type: 'exam',
-        notes: 'Eletroencefalograma'
+      error: (error) => {
+        this.error = 'Erro ao carregar agendamentos';
+        console.error('Erro ao carregar agendamentos:', error);
+        this.schedules = [];
+        this.filterSchedules();
+        this.loading = false;
       }
-    ];
-
-    this.filterSchedules();
+    });
   }
 
   filterSchedules(): void {
@@ -651,30 +741,21 @@ export class SchedulesComponent implements OnInit {
     if (this.searchTerm) {
       const search = this.searchTerm.toLowerCase();
       filtered = filtered.filter(schedule =>
-        schedule.patient.name.toLowerCase().includes(search) ||
-        schedule.doctor.name.toLowerCase().includes(search) ||
-        schedule.doctor.specialty.toLowerCase().includes(search)
+        schedule.name_client.toLowerCase().includes(search) ||
+        (schedule.provider && schedule.provider.name.toLowerCase().includes(search)) ||
+        (schedule.client && schedule.client.name.toLowerCase().includes(search)) ||
+        (schedule.Services && schedule.Services.some(service => 
+          service.service.toLowerCase().includes(search)
+        ))
       );
     }
 
     // Status filter
-    if (!this.filters.status.scheduled || !this.filters.status.confirmed || !this.filters.status.completed || !this.filters.status.cancelled) {
+    if (!this.filters.status.active || !this.filters.status.finished || !this.filters.status.cancelled) {
       filtered = filtered.filter(schedule => {
-        if (this.filters.status.scheduled && schedule.status === 'scheduled') return true;
-        if (this.filters.status.confirmed && schedule.status === 'confirmed') return true;
-        if (this.filters.status.completed && schedule.status === 'completed') return true;
-        if (this.filters.status.cancelled && schedule.status === 'cancelled') return true;
-        return false;
-      });
-    }
-
-    // Type filter
-    if (!this.filters.type.first_visit || !this.filters.type.follow_up || !this.filters.type.exam || !this.filters.type.procedure) {
-      filtered = filtered.filter(schedule => {
-        if (this.filters.type.first_visit && schedule.type === 'first_visit') return true;
-        if (this.filters.type.follow_up && schedule.type === 'follow_up') return true;
-        if (this.filters.type.exam && schedule.type === 'exam') return true;
-        if (this.filters.type.procedure && schedule.type === 'procedure') return true;
+        if (this.filters.status.active && schedule.active && !schedule.finished) return true;
+        if (this.filters.status.finished && schedule.finished) return true;
+        if (this.filters.status.cancelled && !schedule.active && !schedule.finished) return true;
         return false;
       });
     }
@@ -684,7 +765,7 @@ export class SchedulesComponent implements OnInit {
       const start = new Date(this.filters.dateRange.start);
       const end = new Date(this.filters.dateRange.end);
       filtered = filtered.filter(schedule => {
-        const scheduleDate = new Date(schedule.date);
+        const scheduleDate = new Date(schedule.date_and_houres);
         return scheduleDate >= start && scheduleDate <= end;
       });
     }
@@ -703,16 +784,9 @@ export class SchedulesComponent implements OnInit {
     this.searchTerm = '';
     this.filters = {
       status: {
-        scheduled: true,
-        confirmed: true,
-        completed: true,
+        active: true,
+        finished: true,
         cancelled: false
-      },
-      type: {
-        first_visit: true,
-        follow_up: true,
-        exam: true,
-        procedure: true
       },
       dateRange: {
         start: '',
@@ -728,18 +802,108 @@ export class SchedulesComponent implements OnInit {
   }
 
   openScheduleModal(): void {
-    // Implement schedule modal
+    this.editingSchedule = null;
+    this.showFormModal = true;
   }
 
   viewSchedule(schedule: Schedule): void {
-    // Implement view schedule
+    this.selectedSchedule = schedule;
+    this.showViewModal = true;
   }
 
   editSchedule(schedule: Schedule): void {
-    // Implement edit schedule
+    this.editingSchedule = schedule;
+    this.showFormModal = true;
   }
 
   deleteSchedule(schedule: Schedule): void {
-    // Implement delete schedule
+    this.scheduleToDelete = schedule;
+    this.showDeleteModal = true;
+  }
+
+  // Modal methods
+  closeViewModal(): void {
+    this.showViewModal = false;
+    this.selectedSchedule = null;
+  }
+
+  openEditModal(schedule: Schedule): void {
+    this.closeViewModal();
+    this.editSchedule(schedule);
+  }
+
+  closeFormModal(): void {
+    this.showFormModal = false;
+    this.editingSchedule = null;
+    this.formLoading = false;
+  }
+
+  saveSchedule(scheduleData: CreateScheduleRequest): void {
+    this.formLoading = true;
+    
+    if (this.editingSchedule) {
+      // Update existing schedule
+      this.schedulesService.updateSchedule(this.editingSchedule.id, scheduleData).subscribe({
+        next: () => {
+          console.log('Agendamento atualizado com sucesso');
+          this.loadSchedules();
+          this.closeFormModal();
+        },
+        error: (error) => {
+          this.error = 'Erro ao atualizar agendamento';
+          console.error('Erro ao atualizar agendamento:', error);
+          this.formLoading = false;
+        }
+      });
+    } else {
+      // Create new schedule
+      this.schedulesService.createSchedule(scheduleData).subscribe({
+        next: () => {
+          console.log('Agendamento criado com sucesso');
+          this.loadSchedules();
+          this.closeFormModal();
+        },
+        error: (error) => {
+          this.error = 'Erro ao criar agendamento';
+          console.error('Erro ao criar agendamento:', error);
+          this.formLoading = false;
+        }
+      });
+    }
+  }
+
+  closeDeleteModal(): void {
+    this.showDeleteModal = false;
+    this.scheduleToDelete = null;
+    this.deleteLoading = false;
+  }
+
+  confirmDelete(schedule: Schedule): void {
+    this.deleteLoading = true;
+    
+    this.schedulesService.deleteSchedule(schedule.id).subscribe({
+      next: () => {
+        console.log('Agendamento excluído com sucesso');
+        this.loadSchedules();
+        this.closeDeleteModal();
+      },
+      error: (error) => {
+        this.error = 'Erro ao excluir agendamento';
+        console.error('Erro ao excluir agendamento:', error);
+        this.deleteLoading = false;
+      }
+    });
+  }
+
+  getStatusClass(schedule: Schedule): string {
+    if (schedule.finished) return 'completed';
+    if (!schedule.active) return 'cancelled';
+    return 'active';
+  }
+
+  getStatusText(schedule: Schedule): string {
+    if (schedule.finished) return 'Finalizado';
+    if (!schedule.active) return 'Cancelado';
+    return 'Ativo';
   }
 } 

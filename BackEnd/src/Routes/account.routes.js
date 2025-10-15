@@ -79,7 +79,7 @@ router.get('/', authenticateToken, accountController.getAllAccounts.bind(account
  *       401:
  *         description: Unauthorized
  */
-router.post('/', authenticateToken, accountController.createAccount.bind(accountController));
+router.post('/', accountController.createAccount.bind(accountController));
 
 /**
  * @swagger

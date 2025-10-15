@@ -670,9 +670,6 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
   organizeRecipientGroups() {
     const groups = [
-      { label: 'Médicos', users: this.users.filter(u => u.TypeAccount.type === 'medico') },
-      { label: 'Enfermeiros', users: this.users.filter(u => u.TypeAccount.type === 'enfermeiro') },
-      { label: 'Recepcionistas', users: this.users.filter(u => u.TypeAccount.type === 'recepcionista') },
       { label: 'Administradores', users: this.users.filter(u => u.TypeAccount.type === 'admin') }
     ];
 
