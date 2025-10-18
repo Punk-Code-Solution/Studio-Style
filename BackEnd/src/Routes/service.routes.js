@@ -101,7 +101,7 @@ rota.get("/service/one", async (request, response) => { await servicecontroller.
  *       404:
  *         description: Serviço não encontrado
  */
-rota.delete("/service", async (request, response) => { await servicecontroller.deleteService( request, response ); });
+rota.delete("/", async (request, response) => { await servicecontroller.deleteService( request, response ); });
 
 /**
  * @swagger

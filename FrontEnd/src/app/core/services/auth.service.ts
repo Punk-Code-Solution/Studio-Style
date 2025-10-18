@@ -7,7 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
 // Tipos centralizados
-export type UserRole =  | 'admin' | 'ninguem';
+export type UserRole =  | 'admin' | 'ninguem' | 'provider' | 'client';
 
 interface AuthState {
   user: User | null;

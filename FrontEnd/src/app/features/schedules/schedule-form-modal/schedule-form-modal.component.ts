@@ -1,7 +1,8 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Schedule, CreateScheduleRequest, Service, Account } from '../../../core/services/schedules.service';
+import { Schedule, CreateScheduleRequest, Service } from '../../../core/services/schedules.service';
+import { User } from '../../../core/services/user.service';
 
 @Component({
   selector: 'app-schedule-form-modal',
@@ -125,7 +126,7 @@ import { Schedule, CreateScheduleRequest, Service, Account } from '../../../core
                     >
                       <option value="">Selecione um cliente</option>
                       <option *ngFor="let client of clients" [value]="client.id">
-                        {{ client.name }} {{ client.lastname }} - {{ client.cpf }}
+                        {{ client.name }} {{ client.lastname }}
                       </option>
                     </select>
                     <div class="error-message" *ngIf="scheduleForm.submitted && !scheduleData.client_id_schedules">
@@ -175,6 +176,11 @@ import { Schedule, CreateScheduleRequest, Service, Account } from '../../../core
                 Serviços
               </label>
               <div class="services-selection">
+                <!-- Debug info -->
+                <div *ngIf="availableServices.length === 0" style="padding: 10px; background: #f0f0f0; border-radius: 4px; margin-bottom: 10px;">
+                  <small>Debug: Nenhum serviço disponível ({{ availableServices.length }} serviços carregados)</small>
+                </div>
+                
                 <div class="service-option" *ngFor="let service of availableServices">
                   <label class="checkbox-label">
                     <input 
@@ -191,20 +197,6 @@ import { Schedule, CreateScheduleRequest, Service, Account } from '../../../core
               <div class="error-message" *ngIf="scheduleForm.submitted && selectedServices.length === 0">
                 Pelo menos um serviço deve ser selecionado
               </div>
-            </div>
-
-            <div class="form-group">
-              <label for="notes">
-                <i class="fas fa-clipboard"></i>
-                Observações
-              </label>
-              <textarea 
-                id="notes" 
-                [(ngModel)]="scheduleData.notes"
-                name="notes"
-                rows="4"
-                placeholder="Digite observações sobre o agendamento"
-              ></textarea>
             </div>
           </form>
         </div>
@@ -481,8 +473,8 @@ import { Schedule, CreateScheduleRequest, Service, Account } from '../../../core
 export class ScheduleFormModalComponent implements OnInit {
   @Input() schedule: Schedule | null = null;
   @Input() availableServices: Service[] = [];
-  @Input() providers: Account[] = [];
-  @Input() clients: Account[] = [];
+  @Input() providers: User[] = [];
+  @Input() clients: User[] = [];
   @Input() loading = false;
   @Output() close = new EventEmitter<void>();
   @Output() save = new EventEmitter<CreateScheduleRequest>();
@@ -501,9 +493,10 @@ export class ScheduleFormModalComponent implements OnInit {
   statusValue = 'active';
   notes = '';
   clientMode: 'select' | 'manual' = 'select';
-  selectedClient: Account | null = null;
+  selectedClient: User | null = null;
 
   ngOnInit(): void {
+    
     if (this.schedule) {
       this.isEditMode = true;
       this.scheduleData = {
@@ -525,6 +518,7 @@ export class ScheduleFormModalComponent implements OnInit {
         this.statusValue = 'active';
       }
     }
+
   }
 
   closeModal(): void {

@@ -1,11 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { SchedulesService, Schedule, Service, Account, CreateScheduleRequest } from '../../core/services/schedules.service';
+import { SchedulesService, Schedule, Service, CreateScheduleRequest } from '../../core/services/schedules.service';
 import { ScheduleViewModalComponent } from './schedule-view-modal/schedule-view-modal.component';
 import { ScheduleFormModalComponent } from './schedule-form-modal/schedule-form-modal.component';
 import { ScheduleDeleteModalComponent } from './schedule-delete-modal/schedule-delete-modal.component';
+import { User, UserService } from '../../core/services/user.service';
 
 @Component({
   selector: 'app-schedules',
@@ -94,8 +95,8 @@ import { ScheduleDeleteModalComponent } from './schedule-delete-modal/schedule-d
           <table>
             <thead>
               <tr>
-                <th>Cliente</th>
                 <th>Prestador</th>
+                <th>Cliente</th>
                 <th>Data/Hora</th>
                 <th>Serviços</th>
                 <th>Status</th>
@@ -106,16 +107,17 @@ import { ScheduleDeleteModalComponent } from './schedule-delete-modal/schedule-d
               <tr *ngFor="let schedule of filteredSchedules">
                 <td>
                   <div class="user-info">
-                    <img [src]="schedule.client?.avatar || 'https://via.placeholder.com/32x32'" [alt]="schedule.name_client" class="avatar">
-                    <span>{{ schedule.name_client }}</span>
+                    <div class="doctor-details">
+                      <span>{{ schedule.client?.name || 'N/A' }}</span>
+                      <span>{{ schedule.client?.lastname || '' }}</span>
+                    </div>
                   </div>
                 </td>
                 <td>
                   <div class="user-info">
-                    <img [src]="schedule.provider?.avatar || 'https://via.placeholder.com/32x32'" [alt]="schedule.provider?.name" class="avatar">
                     <div class="doctor-details">
                       <span>{{ schedule.provider?.name || 'N/A' }}</span>
-                      <small>{{ schedule.provider?.lastname || '' }}</small>
+                      <span>{{ schedule.provider?.lastname || '' }}</span>
                     </div>
                   </div>
                 </td>
@@ -642,6 +644,7 @@ export class SchedulesComponent implements OnInit {
   totalPages = 1;
   loading = false;
   error = '';
+  userService = inject(UserService);
 
   // Modal states
   showViewModal = false;
@@ -655,8 +658,8 @@ export class SchedulesComponent implements OnInit {
 
   // Data for forms
   availableServices: Service[] = [];
-  providers: Account[] = [];
-  clients: Account[] = [];
+  providers: User[] = [];
+  clients: User[] = [];
 
   filters = {
     status: {
@@ -678,39 +681,27 @@ export class SchedulesComponent implements OnInit {
   }
 
   loadFormData(): void {
-    // Carregar serviços disponíveis
-    this.schedulesService.getAllSchedules().subscribe({
-      next: (schedules) => {
-        // Extrair serviços únicos dos agendamentos
-        const allServices: Service[] = [];
-        schedules.forEach(schedule => {
-          if (schedule.Services) {
-            schedule.Services.forEach(service => {
-              if (!allServices.find(s => s.id === service.id)) {
-                allServices.push(service);
-              }
-            });
-          }
-        });
-        this.availableServices = allServices;
+    // Carregar serviços disponíveis diretamente da API de serviços
+    this.schedulesService.getAllServices().subscribe({
+      next: (services) => {
+        this.availableServices = services;
       },
       error: (error) => {
-        console.error('Erro ao carregar serviços:', error);
+        this.availableServices = [];
       }
     });
 
-    // TODO: Implementar carregamento de providers e clients
-    // Por enquanto, usando dados mock
-    this.providers = [
-      { id: '1', name: 'João', lastname: 'Silva', cpf: '123.456.789-00', typeaccount_id: 'provider', company_id_account: '1' },
-      { id: '2', name: 'Maria', lastname: 'Santos', cpf: '987.654.321-00', typeaccount_id: 'provider', company_id_account: '1' }
-    ];
-
-    this.clients = [
-      { id: '1', name: 'Ana', lastname: 'Costa', cpf: '111.222.333-44', typeaccount_id: 'client', company_id_account: '1' },
-      { id: '2', name: 'Carlos', lastname: 'Oliveira', cpf: '555.666.777-88', typeaccount_id: 'client', company_id_account: '1' },
-      { id: '3', name: 'Fernanda', lastname: 'Lima', cpf: '999.888.777-66', typeaccount_id: 'client', company_id_account: '1' }
-    ];
+    this.userService.getUsers().subscribe({
+      next: (users) => {
+        this.providers = users.filter(user => user.TypeAccount.type === 'provider');
+        this.clients = users.filter(user => user.TypeAccount.type === 'client');
+      },
+      error: (error) => {
+        console.error('❌ Erro ao carregar usuários:', error);
+        this.providers = [];
+        this.clients = [];
+      }
+    });
   }
 
   loadSchedules(): void {
@@ -719,14 +710,12 @@ export class SchedulesComponent implements OnInit {
     
     this.schedulesService.getAllSchedules().subscribe({
       next: (schedules) => {
-        console.log('Agendamentos carregados:', schedules);
         this.schedules = Array.isArray(schedules) ? schedules : [];
         this.filterSchedules();
         this.loading = false;
       },
       error: (error) => {
         this.error = 'Erro ao carregar agendamentos';
-        console.error('Erro ao carregar agendamentos:', error);
         this.schedules = [];
         this.filterSchedules();
         this.loading = false;
@@ -804,6 +793,8 @@ export class SchedulesComponent implements OnInit {
   openScheduleModal(): void {
     this.editingSchedule = null;
     this.showFormModal = true;
+    // Recarregar dados do formulário para garantir que os serviços estejam atualizados
+    this.loadFormData();
   }
 
   viewSchedule(schedule: Schedule): void {
@@ -814,6 +805,8 @@ export class SchedulesComponent implements OnInit {
   editSchedule(schedule: Schedule): void {
     this.editingSchedule = schedule;
     this.showFormModal = true;
+    // Recarregar dados do formulário para garantir que os serviços estejam atualizados
+    this.loadFormData();
   }
 
   deleteSchedule(schedule: Schedule): void {

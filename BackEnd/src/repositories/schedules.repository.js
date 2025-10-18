@@ -77,23 +77,35 @@ class schedulesRepository{
 
   }
     
-  async updateSchedules(service) {
+  async updateSchedules(scheduleData) {
+
+    const { 
+      id,
+      name_client,
+      date_and_houres,
+      active,
+      finished,
+      provider_id_schedules,
+      client_id_schedules,
+      services
+    } = scheduleData
 
     await Schedules.update(
+
       {
 
-        name_client: service.name_client ? service.name_client : Service.name_client,
-        name_provider: service.name_provider ? service.name_provider : Service.name_provider,
-        client_id: service.client_id ? service.client_id : Service.client_id,
-        value: service.value ? service.value : Service.value,
-        service: service.service ? service.service : Service.service,
-        id_account_service_provider: service.id_account_service_provider ? service.id_account_service_provider : Service.id_account_service_provider,
-        date_service: service.date_service ? service.date_service : Service.date_service
+        name_client: name_client ? name_client : Schedules.name_client,
+        date_and_houres: date_and_houres ? date_and_houres : Schedules.date_and_houres,
+        active: active ? active : Schedules.active,
+        finished: finished ? finished : Schedules.finished,
+        provider_id_schedules: provider_id_schedules ? provider_id_schedules : Schedules.provider_id_schedules,
+        client_id_schedules: client_id_schedules ? client_id_schedules : Schedules.client_id_schedules,
+        services: services ? services : Schedules.services
 
       },
       {
         where: {
-            id: service.id,
+            id: id,
         },
         
       }
@@ -102,7 +114,7 @@ class schedulesRepository{
   
     return await Schedules.findOne({
       where:{
-        id : id
+         id: id
         }
     });
   }

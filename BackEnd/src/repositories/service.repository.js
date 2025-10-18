@@ -80,7 +80,7 @@ class serviceRepository{
     
   async deleteService(id) {
 
-    await Service.destroy({
+    return await Service.destroy({
       where: {
         id: id,
       },

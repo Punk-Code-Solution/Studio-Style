@@ -44,7 +44,7 @@ export class MessageService {
 
   getUnreadMessages(userId: number): Observable<Message[]> {
     const unreadMessages = this.messages.filter(message => {
-      const recipient = message.destinatarios.find(r => r.usuario.id === userId);
+      const recipient = message.destinatarios.find(r => r.usuario.id === userId.toString());
       return recipient && !recipient.lida;
     });
     return of(unreadMessages).pipe(delay(300));
@@ -69,7 +69,7 @@ export class MessageService {
       throw new Error('Message not found');
     }
 
-    const recipient = message.destinatarios.find(r => r.usuario.id === userId);
+    const recipient = message.destinatarios.find(r => r.usuario.id === userId.toString());
     if (recipient) {
       recipient.lida = true;
       message.dataLeitura = new Date().toISOString();
@@ -89,8 +89,8 @@ export class MessageService {
 
   getMessagesByUser(userId: number): Observable<Message[]> {
     const userMessages = this.messages.filter(
-      message => message.criadoPor.id === userId ||
-                message.destinatarios.some(r => r.usuario.id === userId)
+      message => message.criadoPor.id === userId.toString() ||
+                message.destinatarios.some(r => r.usuario.id === userId.toString())
     );
     return of(userMessages).pipe(delay(300));
   }

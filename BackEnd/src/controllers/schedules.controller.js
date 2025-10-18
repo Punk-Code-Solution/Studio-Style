@@ -16,28 +16,53 @@ class SchedulesController {
    */
   async createSchedules(req, res) {
     try {
+      const schedules = req.body;
       
-      if (true) {
-
-        const schedules = req.body;
-        const result = await this.schedulesRepository.addSchedules(schedules);
-
-        if(!result){
-          return ResponseHandler.error(res, 400, 'Failed to create schedule');
-        }
-
-        const result_services = await this.schedules_serviceRepository.addSchedule_Service(result.dataValues.id, schedules.services);
-
-        if(!result_services){
-          return ResponseHandler.error(res, 400, 'Failed to create service')
-        }
-
-        return ResponseHandler.success(res, 201, 'Schedules created successfully', result);
-      } else {
-        return ResponseHandler.error(res, 400, 'Failed to create schedules');
+      // Validar dados obrigatórios
+      if (!schedules.name_client || !schedules.date_and_houres || !schedules.provider_id_schedules || !schedules.client_id_schedules) {
+        return ResponseHandler.error(res, 400, 'Dados obrigatórios não fornecidos');
       }
+
+      // Validar se há serviços
+      if (!schedules.services || !Array.isArray(schedules.services) || schedules.services.length === 0) {
+        return ResponseHandler.error(res, 400, 'Pelo menos um serviço deve ser selecionado');
+      }
+
+      console.log('📋 Criando agendamento:', {
+        cliente: schedules.name_client,
+        data: schedules.date_and_houres,
+        provider: schedules.provider_id_schedules,
+        client: schedules.client_id_schedules,
+        services: schedules.services
+      });
+
+      // Criar o agendamento
+      const result = await this.schedulesRepository.addSchedules(schedules);
+
+      if (!result) {
+        return ResponseHandler.error(res, 400, 'Falha ao criar agendamento');
+      }
+
+      console.log('✅ Agendamento criado com ID:', result.dataValues.id);
+
+      // Adicionar serviços ao agendamento
+      const result_services = await this.schedules_serviceRepository.addSchedule_Service(result.dataValues.id, schedules.services);
+
+      if (!result_services) {
+        // Se falhou ao adicionar serviços, remover o agendamento criado
+        await this.schedulesRepository.deleteSchedules(result.dataValues.id);
+        return ResponseHandler.error(res, 400, 'Falha ao associar serviços ao agendamento');
+      }
+
+      console.log('✅ Serviços associados ao agendamento:', result_services.length);
+
+      return ResponseHandler.success(res, 201, 'Agendamento criado com sucesso', {
+        schedule: result,
+        services: result_services
+      });
     } catch (error) {
-      return ResponseHandler.error(res, 500, 'Failed to create schedules', error);
+      console.error('❌ Erro ao criar agendamento:', error);
+      return ResponseHandler.error(res, 500, 'Falha ao criar agendamento', error.message);
     }
   }
 
@@ -76,15 +101,9 @@ class SchedulesController {
    */
   async updateSchedule(req, res) {
     try {
-      const { id } = req.params;
-      const accountData = req.body;
+      const scheduleData = req.body;    
       
-      // Hash password if provided
-      if (accountData.password) {
-        accountData.password = await bcrypt.hash(accountData.password, 10);
-      }
-      
-      const result = await this.schedulesRepository.updateAccount(id, accountData);
+      const result = await this.schedulesRepository.updateSchedules(scheduleData);
       
       if (!result) {
         return ResponseHandler.notFound(res, 'Service not found');
@@ -92,6 +111,7 @@ class SchedulesController {
       
       return ResponseHandler.success(res, 200, 'Service updated successfully', result);
     } catch (error) {
+      console.log("error", error)
       return ResponseHandler.error(res, 500, 'Failed to update service', error);
     }
   }

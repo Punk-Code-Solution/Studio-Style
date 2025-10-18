@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { User } from './user.service';
 
 export interface Schedule {
   id: string;
@@ -13,8 +14,8 @@ export interface Schedule {
   provider_id_schedules: string;
   client_id_schedules: string;
   Services?: Service[];
-  provider?: Account;
-  client?: Account;
+  provider?: User;
+  client?: User;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -34,20 +35,6 @@ export interface Service {
   updatedAt?: string;
 }
 
-export interface Account {
-  id: string;
-  name: string;
-  lastname: string;
-  avatar?: string;
-  cpf: string;
-  birthday?: string;
-  typeaccount_id: string;
-  company_id_account: string;
-  type_hair_id?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
 export interface CreateScheduleRequest {
   name_client: string;
   date_and_houres: string;
@@ -63,7 +50,7 @@ export interface CreateScheduleRequest {
 })
 export class SchedulesService {
   private apiUrl = `${environment.apiUrl}/schedules`;
-
+  private servicesUrl = `${environment.apiUrl}/service`;
   constructor(private http: HttpClient) {}
 
   getAllSchedules(): Observable<Schedule[]> {
@@ -93,6 +80,39 @@ export class SchedulesService {
   deleteSchedule(id: string): Observable<void> {
     return this.http.delete<ApiResponse<void>>(`${this.apiUrl}?id=${id}`).pipe(
       map(response => response.data)
+    );
+  }
+
+  // Método para buscar todos os serviços disponíveis
+  getAllServices(): Observable<Service[]> {    
+    return this.http.get<{result: Service[]}>(this.servicesUrl).pipe(
+      map(response => {
+        const result = response.result;
+        let services: Service[] = [];
+        
+        // Se result é um array, retorna ele. Se é um objeto, coloca em um array
+        if (Array.isArray(result)) {
+          services = result;
+        } else if (result) {
+          services = [result];
+        }
+        
+        // Filtrar serviços válidos (que tenham pelo menos service e price)
+        const validServices = services.filter(service => {
+          const isValid = service && 
+            service.service && 
+            service.service.trim() !== '' && 
+            service.price !== null && 
+            service.price !== undefined;
+          
+          if (!isValid) {
+            console.log('❌ Serviço inválido filtrado:', service);
+          }
+          
+          return isValid;
+        });
+        return validServices;
+      })
     );
   }
 }

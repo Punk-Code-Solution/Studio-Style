@@ -1,20 +1,56 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
-import { delay, tap } from 'rxjs/operators';
+import { delay, tap, map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
+
+export interface TypeAccount {
+  id: string;
+  type: 'admin' | 'provider' | 'client' | 'ninguem';
+  edit: boolean;
+  creat: boolean;
+  viwer: boolean;
+  delet: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Email {
+  id: string;
+  name: string;
+  email: string;
+  active: string;
+  account_id_email: string;
+  company_id_email?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface User {
-  TypeAccount: {
-    type:
-      | 'admin'
-      | 'ninguem';
-  };
-  id: number;
-  nome: string;
-  email: string;
-  telefone: string;
-  ativo: boolean;
-  crm?: string;
-  senha: string;
+  id: string;
+  name: string;
+  lastname: string;
+  password: string;
+  cpf: string;
+  start_date: string;
+  birthday?: string;
+  deleted?: string;
+  avatar?: string;
+  typeaccount_id: string;
+  company_id_account?: string;
+  type_hair_id?: string;
+  createdAt: string;
+  updatedAt: string;
+  TypeAccount: TypeAccount;
+  Company?: any;
+  Emails: Email[];
+  Hair?: any;
+  Schedules: any[];
+  Sales: any[];
+  Purchases: any[];
+  Purchase_Materials: any[];
+  Phones: any[];
+  Adress?: any;
 }
 
 interface ValidationResult {
@@ -26,94 +62,130 @@ interface ValidationResult {
   providedIn: 'root'
 })
 export class UserService {
+  private apiUrl = `${environment.apiUrl}/account`;
 
   private users: User[] = [];
-
-
   private usersSubject = new BehaviorSubject<User[]>(this.users);
   users$ = this.usersSubject.asObservable();
 
-  constructor() {}
+  constructor(private http: HttpClient) {}
 
-  authenticate(email: string, senha: string): User | null {
-    const user = this.users.find(u => u.email === email && u.senha === senha);
-    return user || null;
-  }
-
+  // Buscar todos os usuários
   getUsers(): Observable<User[]> {
-    return of(this.users).pipe(delay(500));
+    return this.http.get<{data: User[]}>(this.apiUrl).pipe(
+      map(response => {
+        const users = response.data || [];
+        this.users = users;
+        this.usersSubject.next(this.users);
+        return users;
+      })
+    );
   }
 
-  getUserById(id: number): Observable<User | undefined> {
-    const user = this.users.find(u => u.id === id);
-    return of(user).pipe(delay(300));
+  // Buscar usuário por ID
+  getUserById(id: string): Observable<User | undefined> {
+    return this.http.get<{result: User}>(`${this.apiUrl}/one?id=${id}`).pipe(
+      map(response => {
+        return response.result;
+      })
+    );
   }
 
-  createUser(user: Omit<User, 'id'>): Observable<User> {
+  // Buscar usuários por tipo de conta
+  getUsersByRole(role: string): Observable<User[]> {
+    return this.getUsers().pipe(
+      map(users => users.filter(user => user.TypeAccount.type === role))
+    );
+  }
+
+  // Buscar usuários ativos (não deletados)
+  getActiveUsers(): Observable<User[]> {
+    return this.getUsers().pipe(
+      map(users => users.filter(user => !user.deleted))
+    );
+  }
+
+  // Criar novo usuário
+  createUser(user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Observable<User> {
     const validation = this.validateUser(user);
     if (!validation.isValid) {
       const errorMessage = validation.errors.join('\n');
       return throwError(() => new Error(errorMessage));
     }
 
-    const newUser: User = {
-      ...user,
-      id: Math.max(...this.users.map(u => u.id)) + 1
-    };
-    this.users = [...this.users, newUser];
-    return of(newUser).pipe(delay(500));
+    return this.http.post<{result: User}>(this.apiUrl, user).pipe(
+      map(response => {
+        this.users = [...this.users, response.result];
+        this.usersSubject.next(this.users);
+        return response.result;
+      })
+    );
   }
 
-  updateUser(id: number, user: Partial<User>): Observable<User> {
-    const index = this.users.findIndex(u => u.id === id);
-    if (index === -1) {
-      return throwError(() => new Error('User not found'));
-    }
-
+  // Atualizar usuário
+  updateUser(id: string, user: Partial<User>): Observable<User> {
     const validation = this.validateUser(user);
     if (!validation.isValid) {
       const errorMessage = validation.errors.join('\n');
       return throwError(() => new Error(errorMessage));
     }
 
-    this.users[index] = { ...this.users[index], ...user };
-    return of(this.users[index]).pipe(delay(500));
+    return this.http.put<{result: User}>(this.apiUrl, { id, ...user }).pipe(
+      map(response => {
+        const index = this.users.findIndex(u => u.id === id);
+        if (index !== -1) {
+          this.users[index] = response.result;
+          this.usersSubject.next(this.users);
+        }
+        return response.result;
+      })
+    );
   }
 
-  deleteUser(id: number): Observable<void> {
-    const index = this.users.findIndex(u => u.id === id);
-    if (index === -1) {
-      return throwError(() => new Error('User not found'));
-    }
-    this.users = this.users.filter(u => u.id !== id);
-    return of(void 0).pipe(delay(500));
+  // Deletar usuário (soft delete)
+  deleteUser(id: string): Observable<void> {
+    return this.http.delete<{result: void}>(`${this.apiUrl}?id=${id}`).pipe(
+      map(response => {
+        this.users = this.users.filter(u => u.id !== id);
+        this.usersSubject.next(this.users);
+        return response.result;
+      })
+    );
   }
 
   validateUser(user: Partial<User>): ValidationResult {
     const errors: string[] = [];
 
-    if (!user.nome) {
+    if (!user.name) {
       errors.push('Nome é obrigatório');
     }
 
-    if (!user.email) {
-      errors.push('Email é obrigatório');
-    } else if (!this.isValidEmail(user.email)) {
-      errors.push('Email inválido');
+    if (!user.lastname) {
+      errors.push('Sobrenome é obrigatório');
     }
 
-    if (!user.telefone) {
-      errors.push('Telefone é obrigatório');
-    } else if (!this.isValidPhone(user.telefone)) {
-      errors.push('Telefone inválido');
+    if (!user.cpf) {
+      errors.push('CPF é obrigatório');
+    } else if (!this.isValidCPF(user.cpf)) {
+      errors.push('CPF inválido');
     }
 
-    if (!user.TypeAccount || !user.TypeAccount.type) {
-      errors.push('Perfil é obrigatório');
+    if (!user.typeaccount_id) {
+      errors.push('Tipo de conta é obrigatório');
     }
 
-    if (!user.TypeAccount || !user.TypeAccount.type || user.TypeAccount.type === 'admin' && !user.crm) {
-      errors.push('CRM é obrigatório para médicos');
+    // Validar se há pelo menos um email
+    if (!user.Emails || user.Emails.length === 0) {
+      errors.push('Pelo menos um email é obrigatório');
+    } else {
+      // Validar emails
+      user.Emails.forEach((email, index) => {
+        if (!email.email) {
+          errors.push(`Email ${index + 1} é obrigatório`);
+        } else if (!this.isValidEmail(email.email)) {
+          errors.push(`Email ${index + 1} é inválido`);
+        }
+      });
     }
 
     return {
@@ -127,74 +199,93 @@ export class UserService {
     return emailRegex.test(email);
   }
 
-  private isValidPhone(phone: string): boolean {
-    const phoneRegex = /^\(\d{2}\) \d{5}-\d{4}$/;
-    return phoneRegex.test(phone);
+  private isValidCPF(cpf: string): boolean {
+    // Remove caracteres não numéricos
+    cpf = cpf.replace(/\D/g, '');
+    
+    // Verifica se tem 11 dígitos
+    if (cpf.length !== 11) return false;
+    
+    // Verifica se todos os dígitos são iguais
+    if (/^(\d)\1{10}$/.test(cpf)) return false;
+    
+    // Validação do CPF
+    let sum = 0;
+    for (let i = 0; i < 9; i++) {
+      sum += parseInt(cpf.charAt(i)) * (10 - i);
+    }
+    let remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cpf.charAt(9))) return false;
+    
+    sum = 0;
+    for (let i = 0; i < 10; i++) {
+      sum += parseInt(cpf.charAt(i)) * (11 - i);
+    }
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cpf.charAt(10))) return false;
+    
+    return true;
   }
 
-  private isEmailUnique(email: string, excludeId?: number): boolean {
+  private isEmailUnique(email: string, excludeId?: string): boolean {
     return !this.users.some(user =>
-      user.email === email && (!excludeId || user.id !== excludeId)
+      user.Emails.some(e => e.email === email) && (!excludeId || user.id !== excludeId)
     );
   }
 
-  addUser(user: Omit<User, 'id'>): Observable<User> {
-    const validation = this.validateUser(user);
-    if (!validation.isValid) {
-      const errorMessage = validation.errors.join('\n');
-      return throwError(() => new Error(errorMessage));
-    }
-
-    if (!this.isEmailUnique(user.email)) {
-      return throwError(() => new Error('Email já cadastrado'));
-    }
-
-    const newUser = {
-      ...user,
-      id: Math.max(...this.users.map(u => u.id)) + 1
-    };
-
-    this.users = [...this.users, newUser];
-    this.usersSubject.next(this.users);
-
-    return of(newUser).pipe(delay(500));
+  // Buscar usuários por nome, sobrenome ou email
+  searchUsers(query: string): Observable<User[]> {
+    const searchTerm = query.toLowerCase();
+    return this.getUsers().pipe(
+      map(users => users.filter(user => {
+        const fullName = `${user.name} ${user.lastname}`.toLowerCase();
+        const hasEmailMatch = user.Emails.some(email => 
+          email.email.toLowerCase().includes(searchTerm)
+        );
+        return fullName.includes(searchTerm) || hasEmailMatch;
+      }))
+    );
   }
 
-  toggleUserStatus(id: number): Observable<User> {
-    const index = this.users.findIndex(u => u.id === id);
-    if (index === -1) {
+  // Alternar status do usuário (soft delete)
+  toggleUserStatus(id: string): Observable<User> {
+    const user = this.users.find(u => u.id === id);
+    if (!user) {
       return throwError(() => new Error('Usuário não encontrado'));
     }
 
     const updatedUser = {
-      ...this.users[index],
-      ativo: !this.users[index].ativo
+      ...user,
+      deleted: user.deleted ? null : new Date().toISOString()
     };
 
-    this.users[index] = updatedUser;
-    this.users = [...this.users];
-    this.usersSubject.next(this.users);
-
-    return of(updatedUser).pipe(delay(500));
+    return this.updateUser(id, { deleted: updatedUser.deleted || undefined });
   }
 
-  getUsersByRole(role: User['TypeAccount']): Observable<User[]> {
-    const filteredUsers = this.users.filter(u => u.TypeAccount.type === role.type);
-    return of(filteredUsers).pipe(delay(500));
-  }
-
-  getActiveUsers(): Observable<User[]> {
-    const activeUsers = this.users.filter(u => u.ativo);
-    return of(activeUsers).pipe(delay(500));
-  }
-
-  searchUsers(query: string): Observable<User[]> {
-    const searchTerm = query.toLowerCase();
-    const filteredUsers = this.users.filter(user =>
-      user.nome.toLowerCase().includes(searchTerm) ||
-      user.email.toLowerCase().includes(searchTerm) ||
-      user.telefone.includes(searchTerm)
+  // Buscar usuários por tipo de conta específico
+  getUsersByTypeAccount(typeAccountId: string): Observable<User[]> {
+    return this.getUsers().pipe(
+      map(users => users.filter(user => user.typeaccount_id === typeAccountId))
     );
-    return of(filteredUsers).pipe(delay(500));
+  }
+
+  // Buscar usuários por empresa
+  getUsersByCompany(companyId: string): Observable<User[]> {
+    return this.getUsers().pipe(
+      map(users => users.filter(user => user.company_id_account === companyId))
+    );
+  }
+
+  // Método para obter o email principal do usuário
+  getPrimaryEmail(user: User): string {
+    const activeEmail = user.Emails.find(email => email.active);
+    return activeEmail ? activeEmail.email : (user.Emails[0]?.email || '');
+  }
+
+  // Método para obter o nome completo do usuário
+  getFullName(user: User): string {
+    return `${user.name} ${user.lastname}`;
   }
 }

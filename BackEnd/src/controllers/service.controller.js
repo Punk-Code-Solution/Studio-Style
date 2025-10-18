@@ -71,15 +71,18 @@ module.exports = class serviceController{
         
     async deleteService(request, response) {
 
-        
+
         try{
 
-            const { service } = request.headers;
-            await serviceRespo.deleteService(service);
-            return response.status(200).json({"Sucess": "foi"});
+            const { id } = request.query;
+            const result = await serviceRespo.deleteService(id);
+            if (!result) {
+                return response.status(404).json({"erro": "Service not found"});
+            }
+            return response.status(200).json({"Sucess": "Deleted successfully"});
 
         }catch(erro){
-        
+            
             return response.status(500).json({"erro" : erro});
 
         }

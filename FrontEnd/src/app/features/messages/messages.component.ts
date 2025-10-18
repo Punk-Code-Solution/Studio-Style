@@ -84,7 +84,7 @@ import { takeUntil } from 'rxjs/operators';
               >
                 <optgroup *ngFor="let group of recipientGroups" [label]="group.label">
                   <option *ngFor="let user of group.users" [value]="user.id">
-                    {{ user.nome }}
+                    {{ user.name }} {{ user.lastname }}
                   </option>
                 </optgroup>
               </select>
@@ -158,7 +158,7 @@ import { takeUntil } from 'rxjs/operators';
             <div class="message-info">
               <p class="author">
                 <i class="fas fa-user"></i>
-                {{ message.criadoPor.nome }}
+                {{ message.criadoPor.name }} {{ message.criadoPor.lastname }}
               </p>
               <p class="recipients">
                 <i class="fas fa-users"></i>
@@ -678,7 +678,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
   getRecipientName(id: string): string {
     const user = this.users.find(u => u.id.toString() === id);
-    return user ? user.nome : 'Usuário não encontrado';
+    return user ? user.name : 'Usuário não encontrado';
   }
 
   removeRecipient(id: string) {
@@ -796,7 +796,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
   }
 
   markAsRead(messageId: string) {
-    this.messageService.markAsRead(parseInt(messageId), this.authService.currentUser!.id)
+    this.messageService.markAsRead(Number(messageId), Number(this.authService.currentUser!.id))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
       next: () => {
