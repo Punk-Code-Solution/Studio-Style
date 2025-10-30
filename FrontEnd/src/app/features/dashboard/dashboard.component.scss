@@ -15,7 +15,7 @@
 .welcome-section {
   margin-bottom: 2rem;
   padding: 1.5rem;
-  background: white;
+  background: vars.$background-light;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 
@@ -418,7 +418,7 @@ select {
   background-color: vars.$primary-color;
   color: vars.$text-light;
   border: 1px solid vars.$border-light;
-  
+
   &:hover {
     background: vars.$primary-dark;
   }

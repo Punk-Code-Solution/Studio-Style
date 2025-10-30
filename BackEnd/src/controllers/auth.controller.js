@@ -45,7 +45,7 @@ class AuthController {
           role: typeUser.dataValues.type,
         },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || "5m" }
+        { expiresIn: process.env.JWT_EXPIRES_IN || "60m" }
       );
 
       // Remove password from response

@@ -127,18 +127,18 @@
   }
 }
 
-@include responsive(lg) {
-  .sidebar {
-    position: fixed;
-    left: -280px;
-    top: 0;
-    bottom: 0;
-    width: 280px;
-    transition: left $transition-normal;
-    z-index: $z-index-fixed;
+// @include responsive(lg) {
+//   .sidebar {
+//     position: fixed;
+//     left: -280px;
+//     top: 0;
+//     bottom: 0;
+//     width: 280px;
+//     transition: left $transition-normal;
+//     z-index: $z-index-fixed;
 
-    &.open {
-      left: 0;
-    }
-  }
-}
+//     &.open {
+//       left: 0;
+//     }
+//   }
+// }

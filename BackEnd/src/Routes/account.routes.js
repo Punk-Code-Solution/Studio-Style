@@ -362,7 +362,7 @@ router.get('/type-accounts', authenticateToken, accountController.getAllTypeAcco
  *       401:
  *         description: Unauthorized
  */
-router.post('/type-account', authorizeRoles(['admin']), accountController.createTypeAccount.bind(accountController));
+router.post('/type-account', accountController.createTypeAccount.bind(accountController));
 
 /**
  * @swagger

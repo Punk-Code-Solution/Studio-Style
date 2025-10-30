@@ -27,7 +27,7 @@ import { NotificationsComponent } from './shared/components/notifications/notifi
 
     .main-content {
       flex: 1;
-      padding: 2rem;
+      padding: 0;
       overflow-y: auto;
     }
 
