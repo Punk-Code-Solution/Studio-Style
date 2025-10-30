@@ -47,7 +47,9 @@
 
 <div class="sidebar-footer">
   <div class="user-info">
-    <img [src]="userAvatar" alt="User Avatar" class="avatar">
+
+    <img [src]="currentUser?.avatar || '/generi.jpg'" alt="User Avatar" class="avatar">
+
     <div class="user-details">
       <span class="user-name">{{ currentUser?.name }}</span>
       <span class="user-role">{{ userRole }}</span>
