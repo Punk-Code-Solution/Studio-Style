@@ -133,8 +133,9 @@ import { Schedule } from '../../../core/services/schedules.service';
     </div>
   `,
   styles: [`
-    @import '../../../../styles/variables';
-    @import '../../../../styles/mixins';
+    @use 'sass:color';
+    @use '../../../../styles/variables' as *;
+    @use '../../../../styles/mixins' as *;
 
     .modal-overlay {
       position: fixed;
@@ -324,7 +325,7 @@ import { Schedule } from '../../../core/services/schedules.service';
         color: $text-light;
 
         &:hover {
-          background-color: darken($text-secondary, 10%);
+          background-color: color.adjust($text-secondary, $lightness: -10%);
           transform: translateY(-1px);
         }
       }

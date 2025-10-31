@@ -1,6 +1,6 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { SchedulesService, Schedule, Service, CreateScheduleRequest } from '../../core/services/schedules.service';
 import { ScheduleViewModalComponent } from './schedule-view-modal/schedule-view-modal.component';
@@ -12,8 +12,8 @@ import { User, UserService } from '../../core/services/user.service';
   selector: 'app-schedules',
   standalone: true,
   imports: [
-    CommonModule, 
-    RouterModule, 
+    CommonModule,
+    RouterModule,
     FormsModule,
     ScheduleViewModalComponent,
     ScheduleFormModalComponent,
@@ -26,7 +26,7 @@ import { User, UserService } from '../../core/services/user.service';
           <h1>Agendamentos</h1>
           <div class="search">
             <i class="fas fa-search"></i>
-            <input type="text" placeholder="Buscar agendamentos..." [(ngModel)]="searchTerm" (input)="filterSchedules()">
+            <input type="text" placeholder="Buscar agendamentos..." [(ngModel)]="searchTerm" (ngModelChange)="filterSchedules()">
           </div>
         </div>
 
@@ -47,15 +47,15 @@ import { User, UserService } from '../../core/services/user.service';
           <label>Status</label>
           <div class="filter-options">
             <label class="checkbox">
-              <input type="checkbox" [(ngModel)]="filters.status.active" (change)="filterSchedules()">
+              <input type="checkbox" [(ngModel)]="filters.status.active" (ngModelChange)="filterSchedules()">
               <span>Ativo</span>
             </label>
             <label class="checkbox">
-              <input type="checkbox" [(ngModel)]="filters.status.finished" (change)="filterSchedules()">
+              <input type="checkbox" [(ngModel)]="filters.status.finished" (ngModelChange)="filterSchedules()">
               <span>Finalizado</span>
             </label>
             <label class="checkbox">
-              <input type="checkbox" [(ngModel)]="filters.status.cancelled" (change)="filterSchedules()">
+              <input type="checkbox" [(ngModel)]="filters.status.cancelled" (ngModelChange)="filterSchedules()">
               <span>Cancelado</span>
             </label>
           </div>
@@ -64,9 +64,9 @@ import { User, UserService } from '../../core/services/user.service';
         <div class="filter-group">
           <label>Data</label>
           <div class="date-range">
-            <input type="date" [(ngModel)]="filters.dateRange.start" (change)="filterSchedules()">
+            <input type="date" [(ngModel)]="filters.dateRange.start" (ngModelChange)="filterSchedules()">
             <span>até</span>
-            <input type="date" [(ngModel)]="filters.dateRange.end" (change)="filterSchedules()">
+            <input type="date" [(ngModel)]="filters.dateRange.end" (ngModelChange)="filterSchedules()">
           </div>
         </div>
 
@@ -168,15 +168,15 @@ import { User, UserService } from '../../core/services/user.service';
     </div>
 
     <!-- Modais -->
-    <app-schedule-view-modal 
-      *ngIf="showViewModal" 
+    <app-schedule-view-modal
+      *ngIf="showViewModal"
       [schedule]="selectedSchedule"
       (close)="closeViewModal()"
       (edit)="openEditModal($event)"
     ></app-schedule-view-modal>
 
-    <app-schedule-form-modal 
-      *ngIf="showFormModal" 
+    <app-schedule-form-modal
+      *ngIf="showFormModal"
       [schedule]="editingSchedule"
       [availableServices]="availableServices"
       [providers]="providers"
@@ -186,8 +186,8 @@ import { User, UserService } from '../../core/services/user.service';
       (save)="saveSchedule($event)"
     ></app-schedule-form-modal>
 
-    <app-schedule-delete-modal 
-      *ngIf="showDeleteModal" 
+    <app-schedule-delete-modal
+      *ngIf="showDeleteModal"
       [schedule]="scheduleToDelete"
       [loading]="deleteLoading"
       (close)="closeDeleteModal()"
@@ -195,8 +195,8 @@ import { User, UserService } from '../../core/services/user.service';
     ></app-schedule-delete-modal>
   `,
   styles: [`
-    @import '../../../styles/variables';
-    @import '../../../styles/mixins';
+    @use '../../../styles/variables' as *;
+    @use '../../../styles/mixins' as *;
 
     .schedules {
       padding: $spacing-lg;
@@ -669,7 +669,6 @@ export class SchedulesComponent implements OnInit {
   totalPages = 1;
   loading = false;
   error = '';
-  userService = inject(UserService);
 
   // Modal states
   showViewModal = false;
@@ -698,11 +697,51 @@ export class SchedulesComponent implements OnInit {
     }
   };
 
-  constructor(private schedulesService: SchedulesService) {}
+  constructor(
+    private schedulesService: SchedulesService,
+    private route: ActivatedRoute,
+    private router: Router,
+    private userService: UserService
+  ) {}
 
   ngOnInit(): void {
     this.loadSchedules();
     this.loadFormData();
+    
+    // Verifica query params para abrir modais automaticamente
+    this.route.queryParams.subscribe(params => {
+      if (params['new'] === 'true') {
+        this.openScheduleModal();
+        // Remove query param após abrir o modal
+        this.router.navigate([], { 
+          relativeTo: this.route, 
+          queryParams: { new: null },
+          queryParamsHandling: 'merge'
+        });
+      } else if (params['id']) {
+        // Buscar o agendamento pelo ID e abrir o modal de visualização
+        this.schedulesService.getScheduleById(params['id']).subscribe({
+          next: (schedule) => {
+            this.viewSchedule(schedule);
+            // Remove query param após abrir o modal
+            this.router.navigate([], { 
+              relativeTo: this.route, 
+              queryParams: { id: null },
+              queryParamsHandling: 'merge'
+            });
+          },
+          error: (error) => {
+            console.error('Erro ao carregar agendamento:', error);
+            // Remove query param em caso de erro
+            this.router.navigate([], { 
+              relativeTo: this.route, 
+              queryParams: { id: null },
+              queryParamsHandling: 'merge'
+            });
+          }
+        });
+      }
+    });
   }
 
   loadFormData(): void {
@@ -732,7 +771,7 @@ export class SchedulesComponent implements OnInit {
   loadSchedules(): void {
     this.loading = true;
     this.error = '';
-    
+
     this.schedulesService.getAllSchedules().subscribe({
       next: (schedules) => {
         this.schedules = Array.isArray(schedules) ? schedules : [];
@@ -752,42 +791,66 @@ export class SchedulesComponent implements OnInit {
     let filtered = [...this.schedules];
 
     // Search filter
-    if (this.searchTerm) {
-      const search = this.searchTerm.toLowerCase();
+    if (this.searchTerm.trim()) {
+      const search = this.searchTerm.toLowerCase().trim();
       filtered = filtered.filter(schedule =>
-        schedule.name_client.toLowerCase().includes(search) ||
-        (schedule.provider && schedule.provider.name.toLowerCase().includes(search)) ||
-        (schedule.client && schedule.client.name.toLowerCase().includes(search)) ||
-        (schedule.Services && schedule.Services.some(service => 
-          service.service.toLowerCase().includes(search)
+        schedule.name_client?.toLowerCase().includes(search) ||
+        (schedule.provider?.name && schedule.provider.name.toLowerCase().includes(search)) ||
+        (schedule.client?.name && schedule.client.name.toLowerCase().includes(search)) ||
+        (schedule.Services && schedule.Services.some(service =>
+          service.service?.toLowerCase().includes(search)
         ))
       );
     }
 
-    // Status filter
-    if (!this.filters.status.active || !this.filters.status.finished || !this.filters.status.cancelled) {
+    // Status filter - aplica apenas se não todos estão marcados
+    const allStatusSelected = this.filters.status.active && this.filters.status.finished && this.filters.status.cancelled;
+    if (!allStatusSelected) {
       filtered = filtered.filter(schedule => {
+        // Ativo: active=true e finished=false
         if (this.filters.status.active && schedule.active && !schedule.finished) return true;
+        // Finalizado: finished=true
         if (this.filters.status.finished && schedule.finished) return true;
+        // Cancelado: active=false e finished=false
         if (this.filters.status.cancelled && !schedule.active && !schedule.finished) return true;
         return false;
       });
     }
 
-    // Date range filter
-    if (this.filters.dateRange.start && this.filters.dateRange.end) {
-      const start = new Date(this.filters.dateRange.start);
-      const end = new Date(this.filters.dateRange.end);
+    // Date range filter - funciona com apenas uma data também
+    if (this.filters.dateRange.start || this.filters.dateRange.end) {
       filtered = filtered.filter(schedule => {
         const scheduleDate = new Date(schedule.date_and_houres);
-        return scheduleDate >= start && scheduleDate <= end;
+        scheduleDate.setHours(0, 0, 0, 0);
+        
+        if (this.filters.dateRange.start && this.filters.dateRange.end) {
+          const start = new Date(this.filters.dateRange.start);
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(this.filters.dateRange.end);
+          end.setHours(23, 59, 59, 999);
+          return scheduleDate >= start && scheduleDate <= end;
+        } else if (this.filters.dateRange.start) {
+          const start = new Date(this.filters.dateRange.start);
+          start.setHours(0, 0, 0, 0);
+          return scheduleDate >= start;
+        } else if (this.filters.dateRange.end) {
+          const end = new Date(this.filters.dateRange.end);
+          end.setHours(23, 59, 59, 999);
+          return scheduleDate <= end;
+        }
+        return true;
       });
     }
 
-    this.totalPages = Math.ceil(filtered.length / this.itemsPerPage);
-    this.currentPage = Math.min(this.currentPage, this.totalPages);
+    // Recalcular paginação
+    this.totalPages = Math.max(1, Math.ceil(filtered.length / this.itemsPerPage));
+    this.currentPage = Math.max(1, Math.min(this.currentPage, this.totalPages));
+    
+    // Aplicar paginação
     const start = (this.currentPage - 1) * this.itemsPerPage;
-    this.filteredSchedules = filtered.slice(start, start + this.itemsPerPage);
+    const end = start + this.itemsPerPage;
+    // Criar novo array para garantir detecção de mudanças do Angular
+    this.filteredSchedules = [...filtered.slice(start, end)];
   }
 
   toggleFilter(): void {
@@ -807,6 +870,7 @@ export class SchedulesComponent implements OnInit {
         end: ''
       }
     };
+    this.currentPage = 1;
     this.filterSchedules();
   }
 
@@ -858,7 +922,7 @@ export class SchedulesComponent implements OnInit {
 
   saveSchedule(scheduleData: CreateScheduleRequest): void {
     this.formLoading = true;
-    
+
     if (this.editingSchedule) {
       // Update existing schedule
       this.schedulesService.updateSchedule(this.editingSchedule.id, scheduleData).subscribe({
@@ -898,7 +962,7 @@ export class SchedulesComponent implements OnInit {
 
   confirmDelete(schedule: Schedule): void {
     this.deleteLoading = true;
-    
+
     this.schedulesService.deleteSchedule(schedule.id).subscribe({
       next: () => {
         console.log('Agendamento excluído com sucesso');
@@ -924,4 +988,4 @@ export class SchedulesComponent implements OnInit {
     if (!schedule.active) return 'Cancelado';
     return 'Ativo';
   }
-} 
+}

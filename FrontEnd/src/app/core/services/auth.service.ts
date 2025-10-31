@@ -38,7 +38,6 @@ export class AuthService {
   private readonly tokenKey = 'auth_token';
   private readonly userKey = 'current_user';
   private readonly isBrowser: boolean;
-  private readonly router: Router;
 
   // Cache de permissões para melhor performance
   private permissionCache = new Map<string, boolean>();
@@ -93,9 +92,9 @@ export class AuthService {
   constructor(
     @Inject(PLATFORM_ID) platformId: Object,
     private userService: UserService,
-    private http: HttpClient
+    private http: HttpClient,
+    private router: Router
   ) {
-    this.router = Inject(Router);
     this.isBrowser = isPlatformBrowser(platformId);
     this.loadStoredUser();
   }

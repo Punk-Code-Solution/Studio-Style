@@ -166,11 +166,11 @@ export class DashboardComponent implements OnInit {
   }
 
   navigateToConsultation(appointment: Schedule) {
-    this.router.navigate(['/schedules'], { queryParams: { id: appointment.id } });
+    this.router.navigate(['/services'], { queryParams: { id: appointment.id } });
   }
 
   navigateToNewConsultation() {
-    this.router.navigate(['/schedules'], { queryParams: { new: true } });
+    this.router.navigate(['/services'], { queryParams: { new: true } });
   }
 
   getRoleLabel(role: string | undefined): string {

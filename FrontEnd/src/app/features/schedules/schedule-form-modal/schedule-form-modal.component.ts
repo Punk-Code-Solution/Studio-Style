@@ -28,9 +28,9 @@ import { User } from '../../../core/services/user.service';
                 <i class="fas fa-user"></i>
                 Nome do Cliente
               </label>
-              <input 
-                type="text" 
-                id="name_client" 
+              <input
+                type="text"
+                id="name_client"
                 [(ngModel)]="scheduleData.name_client"
                 name="name_client"
                 required
@@ -48,9 +48,9 @@ import { User } from '../../../core/services/user.service';
                   <i class="fas fa-calendar"></i>
                   Data e Hora
                 </label>
-                <input 
-                  type="datetime-local" 
-                  id="date_and_houres" 
+                <input
+                  type="datetime-local"
+                  id="date_and_houres"
                   [(ngModel)]="scheduleData.date_and_houres"
                   name="date_and_houres"
                   required
@@ -66,8 +66,8 @@ import { User } from '../../../core/services/user.service';
                   <i class="fas fa-user-md"></i>
                   Prestador
                 </label>
-                <select 
-                  id="provider_id_schedules" 
+                <select
+                  id="provider_id_schedules"
                   [(ngModel)]="scheduleData.provider_id_schedules"
                   name="provider_id_schedules"
                   required
@@ -93,20 +93,20 @@ import { User } from '../../../core/services/user.service';
                 <div class="client-selection">
                   <div class="selection-mode">
                     <label class="radio-label">
-                      <input 
-                        type="radio" 
-                        name="clientMode" 
-                        value="select" 
+                      <input
+                        type="radio"
+                        name="clientMode"
+                        value="select"
                         [(ngModel)]="clientMode"
                         (change)="onClientModeChange()"
                       >
                       <span>Selecionar cliente existente</span>
                     </label>
                     <label class="radio-label">
-                      <input 
-                        type="radio" 
-                        name="clientMode" 
-                        value="manual" 
+                      <input
+                        type="radio"
+                        name="clientMode"
+                        value="manual"
                         [(ngModel)]="clientMode"
                         (change)="onClientModeChange()"
                       >
@@ -116,8 +116,8 @@ import { User } from '../../../core/services/user.service';
 
                   <!-- Seleção de cliente existente -->
                   <div *ngIf="clientMode === 'select'" class="client-select">
-                    <select 
-                      id="client_id_schedules" 
+                    <select
+                      id="client_id_schedules"
                       [(ngModel)]="scheduleData.client_id_schedules"
                       name="client_id_schedules"
                       required
@@ -136,9 +136,9 @@ import { User } from '../../../core/services/user.service';
 
                   <!-- Inserção manual -->
                   <div *ngIf="clientMode === 'manual'" class="client-manual">
-                    <input 
-                      type="text" 
-                      id="client_id_manual" 
+                    <input
+                      type="text"
+                      id="client_id_manual"
                       [(ngModel)]="scheduleData.client_id_schedules"
                       name="client_id_manual"
                       required
@@ -157,8 +157,8 @@ import { User } from '../../../core/services/user.service';
                   <i class="fas fa-info-circle"></i>
                   Status
                 </label>
-                <select 
-                  id="status" 
+                <select
+                  id="status"
                   [(ngModel)]="statusValue"
                   name="status"
                   (change)="updateStatus()"
@@ -180,11 +180,11 @@ import { User } from '../../../core/services/user.service';
                 <div *ngIf="availableServices.length === 0" style="padding: 10px; background: #f0f0f0; border-radius: 4px; margin-bottom: 10px;">
                   <small>Debug: Nenhum serviço disponível ({{ availableServices.length }} serviços carregados)</small>
                 </div>
-                
+
                 <div class="service-option" *ngFor="let service of availableServices">
                   <label class="checkbox-label">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       [value]="service.id"
                       [checked]="isServiceSelected(service.id)"
                       (change)="toggleService(service.id)"
@@ -216,8 +216,9 @@ import { User } from '../../../core/services/user.service';
     </div>
   `,
   styles: [`
-    @import '../../../../styles/variables';
-    @import '../../../../styles/mixins';
+    @use 'sass:color';
+    @use '../../../../styles/variables' as *;
+    @use '../../../../styles/mixins' as *;
 
     .modal-overlay {
       position: fixed;
@@ -460,7 +461,7 @@ import { User } from '../../../core/services/user.service';
         color: $text-light;
 
         &:hover:not(:disabled) {
-          background-color: darken($text-secondary, 10%);
+          background-color: color.adjust($text-secondary, $lightness: -10%);
           transform: translateY(-1px);
         }
       }
@@ -528,7 +529,7 @@ export class ScheduleFormModalComponent implements OnInit {
   selectedClient: User | null = null;
 
   ngOnInit(): void {
-    
+
     if (this.schedule) {
       this.isEditMode = true;
       this.scheduleData = {
@@ -541,7 +542,7 @@ export class ScheduleFormModalComponent implements OnInit {
         services: this.schedule.Services?.map(s => s.id) || []
       };
       this.selectedServices = [...this.scheduleData.services];
-      
+
       if (this.schedule.finished) {
         this.statusValue = 'finished';
       } else if (!this.schedule.active) {
@@ -560,7 +561,7 @@ export class ScheduleFormModalComponent implements OnInit {
   onSubmit(): void {
     this.updateStatus();
     this.scheduleData.services = this.selectedServices;
-    
+
     this.save.emit(this.scheduleData);
   }
 
@@ -598,7 +599,7 @@ export class ScheduleFormModalComponent implements OnInit {
     // Limpa os dados quando muda o modo
     this.scheduleData.client_id_schedules = '';
     this.selectedClient = null;
-    
+
     if (this.clientMode === 'manual') {
       this.scheduleData.name_client = '';
     }
@@ -607,7 +608,7 @@ export class ScheduleFormModalComponent implements OnInit {
   onClientSelect(): void {
     if (this.scheduleData.client_id_schedules) {
       this.selectedClient = this.clients.find(c => c.id === this.scheduleData.client_id_schedules) || null;
-      
+
       if (this.selectedClient) {
         // Preenche automaticamente o nome do cliente
         this.scheduleData.name_client = `${this.selectedClient.name} ${this.selectedClient.lastname}`;
