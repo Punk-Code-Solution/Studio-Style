@@ -80,7 +80,7 @@ import { Schedule } from '../../../core/services/schedules.service';
             <i class="fas fa-times"></i>
             Cancelar
           </button>
-          <button type="button" class="btn-danger" (click)="confirmDelete()" [disabled]="loading">
+          <button type="button" class="btn-primary" (click)="confirmDelete()" [disabled]="loading">
             <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
             <i class="fas fa-trash" *ngIf="!loading"></i>
             {{ loading ? 'Excluindo...' : 'Excluir' }}
@@ -121,13 +121,13 @@ import { Schedule } from '../../../core/services/schedules.service';
 
       h3 {
         margin: 0;
-        color: $error-color;
+        color: $primary-color;
         @include typography($font-size-lg, $font-weight-medium);
         @include flex(row, flex-start, center);
         gap: $spacing-sm;
 
         i {
-          color: $error-color;
+          color: $primary-color;
         }
       }
 
@@ -145,6 +145,22 @@ import { Schedule } from '../../../core/services/schedules.service';
     .modal-body {
       padding: $spacing-lg;
       text-align: center;
+      max-height: 70vh;
+      overflow-y: auto;
+
+      &::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: $primary-color;
+        border-radius: 4px;
+      }
     }
 
     .warning-icon {
@@ -153,7 +169,7 @@ import { Schedule } from '../../../core/services/schedules.service';
 
       i {
         font-size: 3rem;
-        color: $error-color;
+        color: $primary-color;
       }
     }
 
@@ -182,6 +198,7 @@ import { Schedule } from '../../../core/services/schedules.service';
       border: 1px solid $border-color;
       border-radius: $border-radius-sm;
       padding: $spacing-md;
+      box-shadow: $shadow-sm;
       text-align: left;
     }
 
@@ -230,14 +247,14 @@ import { Schedule } from '../../../core/services/schedules.service';
       @include flex(row, flex-start, center);
       gap: $spacing-sm;
       padding: $spacing-md;
-      background-color: rgba($warning-color, 0.1);
-      border: 1px solid rgba($warning-color, 0.3);
+      background-color: rgba($info-color, 0.1);
+      border: 1px solid rgba($info-color, 0.3);
       border-radius: $border-radius-sm;
-      color: $warning-color;
+      color: $info-color;
       @include typography($font-size-sm);
 
       i {
-        color: $warning-color;
+        color: $info-color;
         flex-shrink: 0;
       }
     }
@@ -255,6 +272,8 @@ import { Schedule } from '../../../core/services/schedules.service';
         gap: $spacing-sm;
         padding: $spacing-sm $spacing-md;
         min-width: 120px;
+        border: 1px solid $border-color;
+        box-shadow: $shadow-sm;
 
         &:disabled {
           opacity: 0.6;
@@ -268,15 +287,17 @@ import { Schedule } from '../../../core/services/schedules.service';
 
         &:hover:not(:disabled) {
           background-color: darken($text-secondary, 10%);
+          transform: translateY(-1px);
         }
       }
 
-      .btn-danger {
-        background-color: $error-color;
+      .btn-primary {
+        background-color: $primary-color;
         color: $text-light;
 
         &:hover:not(:disabled) {
-          background-color: darken($error-color, 10%);
+          background-color: $primary-dark;
+          transform: translateY(-1px);
         }
       }
     }

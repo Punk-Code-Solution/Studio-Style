@@ -200,6 +200,8 @@ import { User, UserService } from '../../core/services/user.service';
 
     .schedules {
       padding: $spacing-lg;
+      background-color: $background-color;
+      min-height: 100%;
     }
 
     .schedules-header {
@@ -212,7 +214,7 @@ import { User, UserService } from '../../core/services/user.service';
       gap: $spacing-xl;
 
       h1 {
-        color: $text-primary;
+        color: $primary-color;
         margin: 0;
       }
     }
@@ -269,9 +271,12 @@ import { User, UserService } from '../../core/services/user.service';
     .add-btn {
       background-color: $primary-color;
       color: $text-light;
+      border: 1px solid $border-color;
+      box-shadow: $shadow-sm;
 
       &:hover {
         background-color: $primary-dark;
+        transform: translateY(-2px);
       }
     }
 
@@ -282,6 +287,7 @@ import { User, UserService } from '../../core/services/user.service';
       padding: $spacing-lg;
       margin-bottom: $spacing-xl;
       display: none;
+      box-shadow: $shadow-sm;
 
       &.show {
         display: block;
@@ -367,10 +373,25 @@ import { User, UserService } from '../../core/services/user.service';
       border: 1px solid $border-color;
       border-radius: $border-radius-lg;
       overflow: hidden;
+      box-shadow: $shadow-sm;
     }
 
     .schedules-table {
       overflow-x: auto;
+
+      &::-webkit-scrollbar {
+        height: 8px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: $primary-color;
+        border-radius: 4px;
+      }
 
       table {
         width: 100%;
@@ -482,6 +503,8 @@ import { User, UserService } from '../../core/services/user.service';
       &:hover {
         color: $primary-color;
         background-color: rgba($primary-color, 0.1);
+        box-shadow: $shadow-sm;
+        transform: translateY(-1px);
       }
     }
 
@@ -496,9 +519,11 @@ import { User, UserService } from '../../core/services/user.service';
       padding: $spacing-sm;
       border: 1px solid $border-color;
       border-radius: $border-radius-sm;
+      box-shadow: $shadow-sm;
 
       &:hover:not(:disabled) {
         background-color: $background-dark;
+        transform: translateY(-1px);
       }
 
       &:disabled {

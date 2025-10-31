@@ -166,7 +166,7 @@ import { Schedule } from '../../../core/services/schedules.service';
 
       h3 {
         margin: 0;
-        color: $text-primary;
+        color: $primary-color;
         @include typography($font-size-lg, $font-weight-medium);
         @include flex(row, flex-start, center);
         gap: $spacing-sm;
@@ -191,6 +191,20 @@ import { Schedule } from '../../../core/services/schedules.service';
       padding: $spacing-lg;
       overflow-y: auto;
       flex: 1;
+
+      &::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: $primary-color;
+        border-radius: 4px;
+      }
     }
 
     .schedule-details {
@@ -301,6 +315,8 @@ import { Schedule } from '../../../core/services/schedules.service';
         @include flex(row, center, center);
         gap: $spacing-sm;
         padding: $spacing-sm $spacing-md;
+        border: 1px solid $border-color;
+        box-shadow: $shadow-sm;
       }
 
       .btn-secondary {
@@ -309,6 +325,7 @@ import { Schedule } from '../../../core/services/schedules.service';
 
         &:hover {
           background-color: darken($text-secondary, 10%);
+          transform: translateY(-1px);
         }
       }
 
@@ -318,6 +335,7 @@ import { Schedule } from '../../../core/services/schedules.service';
 
         &:hover {
           background-color: $primary-dark;
+          transform: translateY(-1px);
         }
       }
     }

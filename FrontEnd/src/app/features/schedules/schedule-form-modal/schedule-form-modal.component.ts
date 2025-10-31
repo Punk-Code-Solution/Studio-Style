@@ -249,7 +249,7 @@ import { User } from '../../../core/services/user.service';
 
       h3 {
         margin: 0;
-        color: $text-primary;
+        color: $primary-color;
         @include typography($font-size-lg, $font-weight-medium);
         @include flex(row, flex-start, center);
         gap: $spacing-sm;
@@ -274,6 +274,20 @@ import { User } from '../../../core/services/user.service';
       padding: $spacing-lg;
       overflow-y: auto;
       flex: 1;
+
+      &::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: $primary-color;
+        border-radius: 4px;
+      }
     }
 
     .form-group {
@@ -372,6 +386,20 @@ import { User } from '../../../core/services/user.service';
       border: 1px solid $border-color;
       border-radius: $border-radius-sm;
       padding: $spacing-sm;
+
+      &::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: $primary-color;
+        border-radius: 4px;
+      }
     }
 
     .service-option {
@@ -418,6 +446,8 @@ import { User } from '../../../core/services/user.service';
         gap: $spacing-sm;
         padding: $spacing-sm $spacing-md;
         min-width: 120px;
+        border: 1px solid $border-color;
+        box-shadow: $shadow-sm;
 
         &:disabled {
           opacity: 0.6;
@@ -431,6 +461,7 @@ import { User } from '../../../core/services/user.service';
 
         &:hover:not(:disabled) {
           background-color: darken($text-secondary, 10%);
+          transform: translateY(-1px);
         }
       }
 
@@ -440,6 +471,7 @@ import { User } from '../../../core/services/user.service';
 
         &:hover:not(:disabled) {
           background-color: $primary-dark;
+          transform: translateY(-1px);
         }
       }
     }

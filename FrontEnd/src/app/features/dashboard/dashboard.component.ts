@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
-import { User } from '../../core/services/user.service';
+import { User, UserService } from '../../core/services/user.service';
 import { SchedulesService, Schedule } from '../../core/services/schedules.service';
 
 @Component({
@@ -20,11 +20,20 @@ export class DashboardComponent implements OnInit {
   currentUser: User | null = null;
   isLoading = true;
   error: string | null = null;
+  totalAppointmentsThisMonth = 0;
+  completedAppointmentsThisMonth = 0;
+  totalClients = 0;
+  newClientsThisMonth = 0;
+
+  get completedAppointmentsToday(): number {
+    return this.appointments.filter(a => !!a.finished).length;
+  }
 
   constructor(
     private authService: AuthService,
     private router: Router,
-    private schedulesService: SchedulesService
+    private schedulesService: SchedulesService,
+    private userService: UserService
   ) {
     this.currentUser = this.authService.currentUser;
   }
@@ -42,6 +51,7 @@ export class DashboardComponent implements OnInit {
       this.isLoading = true;
       this.error = null;
       await this.loadAppointments();
+      await this.loadClients();
     } catch (err) {
       this.error = 'Erro ao carregar dados do dashboard';
       console.error('Erro ao carregar dashboard:', err);
@@ -54,12 +64,23 @@ export class DashboardComponent implements OnInit {
     try {
       this.schedulesService.getAllSchedules().subscribe({
         next: (schedules) => {
-          // Filtrar apenas os agendamentos de hoje
-          const today = new Date().toISOString().split('T')[0];
+          // Agendamentos de hoje (para listagem do dia)
+          const now = new Date();
+          const todayStr = new Date(now).toISOString().split('T')[0];
           this.appointments = schedules.filter(schedule => {
-            const scheduleDate = new Date(schedule.date_and_houres).toISOString().split('T')[0];
-            return scheduleDate === today;
+            const scheduleDateStr = new Date(schedule.date_and_houres).toISOString().split('T')[0];
+            return scheduleDateStr === todayStr;
           });
+
+          // Total de agendamentos do mês atual (para o card "Serviços este mês")
+          const currentMonth = now.getMonth();
+          const currentYear = now.getFullYear();
+          const monthSchedules = schedules.filter(schedule => {
+            const d = new Date(schedule.date_and_houres);
+            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+          });
+          this.totalAppointmentsThisMonth = monthSchedules.length;
+          this.completedAppointmentsThisMonth = monthSchedules.filter(s => !!s.finished).length;
         },
         error: (error) => {
           console.error('Erro ao carregar agendamentos:', error);
@@ -69,6 +90,29 @@ export class DashboardComponent implements OnInit {
     } catch (error) {
       console.error('Erro ao carregar agendamentos:', error);
       this.error = 'Erro ao carregar agendamentos';
+    }
+  }
+
+  private async loadClients() {
+    try {
+      this.userService.getUsers().subscribe({
+        next: (users) => {
+          const now = new Date();
+          const currentMonth = now.getMonth();
+          const currentYear = now.getFullYear();
+          const clients = users.filter(u => u.TypeAccount?.type === 'client');
+          this.totalClients = clients.length;
+          this.newClientsThisMonth = clients.filter(u => {
+            const created = new Date(u.createdAt);
+            return created.getMonth() === currentMonth && created.getFullYear() === currentYear;
+          }).length;
+        },
+        error: (error) => {
+          console.error('Erro ao carregar usuários:', error);
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao carregar usuários:', error);
     }
   }
 
@@ -169,9 +213,9 @@ export class DashboardComponent implements OnInit {
   }
 
   formatTime(dateTime: string): string {
-    return new Date(dateTime).toLocaleTimeString('pt-BR', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return new Date(dateTime).toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
     });
   }
 }
