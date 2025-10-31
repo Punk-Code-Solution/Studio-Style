@@ -165,7 +165,7 @@ router.put('/id', accountValidation, accountController.updateAccount.bind(accoun
  *       401:
  *         description: Unauthorized
  */
-router.delete('/id', authorizeRoles(['admin']), accountController.deleteAccountById.bind(accountController));
+router.delete('/id', authenticateToken, authorizeRoles(['admin']), accountController.deleteAccountById.bind(accountController));
 
 /**
  * @swagger

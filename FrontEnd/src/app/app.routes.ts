@@ -25,28 +25,7 @@ const patientRoutes: Routes = [
   {
     path: 'patients',
     canActivate: [RoleGuard],
-    children: [
-      {
-        path: '',
-        canActivate: [RoleGuard],
-        loadComponent: () => import('./features/patients/patients.component').then(m => m.PatientsComponent)
-      },
-      {
-        path: 'new',
-        canActivate: [RoleGuard],
-        loadComponent: () => import('./features/patients/patient-form/patient-form.component').then(m => m.PatientFormComponent)
-      },
-      {
-        path: ':id',
-        canActivate: [RoleGuard],
-        loadComponent: () => import('./features/patients/patient-details/patient-details.component').then(m => m.PatientDetailsComponent)
-      },
-      {
-        path: ':id/edit',
-        canActivate: [RoleGuard],
-        loadComponent: () => import('./features/patients/patient-form/patient-form.component').then(m => m.PatientFormComponent)
-      }
-    ]
+    loadComponent: () => import('./features/patients/patients.component').then(m => m.PatientsComponent)
   }
 ];
 

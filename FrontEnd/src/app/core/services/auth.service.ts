@@ -47,7 +47,7 @@ export class AuthService {
     routes: {
       // Rotas principais
       dashboard: ['admin'],
-      patients: ['ninguem'],
+      patients: ['admin'],
       calendar: ['ninguem'],
       messages: ['ninguem'],
       documents: ['ninguem'],
@@ -56,9 +56,9 @@ export class AuthService {
       services: ['admin'],
 
       // Sub-rotas de pacientes
-      'patients/new': ['ninguem'],
-      'patients/:id': ['ninguem'],
-      'patients/:id/edit': ['ninguem'],
+      'patients/new': ['admin'],
+      'patients/:id': ['admin'],
+      'patients/:id/edit': ['admin'],
 
       // Sub-rotas de consultas
       'services/new': ['admin'],
@@ -71,9 +71,7 @@ export class AuthService {
     fields: {
       'patient.medicalRecord': ['ninguem'],
       'patient.prescriptions': ['ninguem'],
-      'patient.appointments': [
-        'ninguem',
-      ],
+      'patient.appointments': ['ninguem'],
       'patient.billing': ['ninguem'],
       'patient.personal': ['ninguem'],
       'patient.contact': ['ninguem'],

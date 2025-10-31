@@ -1,10 +1,22 @@
 export interface Patient {
-  id: number;
-  nome: string;
+  id: string;
+  name: string;
+  lastname: string;
   email: string;
-  telefone: string;
-  status: 'ativo' | 'inativo';
-  ultimaVisita?: string;
-  proximaConsulta?: string;
+  password?: string;
+  cpf: string;
+  start_date?: string;
+  birthday?: string;
+  deleted?: boolean;
   avatar?: string;
+  typeaccount_id: string;
+  company_id_account?: string;
+  type_hair_id?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  TypeAccount?: {
+    id: string;
+    type: string;
+    name?: string;
+  };
 }

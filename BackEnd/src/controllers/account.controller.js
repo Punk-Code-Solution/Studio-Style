@@ -121,7 +121,13 @@ class AccountController {
    */
   async getAccountById(req, res) {
     try {
-      const { id } = req.params;
+      // ID pode vir de params ou query (compatibilidade)
+      const id = req.params.id || req.query.id;
+      
+      if (!id) {
+        return ResponseHandler.validationError(res, 'Account ID is required');
+      }
+      
       const result = await this.accountRepository.findById(id);
       
       if (!result) {
@@ -157,15 +163,27 @@ class AccountController {
    */
   async updateAccount(req, res) {
     try {
-      const { id } = req.params;
-      const accountData = req.body;
+      // ID pode vir de params ou body (compatibilidade)
+      const id = req.params.id || req.body.id || req.query.id;
+      const accountData = { ...req.body };
+      
+      // Remover id do body para não duplicar
+      if (accountData.id) {
+        delete accountData.id;
+      }
+      
+      if (!id) {
+        return ResponseHandler.validationError(res, 'Account ID is required');
+      }
       
       // Hash password if provided
       if (accountData.password) {
         accountData.password = await bcrypt.hash(accountData.password, 10);
       }
       
-      const result = await this.accountRepository.updateAccount(id, accountData);
+      // Passar ID junto com os dados para o repository
+      accountData.id = id;
+      const result = await this.accountRepository.updateAccount(accountData);
       
       if (!result) {
         return ResponseHandler.notFound(res, 'Account not found');
@@ -182,8 +200,14 @@ class AccountController {
    */
   async deleteAccountById(req, res) {
     try {
-      const { id } = req.params;
-      const result = await this.accountRepository.deleteAccountById(id);
+      // ID pode vir de params ou query (compatibilidade)
+      const id = req.params.id || req.query.id;
+      
+      if (!id) {
+        return ResponseHandler.validationError(res, 'Account ID is required');
+      }
+      
+      const result = await this.accountRepository.deleteAccountId(id);
       
       if (!result) {
         return ResponseHandler.notFound(res, 'Account not found');
