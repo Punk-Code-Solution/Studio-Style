@@ -76,10 +76,10 @@ import { PatientService, CreatePatientRequest, TypeAccount, HairType } from '../
                   name="email"
                   required
                   email
-                  [class.error]="patientForm.submitted && (!patientData.email || patientForm.controls['email']?.invalid)"
+                  [class.error]="patientForm.submitted && (!patientData.email || patientForm.controls['email'].invalid)"
                   placeholder="Digite o e-mail"
                 >
-                <div class="error-message" *ngIf="patientForm.submitted && patientForm.controls['email']?.invalid">
+                <div class="error-message" *ngIf="patientForm.submitted && patientForm.controls['email'].invalid">
                   E-mail inválido
                 </div>
               </div>

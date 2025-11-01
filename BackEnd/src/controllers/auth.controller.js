@@ -29,6 +29,24 @@ class AuthController {
 
       const user = userAllDate.Account;
       const typeUser = userAllDate.Account.TypeAccount;
+      const userType = typeUser?.dataValues?.type?.toLowerCase();
+
+      // Check if user type is allowed to login (only admin and provider)
+      // Block client/cliente and any other types
+      const allowedTypes = ['admin', 'provider'];
+      const blockedTypes = ['client', 'cliente'];
+      
+      if (!userType) {
+        return ResponseHandler.unauthorized(res, 'Invalid user type');
+      }
+
+      if (blockedTypes.includes(userType)) {
+        return ResponseHandler.unauthorized(res, 'Access denied. Clients cannot access the system. Only administrators and providers can log in.');
+      }
+
+      if (!allowedTypes.includes(userType)) {
+        return ResponseHandler.unauthorized(res, 'Access denied. Only administrators and providers can access the system.');
+      }
 
       // Check password
       const isValidPassword = bcrypt.compareSync(password, user.dataValues.password);

@@ -2,7 +2,7 @@ export interface Patient {
   id: string;
   name: string;
   lastname: string;
-  email: string;
+  email?: string;
   password?: string;
   cpf: string;
   start_date?: string;
@@ -17,6 +17,17 @@ export interface Patient {
   TypeAccount?: {
     id: string;
     type: string;
-    name?: string;
+    edit: boolean;
+    creat: boolean;
+    viwer: boolean;
+    delet: boolean;
   };
+  Emails?: Array<{
+    id: string;
+    name?: string;
+    email: string;
+    active?: string;
+    account_id_email: string;
+    company_id_email?: string;
+  }>;
 }
