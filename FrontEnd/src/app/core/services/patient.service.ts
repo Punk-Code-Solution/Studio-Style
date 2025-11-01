@@ -1,72 +1,94 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 import { Patient } from '../models/patient.model';
+
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+export interface CreatePatientRequest {
+  name: string;
+  lastname: string;
+  email: string;
+  password?: string;
+  cpf: string;
+  birthday?: string;
+  deleted?: boolean;
+  avatar?: string;
+  typeaccount_id: string;
+  company_id_account?: string;
+  type_hair_id?: string;
+}
+
+export interface TypeAccount {
+  id: string;
+  type: string;
+  name?: string;
+  edit?: boolean;
+  creat?: boolean;
+  viwer?: boolean;
+  delet?: boolean;
+}
+
+export interface HairType {
+  id: string;
+  type: string;
+  level?: number;
+  letter?: string;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class PatientService {
-  private patients: Patient[] = [
-    {
-      id: 1,
-      nome: 'João Silva',
-      email: 'joao.silva@email.com',
-      telefone: '(11) 99999-9999',
-      status: 'ativo',
-      ultimaVisita: '2024-03-15',
-      proximaConsulta: '2024-04-01',
-      avatar: 'assets/images/avatars/patient1.jpg'
-    },
-    {
-      id: 2,
-      nome: 'Maria Santos',
-      email: 'maria.santos@email.com',
-      telefone: '(11) 98888-8888',
-      status: 'ativo',
-      ultimaVisita: '2024-03-10',
-      proximaConsulta: '2024-03-25',
-      avatar: 'assets/images/avatars/patient2.jpg'
-    }
-  ];
+  private apiUrl = `${environment.apiUrl}/account`;
 
-  constructor() {}
+  constructor(private http: HttpClient) {}
 
-  getPatients(): Observable<Patient[]> {
-    return of(this.patients);
+  getAllPatients(): Observable<Patient[]> {
+    return this.http.get<ApiResponse<Patient[]>>(this.apiUrl).pipe(
+      map(response => response.data || [])
+    );
   }
 
-  getPatient(id: string): Observable<Patient> {
-    const patient = this.patients.find(p => p.id === +id);
-    if (!patient) {
-      throw new Error('Paciente não encontrado');
-    }
-    return of(patient);
+  getPatientById(id: string): Observable<Patient> {
+    return this.http.get<ApiResponse<Patient>>(`${this.apiUrl}/id?id=${id}`).pipe(
+      map(response => response.data)
+    );
   }
 
-  createPatient(patient: Omit<Patient, 'id'>): Observable<Patient> {
-    const newPatient = {
-      ...patient,
-      id: this.patients.length + 1
-    };
-    this.patients.push(newPatient);
-    return of(newPatient);
+  createPatient(patient: CreatePatientRequest): Observable<Patient> {
+    return this.http.post<ApiResponse<Patient>>(this.apiUrl, patient).pipe(
+      map(response => response.data)
+    );
   }
 
-  updatePatient(id: number, patient: Partial<Patient>): Observable<Patient> {
-    const index = this.patients.findIndex(p => p.id === id);
-    if (index === -1) {
-      throw new Error('Paciente não encontrado');
-    }
-    this.patients[index] = { ...this.patients[index], ...patient };
-    return of(this.patients[index]);
+  updatePatient(id: string, patient: Partial<CreatePatientRequest>): Observable<Patient> {
+    return this.http.put<ApiResponse<Patient>>(`${this.apiUrl}/id`, { id, ...patient }).pipe(
+      map(response => response.data)
+    );
   }
 
-  deletePatient(id: number): Observable<void> {
-    const index = this.patients.findIndex(p => p.id === id);
-    if (index === -1) {
-      throw new Error('Paciente não encontrado');
-    }
-    this.patients.splice(index, 1);
-    return of(void 0);
+  deletePatient(id: string): Observable<void> {
+    return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/id?id=${id}`).pipe(
+      map(response => response.data)
+    );
+  }
+
+  getAllTypeAccounts(): Observable<TypeAccount[]> {
+    return this.http.get<ApiResponse<TypeAccount[]>>(`${this.apiUrl}/type-accounts`).pipe(
+      map(response => response.data || [])
+    );
+  }
+
+  getAllHairTypes(): Observable<HairType[]> {
+    return this.http.get<ApiResponse<HairType[]>>(`${this.apiUrl}/hair`).pipe(
+      map(response => response.data || [])
+    );
   }
 }

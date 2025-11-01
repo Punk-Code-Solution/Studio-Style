@@ -23,7 +23,7 @@ const servicecontroller = new ServiceController()
  *       400:
  *         description: Erro na requisição
  */
-rota.post("/service", async (request, response) => { await servicecontroller.addService( request, response ); });
+rota.post("/", async (request, response) => { await servicecontroller.addService( request, response ); });
 
 /**
  * @swagger
@@ -44,7 +44,7 @@ rota.post("/service", async (request, response) => { await servicecontroller.add
  *       400:
  *         description: Erro na requisição
  */
-rota.put("/service",  async (request, response) => {  await servicecontroller.updateService( request, response ); });
+rota.put("/",  async (request, response) => {  await servicecontroller.updateService( request, response ); });
 
 /**
  * @swagger
@@ -57,7 +57,7 @@ rota.put("/service",  async (request, response) => {  await servicecontroller.up
  *       200:
  *         description: Lista de serviços
  */
-rota.get("/service", async (request, response) => { await servicecontroller.findAll( request, response ) });
+rota.get("/", async (request, response) => { await servicecontroller.findAll( request, response ) });
 
 /**
  * @swagger
@@ -101,7 +101,7 @@ rota.get("/service/one", async (request, response) => { await servicecontroller.
  *       404:
  *         description: Serviço não encontrado
  */
-rota.delete("/service", async (request, response) => { await servicecontroller.deleteService( request, response ); });
+rota.delete("/", async (request, response) => { await servicecontroller.deleteService( request, response ); });
 
 /**
  * @swagger

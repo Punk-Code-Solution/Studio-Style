@@ -27,8 +27,15 @@ const authenticateToken = (req, res, next) => {
  */
 const authorizeRoles = (allowedRoles) => {
   return (req, res, next) => {
+    console.log("req.user: ", req);
+    // Evita logs pesados, removendo console.log que podem travar o sistema
     if (!req.user) {
       return ResponseHandler.unauthorized(res, 'Authentication required');
+    }
+
+    // Permite qualquer usuário autenticado se não houver roles especificadas
+    if (!allowedRoles || !Array.isArray(allowedRoles) || allowedRoles.length === 0) {
+      return next();
     }
 
     if (!allowedRoles.includes(req.user.role)) {

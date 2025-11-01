@@ -19,14 +19,18 @@ module.exports = (sequelize, DataTypes) => {
       this.hasMany( models.Phone, { foreignKey: "account_id_phone", constraints: false, onDelete: 'CASCADE' } ),
       this.hasMany( models.Purchase_Material, { foreignKey: "account_id_purchase_material", constraints: false } ),
       this.hasMany( models.Purchase, { foreignKey: "account_id_purchase", constraints: false } ),
-      this.hasMany( models.Sale, { foreignKey: "account_id_sale", constraints: false } ),
-      this.hasMany( models.Schedules, { foreignKey: "client_id_schedules", constraints: false } ),
-      this.hasMany( models.Service, { foreignKey: "client_id_service", constraints: false } ),
-      this.hasMany( models.Service, { foreignKey: "provider_id_service", constraints: false } );
+      this.hasMany( models.Sale, { foreignKey: "account_id_sale", constraints: false } )
+      this.hasMany( models.Schedules, { foreignKey: "provider_id_schedules", constraints: false } )
+      this.hasMany( models.Schedules, { foreignKey: "client_id_schedules", constraints: false } )
 
     }
   }
   Account.init({
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
+    },
     name: DataTypes.STRING,
     lastname: DataTypes.STRING,
     password: DataTypes.STRING,

@@ -17,6 +17,11 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Phone.init({
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
+    },
     phone: DataTypes.INTEGER,
     ddd: DataTypes.INTEGER,
     active: DataTypes.DATE,

@@ -12,8 +12,8 @@
 
   <div *ngIf="!isLoading && !error">
     <div class="welcome-section">
-      <h1>Bem-vindo, {{ currentUser?.nome }}</h1>
-      <p class="role">{{ getRoleLabel(currentUser?.perfil) }}</p>
+      <h1>Bem-vindo, {{ currentUser?.name }}</h1>
+      <p class="role">{{ getRoleLabel(currentUser?.TypeAccount?.type)}}</p>
     </div>
 
     <div class="stats-grid">
@@ -23,10 +23,10 @@
         </div>
         <div class="stat-content">
           <h3>Total de Clientes</h3>
-          <p class="stat-value">1,234</p>
+          <p class="stat-value">{{ totalClients }}</p>
           <p class="stat-change positive">
-            <i class="fas fa-arrow-up"></i>
-            12% este mês
+            <i class="fas fa-user-plus"></i>
+            {{ newClientsThisMonth }} novos no mês
           </p>
         </div>
       </div>
@@ -37,10 +37,10 @@
         </div>
         <div class="stat-content">
           <h3>Serviços Hoje</h3>
-          <p class="stat-value">28</p>
+          <p class="stat-value">{{ appointments.length }}</p>
           <p class="stat-change">
-            <i class="fas fa-clock"></i>
-            5 pendentes
+            <i class="fas fa-check-circle"></i>
+            {{ completedAppointmentsToday }} concluído(s)
           </p>
         </div>
       </div>
@@ -51,11 +51,12 @@
         </div>
         <div class="stat-content">
           <h3>Serviços este mês</h3>
-          <p class="stat-value">856</p>
-          <p class="stat-change">
-            <i class="fas fa-clock"></i>
-            12 para revisar
-          </p>
+            <p class="stat-value">{{ totalAppointmentsThisMonth }}</p>
+
+            <p class="stat-change">
+              <i class="fas fa-check-circle"></i>
+              {{ completedAppointmentsThisMonth }} concluído(s)
+            </p>
         </div>
       </div>
     </div>
@@ -68,20 +69,21 @@
             <i class="fas fa-plus"></i>
             Novo Serviço
           </button>
-          <a routerLink="/calendar" class="view-all">Ver todas</a>
+          <a routerLink="/services" class="view-all">Ver todas</a>
         </div>
       </div>
       <div class="appointments-list">
         <div class="appointment-card" *ngFor="let appointment of appointments" (click)="navigateToConsultation(appointment)">
           <div class="appointment-info">
-            <h3>{{ appointment.patientName }}</h3>
-            <p class="time">Horário: {{ appointment.time }}</p>
-            <p class="doctor">Colaborador: {{ appointment.doctor }}</p>
+            <h3>{{ appointment.name_client }}</h3>
+            <p class="time">Horário: {{ formatTime(appointment.date_and_houres) }}</p>
+            <p class="doctor">Prestador: {{ getProviderName(appointment) }}</p>
+            <p class="services">Serviços: {{ getServicesList(appointment) }}</p>
           </div>
           <div class="appointment-status">
             <p class="status-label">Status:</p>
             <select
-              [value]="appointment.status"
+              [value]="getStatusValue(appointment)"
               (change)="updateStatus(appointment, $event)"
               (click)="$event.stopPropagation()"
             >
@@ -91,6 +93,12 @@
               <option value="cancelled">Cancelado</option>
             </select>
           </div>
+        </div>
+
+        <!-- Mensagem quando não há agendamentos -->
+        <div *ngIf="appointments.length === 0" class="no-appointments">
+          <i class="fas fa-calendar-times"></i>
+          <p>Nenhum agendamento para hoje</p>
         </div>
       </div>
     </div>

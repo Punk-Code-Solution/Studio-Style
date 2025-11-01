@@ -14,7 +14,7 @@ import { User } from '../../core/services/user.service';
         <button class="menu-btn" (click)="toggleSidebar()">
           <i class="fas fa-bars"></i>
         </button>
-        
+
         <div class="search">
           <i class="fas fa-search"></i>
           <input type="text" placeholder="Pesquisar...">
@@ -38,7 +38,7 @@ import { User } from '../../core/services/user.service';
 
         <div class="user-menu" (click)="toggleUserMenu()">
           <img [src]="userAvatar" alt="User Avatar" class="avatar">
-          <span class="user-name">{{ currentUser?.nome }}</span>
+          <span class="user-name">{{ currentUser?.name }}</span>
           <i class="fas fa-chevron-down"></i>
 
           <div class="dropdown-menu" [class.show]="isUserMenuOpen">
@@ -250,4 +250,4 @@ export class HeaderComponent {
     this.authService.logout();
     this.router.navigate(['/login']);
   }
-} 
+}

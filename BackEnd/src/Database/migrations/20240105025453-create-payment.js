@@ -2,35 +2,30 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Services', {
+    await queryInterface.createTable('Payments', {
       id: {
         allowNull: false,
         primaryKey: true,
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4
       },
-      service: {
+      valueTotal: {
+        type: Sequelize.FLOAT
+      },
+      discountValue: {
+        type: Sequelize.FLOAT
+      },
+      tipePayment: {
         type: Sequelize.STRING
       },
-      date_service: {
+      date: {
         type: Sequelize.DATE
       },
-      additionalComments: {
-        type: Sequelize.STRING
-      },
-      client_id_service: {
+      service_id_payment: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         references: {
-          model: 'Accounts',
-          key: 'id'
-        }
-      },
-      provider_id_service: {
-        type: Sequelize.UUID,
-        defaultValue: Sequelize.UUIDV4,
-        references: {
-          model: 'Accounts',
+          model: 'Schedules',
           key: 'id'
         }
       },
@@ -45,6 +40,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Services');
+    await queryInterface.dropTable('Payments');
   }
 };

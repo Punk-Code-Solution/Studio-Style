@@ -49,8 +49,13 @@ try {
       pool: {
         max: 5,
         min: 0,
-        acquire: 30000,
+        acquire: 60000,
         idle: 10000
+      },
+      dialectOptions: {
+        connectTimeout: 60000,
+        requestTimeout: 60000,
+        connectionTimeout: 60000
       },
       logging: false,
       define: {

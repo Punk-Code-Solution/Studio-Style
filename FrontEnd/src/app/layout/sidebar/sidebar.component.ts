@@ -7,10 +7,10 @@ import { User } from '../../core/services/user.service';
 // Constante centralizada para labels de roles
 const ROLE_LABELS: Record<UserRole, string> = {
   'admin': 'Administrador',
-  'medico': 'Médico',
-  'enfermeiro': 'Enfermeiro',
-  'recepcionista': 'Recepcionista',
-  'administrativo': 'Administrativo'
+  'ninguem': 'Usuário',
+  'provider': 'Colaborador',
+  'client': 'Cliente' 
+
 };
 
 @Component({
@@ -25,7 +25,7 @@ export class SidebarComponent implements OnInit {
   userAvatar = 'assets/images/avatar.png';
 
   get userRole(): string {
-    return this.currentUser?.perfil ? ROLE_LABELS[this.currentUser.perfil] : '';
+    return this.currentUser?.TypeAccount.type ? ROLE_LABELS[this.currentUser.TypeAccount.type] : '';
   }
 
   constructor(

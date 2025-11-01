@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       
       this.belongsTo( models.Account, { foreignKey: "provider_id_schedules", constraints: false } ),
       this.belongsTo( models.Account, { foreignKey: "client_id_schedules", constraints: false } );
-      
+      this.belongsTo( models.Service, { through: 'Schedule_Service' } );
     }
   }
   Schedules.init({
