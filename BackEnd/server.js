@@ -10,7 +10,7 @@ const swaggerUi = require('swagger-ui-express');
 // Import database connection
 let db;
 try {
-  db = require('./src/database/models');
+  db = require('./src/Database/models');
 } catch (error) {
   console.error('❌ Failed to load database models:', error.message);
   console.error('Full error:', error);
