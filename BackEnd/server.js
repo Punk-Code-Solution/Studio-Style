@@ -10,7 +10,7 @@ const swaggerUi = require('swagger-ui-express');
 // Import database connection
 let db;
 try {
-  db = require('./src/database/models');
+  db = require('./src/Database/models');
 } catch (error) {
   console.error('❌ Failed to load database models:', error.message);
   console.error('Full error:', error);
@@ -27,14 +27,14 @@ const errorHandler = require('./src/middlewares/errorHandler');
 const { authenticateToken } = require('./src/middlewares/auth');
 
 // Import routes
-const authRoutes = require('./src/routes/auth.routes');
-const accountRoutes = require('./src/routes/account.routes');
-const companyRoutes = require('./src/routes/company.routes');
-const productRoutes = require('./src/routes/product.routes');
-const purchaseRoutes = require('./src/routes/purchase_sale.routes');
-const serviceRoutes = require('./src/routes/service.routes');
-const schedulesRoutes = require('./src/routes/schedules.routes');
-const whatsappRoutes = require('./src/routes/whatsapp.routes');
+const authRoutes = require('./src/Routes/auth.routes');
+const accountRoutes = require('./src/Routes/account.routes');
+const companyRoutes = require('./src/Routes/company.routes');
+const productRoutes = require('./src/Routes/product.routes');
+const purchaseRoutes = require('./src/Routes/purchase_sale.routes');
+const serviceRoutes = require('./src/Routes/service.routes');
+const schedulesRoutes = require('./src/Routes/schedules.routes');
+const whatsappRoutes = require('./src/Routes/whatsapp.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -81,7 +81,7 @@ const swaggerOptions = {
       }
     ]
   },
-  apis: ['./src/routes/*.js']
+  apis: ['./src/Routes/*.js']
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);

@@ -1,4 +1,4 @@
-const { Adress } = require("../database/models");
+const { Adress } = require("../Database/models");
 
 class adressRepository{
 

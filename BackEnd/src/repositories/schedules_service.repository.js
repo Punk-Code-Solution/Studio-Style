@@ -1,4 +1,4 @@
-const { Schedule_Service } = require("../database/models");
+const { Schedule_Service } = require("../Database/models");
 const { v4: uuidv4 } = require('uuid');
 
 class schedules_serviceRepository{
