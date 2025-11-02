@@ -6,11 +6,49 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const path = require('path');
+const fs = require('fs');
+
+// Helper function to resolve path case-insensitively
+function resolvePath(...parts) {
+  const basePath = __dirname;
+  let currentPath = basePath;
+  
+  for (let part of parts) {
+    const fullPath = path.join(currentPath, part);
+    
+    // Try exact match first
+    if (fs.existsSync(fullPath)) {
+      currentPath = fullPath;
+      continue;
+    }
+    
+    // Try case-insensitive match
+    const dir = path.dirname(fullPath);
+    const fileName = path.basename(fullPath);
+    
+    if (fs.existsSync(dir)) {
+      const files = fs.readdirSync(dir);
+      const match = files.find(f => f.toLowerCase() === fileName.toLowerCase());
+      if (match) {
+        currentPath = path.join(dir, match);
+        continue;
+      }
+    }
+    
+    // If no match found, use original path
+    currentPath = fullPath;
+  }
+  
+  return currentPath;
+}
 
 // Import database connection
 let db;
 try {
-  db = require('./src/database/models');
+  // Use case-insensitive path resolution
+  const modelsPath = resolvePath('src', 'database', 'models');
+  db = require(modelsPath);
 } catch (error) {
   console.error('❌ Failed to load database models:', error.message);
   console.error('Full error:', error);
@@ -23,18 +61,18 @@ try {
 }
 
 // Import middlewares
-const errorHandler = require('./src/middlewares/errorHandler');
-const { authenticateToken } = require('./src/middlewares/auth');
+const errorHandler = require(resolvePath('src', 'middlewares', 'errorHandler'));
+const { authenticateToken } = require(resolvePath('src', 'middlewares', 'auth'));
 
-// Import routes
-const authRoutes = require('./src/routes/auth.routes');
-const accountRoutes = require('./src/routes/account.routes');
-const companyRoutes = require('./src/routes/company.routes');
-const productRoutes = require('./src/routes/product.routes');
-const purchaseRoutes = require('./src/routes/purchase_sale.routes');
-const serviceRoutes = require('./src/routes/service.routes');
-const schedulesRoutes = require('./src/routes/schedules.routes');
-const whatsappRoutes = require('./src/routes/whatsapp.routes');
+// Import routes  
+const authRoutes = require(resolvePath('src', 'routes', 'auth.routes'));
+const accountRoutes = require(resolvePath('src', 'routes', 'account.routes'));
+const companyRoutes = require(resolvePath('src', 'routes', 'company.routes'));
+const productRoutes = require(resolvePath('src', 'routes', 'product.routes'));
+const purchaseRoutes = require(resolvePath('src', 'routes', 'purchase_sale.routes'));
+const serviceRoutes = require(resolvePath('src', 'routes', 'service.routes'));
+const schedulesRoutes = require(resolvePath('src', 'routes', 'schedules.routes'));
+const whatsappRoutes = require(resolvePath('src', 'routes', 'whatsapp.routes'));
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -81,7 +119,7 @@ const swaggerOptions = {
       }
     ]
   },
-  apis: ['./src/routes/*.js']
+  apis: [path.join(resolvePath('src', 'routes'), '*.js')]
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
