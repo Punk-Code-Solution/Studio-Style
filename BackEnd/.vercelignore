@@ -199,8 +199,8 @@ docs/
 *.sqlite
 
 # Migration files (keep only the latest)
-src/database/migrations/
-src/database/seeders/
+src/Database/migrations/
+src/Database/seeders/
 
 # Setup files
 setup.js
