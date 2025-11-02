@@ -8,7 +8,19 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
 // Import database connection
-const db = require('./src/database/models');
+let db;
+try {
+  db = require('./src/database/models');
+} catch (error) {
+  console.error('❌ Failed to load database models:', error.message);
+  console.error('Full error:', error);
+  // Create a minimal db object to prevent crashes
+  db = {
+    sequelize: null,
+    Sequelize: null
+  };
+  console.warn('⚠️ Server running without database connection. API endpoints may fail.');
+}
 
 // Import middlewares
 const errorHandler = require('./src/middlewares/errorHandler');
@@ -169,10 +181,15 @@ app.use(errorHandler);
 const startServer = async () => {
    try {
      // Test database connection (only in development)
-     if (process.env.NODE_ENV === 'development') {
-        await db.sequelize.authenticate();
-        await db.sequelize.sync({ alter: true });
-        console.log('Database connected and synchronized');
+     if (process.env.NODE_ENV === 'development' && db.sequelize) {
+        try {
+          await db.sequelize.authenticate();
+          await db.sequelize.sync({ alter: true });
+          console.log('Database connected and synchronized');
+        } catch (dbError) {
+          console.error('Database connection error:', dbError.message);
+          console.warn('Server will continue without database connection');
+        }
      }
 
      // Start server locally
