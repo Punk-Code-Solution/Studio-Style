@@ -5,7 +5,7 @@ import { User, UserService } from './user.service';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-
+import { Router } from '@angular/router';
 
 // Tipos centralizados
 export type UserRole =  | 'admin' | 'ninguem' | 'provider' | 'client';
