@@ -1,6 +1,6 @@
 ﻿/* eslint-disable import/order */
 const WhatsAppService = require('../services/whatsapp.service');
-const { Schedules, Service } = require('../Database/models');
+const { Schedules, Service } = require('../database/models');
 const moment = require('moment');
 const { Op } = require('sequelize');
 

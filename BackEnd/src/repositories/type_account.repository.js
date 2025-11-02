@@ -1,4 +1,4 @@
-const { TypeAccount, Account } = require("../Database/models");
+const { TypeAccount, Account } = require("../database/models");
 const { v4: uuidv4 } = require('uuid');
 
 class typeAccountRepository{
