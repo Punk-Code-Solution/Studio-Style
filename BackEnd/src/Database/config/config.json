@@ -47,7 +47,8 @@
     },
     "dialectOptions": {
       "ssl": {
-        "require": true
+        "require": true,
+        "rejectUnauthorized": false
       },
       "connectTimeout": 60000,
       "requestTimeout": 60000,
