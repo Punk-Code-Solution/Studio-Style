@@ -14,8 +14,8 @@ module.exports = (sequelize, DataTypes) => {
       this.belongsTo( models.Account, { foreignKey: "client_id_service", constraints: false } ),
       this.belongsTo( models.Account, { foreignKey: "provider_id_service", constraints: false } ),
       this.belongsTo( models.Schedules, { foreignKey: "schedule_id", constraints: false } ),
-      this.hasMany( models.Action, { foreignKey: "client_id_service", constraints: false } ),
-      this.hasMany( models.Payment, { foreignKey: "payment_id_action", constraints: false } );
+      this.hasMany( models.Action, { foreignKey: "service_id_action", constraints: false } ),
+      this.hasMany( models.Payment, { foreignKey: "service_id_payment", constraints: false } );
 
     }
   }
