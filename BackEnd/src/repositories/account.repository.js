@@ -10,7 +10,7 @@ const {
   Purchase,
   Purchase_Material,
   Phone,
-  Adress } = require("../Database/models");
+  Adress } = require("../database/models");
 const { v4: uuidv4 } = require('uuid');
 const bkrypt = require('bcrypt');
 
@@ -90,17 +90,9 @@ module.exports = class accountRepository{
   async findAllLimit(limit = 10, base = 0){
 
     return await Account.findAll({
-
-      if(limit){
-
-        limit,
-        base
-
-      },
-
+      limit,
       offset: base
-
-    })
+    });
 
   }
 

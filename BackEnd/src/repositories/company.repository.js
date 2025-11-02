@@ -1,4 +1,4 @@
-const { Company, Account, Email } = require('../Database/models');
+const { Company, Account, Email } = require('../database/models');
 const { v4: uuidv4 } = require('uuid');
 const bkrypt = require('bcrypt');
 
