@@ -6,8 +6,9 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
+
 // Tipos centralizados
-export type UserRole = 'medico' | 'enfermeiro' | 'recepcionista' | 'administrativo' | 'admin';
+export type UserRole =  | 'admin' | 'ninguem' | 'provider' | 'client';
 
 interface AuthState {
   user: User | null;
@@ -21,13 +22,13 @@ interface Permissions {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthService {
   // Estado de autenticação centralizado
   private authState = new BehaviorSubject<AuthState>({
     user: null,
-    isAuthenticated: false
+    isAuthenticated: false,
   });
 
   // Observable público do estado
@@ -45,70 +46,74 @@ export class AuthService {
   private readonly permissions: Permissions = {
     routes: {
       // Rotas principais
-      'dashboard': ['admin', 'medico', 'enfermeiro', 'recepcionista', 'administrativo'],
-      'patients': ['admin', 'medico', 'enfermeiro', 'recepcionista'],
-      'calendar': ['admin', 'medico', 'enfermeiro', 'recepcionista'],
-      'messages': ['admin', 'medico', 'enfermeiro', 'recepcionista', 'administrativo'],
-      'documents': ['admin', 'medico', 'enfermeiro', 'recepcionista', 'administrativo'],
-      'employees': ['admin'],
-      'feedbacks': ['admin', 'medico'],
-      'services': ['admin', 'medico', 'enfermeiro'],
+      dashboard: ['admin'],
+      patients: ['admin'],
+      calendar: ['ninguem'],
+      messages: ['ninguem'],
+      documents: ['ninguem'],
+      employees: ['ninguem'],
+      feedbacks: ['ninguem'],
+      services: ['admin'],
 
       // Sub-rotas de pacientes
-      'patients/new': ['admin', 'medico', 'recepcionista'],
-      'patients/:id': ['admin', 'medico'],
-      'patients/:id/edit': ['admin', 'medico'],
+      'patients/new': ['admin'],
+      'patients/:id': ['admin'],
+      'patients/:id/edit': ['admin'],
 
       // Sub-rotas de consultas
-      'services/new': ['admin', 'medico'],
-      'services/:id': ['admin', 'medico', 'enfermeiro'],
+      'services/new': ['admin'],
+      'services/:id': ['admin'],
 
       // Sub-rotas de funcionários
-      'employees/new': ['admin'],
-      'employees/:id': ['admin']
+      'employees/new': ['ninguem'],
+      'employees/:id': ['ninguem'],
     },
     fields: {
-      'patient.medicalRecord': ['admin', 'medico', 'enfermeiro'],
-      'patient.prescriptions': ['admin', 'medico'],
-      'patient.appointments': ['admin', 'medico', 'enfermeiro', 'recepcionista'],
-      'patient.billing': ['admin', 'administrativo', 'medico'],
-      'patient.personal': ['admin', 'medico', 'enfermeiro', 'recepcionista'],
-      'patient.contact': ['admin', 'medico', 'enfermeiro', 'recepcionista']
+      'patient.medicalRecord': ['ninguem'],
+      'patient.prescriptions': ['ninguem'],
+      'patient.appointments': ['ninguem'],
+      'patient.billing': ['ninguem'],
+      'patient.personal': ['ninguem'],
+      'patient.contact': ['ninguem'],
     },
     actions: {
-      'edit.all': ['admin', 'medico'],
-      'edit.email': ['admin', 'medico', 'recepcionista'],
-      'edit.phone': ['admin', 'medico', 'recepcionista'],
-      'edit.appointments': ['admin', 'medico', 'recepcionista'],
-      'edit.medicalRecord': ['admin', 'medico'],
-      'view.fullPatientDetails': ['admin', 'medico'],
-      'edit.patientData': ['admin', 'medico']
-    }
+      'edit.all': ['ninguem'],
+      'edit.email': ['ninguem'],
+      'edit.phone': ['ninguem'],
+      'edit.appointments': ['ninguem'],
+      'edit.medicalRecord': ['ninguem'],
+      'view.fullPatientDetails': ['ninguem'],
+      'edit.patientData': ['ninguem'],
+    },
   };
 
   constructor(
     @Inject(PLATFORM_ID) platformId: Object,
     private userService: UserService,
-    private http: HttpClient
+    private http: HttpClient,
+    private router: Router
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
     this.loadStoredUser();
   }
 
   // Getters públicos
-  get currentUser(): User | null {
+  get currentUser() {
     return this.authState.value.user;
   }
 
   get currentUser$(): Observable<User | null> {
     return this.authState$.pipe(
-      map(state => state.user),
-      tap(user => console.log('Estado do usuário atualizado:', user))
+      map((state) => state.user),
+      tap((user) => console.log('Estado do usuário atualizado:', user))
     );
   }
 
   // Métodos de autenticação
-  login(email: string, senha: string): Observable<{ token: string; user: User }> {
+  login(
+    email: string,
+    senha: string
+  ): Observable<{ token: string; user: User }> {
     const url = `${environment.apiUrl}/auth/login`;
     return this.http.post<any>(url, { email, password: senha }).pipe(
       map((res) => {
@@ -116,6 +121,8 @@ export class AuthService {
         const payload = res?.data ?? res;
         const token = payload?.token as string;
         const user = payload?.user as User;
+
+        console.log('Resposta de login recebida:', payload);
 
         if (!token || !user) {
           throw new Error('Resposta de login inválida');
@@ -141,7 +148,7 @@ export class AuthService {
     this.clearPermissionCache(); // Limpa cache ao fazer logout
     this.authState.next({
       user: null,
-      isAuthenticated: false
+      isAuthenticated: false,
     });
   }
 
@@ -177,11 +184,13 @@ export class AuthService {
 
   // Verificações de role
   hasRole(role: UserRole): boolean {
-    return this.currentUser?.perfil === role;
+    return this.currentUser?.TypeAccount.type === role;
   }
 
   hasAnyRole(roles: UserRole[]): boolean {
-    return this.currentUser ? roles.includes(this.currentUser.perfil) : false;
+    return this.currentUser
+      ? roles.includes(this.currentUser.TypeAccount.type)
+      : false;
   }
 
   // Métodos de estado
@@ -190,6 +199,7 @@ export class AuthService {
     if (!token) return false;
     if (this.isJwtExpired(token)) {
       this.logout();
+      this.router.navigate(['/login']);
       return false;
     }
     return this.authState.value.isAuthenticated;
@@ -204,14 +214,14 @@ export class AuthService {
     const user = this.currentUser;
     if (!user) return false;
 
-    const cacheKey = `${type}:${key}:${user.perfil}`;
+    const cacheKey = `${type}:${key}:${user.TypeAccount.type}`;
     if (this.permissionCache.has(cacheKey)) {
       return this.permissionCache.get(cacheKey)!;
     }
 
     const normalizedKey = key.startsWith('/') ? key.substring(1) : key;
     const allowedRoles = this.permissions[type][normalizedKey];
-    const result = allowedRoles?.includes(user.perfil) ?? false;
+    const result = allowedRoles?.includes(user.TypeAccount.type) ?? false;
 
     this.permissionCache.set(cacheKey, result);
     return result;
@@ -228,12 +238,16 @@ export class AuthService {
   }
 
   private setCurrentUser(user: User): void {
+    // Garante que o campo 'perfil' seja preenchido com o tipo de conta
+    if (user['TypeAccount']?.type) {
+      user.TypeAccount.type = user['TypeAccount'].type;
+    }
     if (this.isBrowser) {
       localStorage.setItem(this.userKey, JSON.stringify(user));
     }
     this.authState.next({
       user,
-      isAuthenticated: true
+      isAuthenticated: true,
     });
   }
 
@@ -249,7 +263,7 @@ export class AuthService {
         const user = JSON.parse(storedUser);
         this.authState.next({
           user,
-          isAuthenticated: true
+          isAuthenticated: true,
         });
       }
     }

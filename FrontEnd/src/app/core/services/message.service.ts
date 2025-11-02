@@ -23,80 +23,7 @@ export interface Message {
   providedIn: 'root'
 })
 export class MessageService {
-  private messages: Message[] = [
-    {
-      id: 1,
-      assunto: 'Bem-vindo ao ExperienceMed',
-      conteudo: 'Olá! Bem-vindo ao nosso sistema de gestão médica.',
-      criadoPor: {
-        id: 1,
-        nome: 'Admin',
-        email: 'admin@experiencemed.com',
-        telefone: '(11) 97777-7777',
-        perfil: 'admin',
-        ativo: true,
-        senha: 'admin123'
-      },
-      destinatarios: [
-        {
-          usuario: {
-            id: 2,
-            nome: 'Dr. João Silva',
-            email: 'joao.silva@experiencemed.com',
-            telefone: '(11) 99999-9999',
-            perfil: 'medico',
-            ativo: true,
-            crm: '12345-SP',
-            senha: 'medico123'
-          },
-          lida: false
-        }
-      ],
-      dataCriacao: '2024-01-15T10:00:00Z'
-    },
-    {
-      id: 2,
-      assunto: 'Nova consulta agendada',
-      conteudo: 'Você tem uma nova consulta agendada para amanhã às 14h.',
-      criadoPor: {
-        id: 2,
-        nome: 'Dr. João Silva',
-        email: 'joao.silva@experiencemed.com',
-        telefone: '(11) 99999-9999',
-        perfil: 'medico',
-        ativo: true,
-        crm: '12345-SP',
-        senha: 'medico123'
-      },
-      destinatarios: [
-        {
-          usuario: {
-            id: 3,
-            nome: 'Ana Costa',
-            email: 'ana.costa@experiencemed.com',
-            telefone: '(11) 98888-8888',
-            perfil: 'enfermeiro',
-            ativo: true,
-            senha: 'enfermeiro123'
-          },
-          lida: false
-        },
-        {
-          usuario: {
-            id: 4,
-            nome: 'Maria Santos',
-            email: 'maria.santos@experiencemed.com',
-            telefone: '(11) 98888-8888',
-            perfil: 'recepcionista',
-            ativo: true,
-            senha: 'recepcionista123'
-          },
-          lida: false
-        }
-      ],
-      dataCriacao: '2024-01-16T15:30:00Z'
-    }
-  ];
+  private messages: Message[] = [ ];
 
   private messagesSubject = new BehaviorSubject<Message[]>(this.messages);
   messages$ = this.messagesSubject.asObservable();
@@ -117,7 +44,7 @@ export class MessageService {
 
   getUnreadMessages(userId: number): Observable<Message[]> {
     const unreadMessages = this.messages.filter(message => {
-      const recipient = message.destinatarios.find(r => r.usuario.id === userId);
+      const recipient = message.destinatarios.find(r => r.usuario.id === userId.toString());
       return recipient && !recipient.lida;
     });
     return of(unreadMessages).pipe(delay(300));
@@ -142,7 +69,7 @@ export class MessageService {
       throw new Error('Message not found');
     }
 
-    const recipient = message.destinatarios.find(r => r.usuario.id === userId);
+    const recipient = message.destinatarios.find(r => r.usuario.id === userId.toString());
     if (recipient) {
       recipient.lida = true;
       message.dataLeitura = new Date().toISOString();
@@ -162,17 +89,18 @@ export class MessageService {
 
   getMessagesByUser(userId: number): Observable<Message[]> {
     const userMessages = this.messages.filter(
-      message => message.criadoPor.id === userId || 
-                message.destinatarios.some(r => r.usuario.id === userId)
+      message => message.criadoPor.id === userId.toString() ||
+                message.destinatarios.some(r => r.usuario.id === userId.toString())
     );
     return of(userMessages).pipe(delay(300));
   }
 
   getMessagesByRole(role: UserRole): Observable<Message[]> {
     const roleMessages = this.messages.filter(
-      message => message.criadoPor.perfil === role || 
-                message.destinatarios.some(r => r.usuario.perfil === role)
+      (message) =>
+        message.criadoPor.TypeAccount.type === role ||
+        message.destinatarios.some((r) => r.usuario.TypeAccount.type === role)
     );
     return of(roleMessages).pipe(delay(300));
   }
-} 
+}

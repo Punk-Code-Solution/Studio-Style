@@ -1,609 +1,705 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { AuthService } from '../../core/services/auth.service';
-import { PatientService } from '../../core/services/patient.service';
 import { Patient } from '../../core/models/patient.model';
+import { PatientService, CreatePatientRequest } from '../../core/services/patient.service';
+import { PatientViewModalComponent } from './patient-view-modal/patient-view-modal.component';
+import { PatientFormModalComponent } from './patient-form-modal/patient-form-modal.component';
+import { PatientDeleteModalComponent } from './patient-delete-modal/patient-delete-modal.component';
 
 @Component({
   selector: 'app-patients',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [
+    CommonModule,
+    RouterModule,
+    FormsModule,
+    PatientViewModalComponent,
+    PatientFormModalComponent,
+    PatientDeleteModalComponent,
+  ],
   template: `
-    <div class="patients-container">
-      <!-- Loading State -->
-      <div class="loading-state" *ngIf="isLoading">
-        <div class="spinner"></div>
-        <span>Carregando pacientes...</span>
-      </div>
-
-      <!-- Error Message -->
-      <div class="error-message" *ngIf="errorMessage">
-        <i class="fas fa-exclamation-circle"></i>
-        {{ errorMessage }}
-        <button class="retry-btn" (click)="retryLoading()">
-          <i class="fas fa-redo"></i>
-          Tentar Novamente
-        </button>
-      </div>
-
-      <!-- Header Section -->
-      <div class="header">
+    <div class="patients">
+      <div class="patients-header">
         <div class="header-left">
-          <h2>Pacientes</h2>
+          <h1>Clientes</h1>
           <div class="search">
             <i class="fas fa-search"></i>
-            <input 
-              type="text" 
-              placeholder="Buscar pacientes..." 
-              [(ngModel)]="searchTerm" 
-              (input)="filterPatients()"
-              [disabled]="isLoading"
-            >
+            <input
+              type="text"
+              placeholder="Buscar pacientes..."
+              [(ngModel)]="searchTerm"
+              (ngModelChange)="filterPatients()"
+            />
           </div>
         </div>
 
         <div class="header-right">
-          <button class="filter-btn" (click)="toggleFilter()" [disabled]="isLoading">
+          <button class="filter-btn" (click)="toggleFilter()">
             <i class="fas fa-filter"></i>
             Filtros
           </button>
-          <button class="add-btn" routerLink="/patients/new" [disabled]="isLoading">
+          <button class="add-btn" (click)="openPatientModal()">
             <i class="fas fa-plus"></i>
-            Novo Paciente
+            Novo Cliente
           </button>
         </div>
       </div>
 
-      <!-- Filter Panel -->
-      <div class="filter-panel" [class.show]="isFilterOpen" *ngIf="!isLoading">
+      <div class="filter-panel" [class.show]="isFilterOpen">
         <div class="filter-group">
           <label>Status</label>
           <div class="filter-options">
             <label class="checkbox">
-              <input 
-                type="checkbox" 
-                [(ngModel)]="filters.status.active" 
-                (change)="filterPatients()"
-              >
-              <span>Ativos</span>
+              <input
+                type="checkbox"
+                [(ngModel)]="filters.status.active"
+                (ngModelChange)="filterPatients()"
+              />
+              <span>Ativo</span>
             </label>
             <label class="checkbox">
-              <input 
-                type="checkbox" 
-                [(ngModel)]="filters.status.inactive" 
-                (change)="filterPatients()"
-              >
-              <span>Inativos</span>
+              <input
+                type="checkbox"
+                [(ngModel)]="filters.status.deleted"
+                (ngModelChange)="filterPatients()"
+              />
+              <span>Excluído</span>
             </label>
           </div>
         </div>
 
         <div class="filter-actions">
-          <button class="clear-btn" (click)="clearFilters()">Limpar Filtros</button>
+          <button class="clear-btn" (click)="clearFilters()">
+            Limpar Filtros
+          </button>
         </div>
       </div>
 
-      <!-- Patients Table -->
-      <div class="patients-table" *ngIf="!isLoading">
-        <div class="table-header">
-          <span class="results-count">
-            {{ filteredPatients.length }} paciente{{ filteredPatients.length !== 1 ? 's' : '' }} encontrado{{ filteredPatients.length !== 1 ? 's' : '' }}
-          </span>
+      <!-- Loading indicator -->
+      <div *ngIf="loading" class="loading-container">
+        <div class="loading-spinner">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>Carregando clientes...</span>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Email</th>
-              <th>Telefone</th>
-              <th>Status</th>
-              <th>Última Visita</th>
-              <th>Próxima Consulta</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngIf="filteredPatients.length === 0">
-              <td colspan="7" class="empty-state">
-                <i class="fas fa-user-slash"></i>
-                <p>Nenhum paciente encontrado</p>
-                <small *ngIf="searchTerm || selectedStatus">
-                  Tente ajustar os filtros de busca
-                </small>
-              </td>
-            </tr>
-            <tr *ngFor="let patient of paginatedPatients">
-              <td>
-                <div class="patient-info">
-                  <img [src]="patient.avatar || 'assets/images/default-avatar.png'" [alt]="patient.nome" class="avatar">
-                  <span>{{ patient.nome }}</span>
-                </div>
-              </td>
-              <td>{{ patient.email }}</td>
-              <td>{{ patient.telefone }}</td>
-              <td>
-                <span class="status-badge" [class]="getStatusClass(patient.status)">
-                  {{ getStatusLabel(patient.status) }}
-                </span>
-              </td>
-              <td>{{ formatDate(patient.ultimaVisita) }}</td>
-              <td>{{ formatDate(patient.proximaConsulta) }}</td>
-              <td>
-                <div class="actions">
-                  <button class="action-btn" [routerLink]="['/patients', patient.id]" title="Ver detalhes">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button class="action-btn" [routerLink]="['/patients', patient.id, 'edit']" title="Editar paciente">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="action-btn delete" (click)="deletePatient(patient)" title="Excluir paciente">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
       </div>
 
-      <!-- Empty State -->
-      <div class="empty-state" *ngIf="!isLoading && filteredPatients.length === 0">
-        <i class="fas fa-users"></i>
-        <h3>Nenhum paciente encontrado</h3>
-        <p>Tente ajustar os filtros ou realizar uma nova busca</p>
+      <!-- Error message -->
+      <div *ngIf="error" class="error-message">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>{{ error }}</span>
+        <button class="retry-btn" (click)="loadPatients()">
+          Tentar novamente
+        </button>
       </div>
 
-      <!-- Pagination -->
-      <div class="pagination" *ngIf="!isLoading && filteredPatients.length > 0">
-        <button 
-          class="page-btn" 
-          [disabled]="currentPage === 1" 
+      <div class="patients-grid" *ngIf="!loading && !error">
+        <div class="patients-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>E-mail</th>
+                <th>Tipo de Conta</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let patient of filteredPatients">
+                <td>
+                  <div class="user-info">
+                    <div class="patient-details">
+                      <span>{{ patient.name }}</span>
+                      <span>{{ patient.lastname }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ getPatientEmail(patient) || 'N/A' }}</td>
+                <td>
+                  <span class="type-badge">
+                    {{ patient.TypeAccount?.type || 'N/A' }}
+                  </span>
+                </td>
+                <td>
+                  <span class="status-badge" [class]="getStatusClass(patient)">
+                    {{ getStatusText(patient) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="actions">
+                    <button class="action-btn" (click)="viewPatient(patient)">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="action-btn" (click)="editPatient(patient)">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn" (click)="deletePatient(patient)">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="filteredPatients.length === 0">
+                <td colspan="5" class="empty-state">
+                  <p>Nenhum cliente encontrado</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="pagination">
+        <button
+          class="page-btn"
+          [disabled]="currentPage === 1"
           (click)="changePage(currentPage - 1)"
         >
           <i class="fas fa-chevron-left"></i>
         </button>
-        <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
-        <button 
-          class="page-btn" 
-          [disabled]="currentPage === totalPages" 
+        <span class="page-info"
+          >Página {{ currentPage }} de {{ totalPages }}</span
+        >
+        <button
+          class="page-btn"
+          [disabled]="currentPage === totalPages"
           (click)="changePage(currentPage + 1)"
         >
           <i class="fas fa-chevron-right"></i>
         </button>
       </div>
     </div>
+
+    <!-- Modais -->
+    <app-patient-view-modal
+      *ngIf="showViewModal"
+      [patient]="selectedPatient"
+      (close)="closeViewModal()"
+      (edit)="openEditModal($event)"
+    ></app-patient-view-modal>
+
+    <app-patient-form-modal
+      *ngIf="showFormModal"
+      [patient]="editingPatient"
+      [loading]="formLoading"
+      (close)="closeFormModal()"
+      (save)="savePatient($event)"
+    ></app-patient-form-modal>
+
+    <app-patient-delete-modal
+      *ngIf="showDeleteModal"
+      [patient]="patientToDelete"
+      [loading]="deleteLoading"
+      (close)="closeDeleteModal()"
+      (confirm)="confirmDelete($event)"
+    ></app-patient-delete-modal>
   `,
-  styles: [`
-    .patients-container {
-      padding: 2rem;
-    }
+  styles: [
+    `
+      @use '../../../styles/variables' as *;
+      @use '../../../styles/mixins' as *;
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
-    }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 2rem;
-
-      h2 {
-        margin: 0;
-        color: #1976d2;
-      }
-    }
-
-    .search {
-      position: relative;
-      width: 300px;
-
-      i {
-        position: absolute;
-        left: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #666;
+      .patients {
+        padding: $spacing-lg;
+        background-color: $background-color;
+        min-height: 100%;
       }
 
-      input {
-        width: 100%;
-        padding: 0.5rem 1rem 0.5rem 2.5rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 1rem;
-
-        &:focus {
-          outline: none;
-          border-color: #1976d2;
-        }
-
-        &:disabled {
-          background-color: #f5f5f5;
-          cursor: not-allowed;
-        }
-      }
-    }
-
-    .header-right {
-      display: flex;
-      gap: 1rem;
-    }
-
-    .filter-btn, .add-btn {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 4px;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.2s;
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    }
-
-    .filter-btn {
-      background: #f5f5f5;
-      color: #333;
-
-      &:hover:not(:disabled) {
-        background: #e0e0e0;
-      }
-    }
-
-    .add-btn {
-      background: #1976d2;
-      color: white;
-
-      &:hover:not(:disabled) {
-        background: #1565c0;
-      }
-    }
-
-    .error-message {
-      background: #ffebee;
-      color: #d32f2f;
-      padding: 1rem;
-      border-radius: 4px;
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-
-      i {
-        font-size: 1.25rem;
-      }
-
-      .retry-btn {
-        margin-left: auto;
-        background: transparent;
-        border: 1px solid #d32f2f;
-        color: #d32f2f;
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.875rem;
-
-        &:hover {
-          background: rgba(211, 47, 47, 0.1);
-        }
-      }
-    }
-
-    .loading-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1rem;
-      padding: 2rem;
-      color: #666;
-
-      .spinner {
-        width: 40px;
-        height: 40px;
-        border: 3px solid #f3f3f3;
-        border-top: 3px solid #1976d2;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    }
-
-    .filter-panel {
-      background: white;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
-      display: none;
-
-      &.show {
-        display: block;
-      }
-    }
-
-    .filter-group {
-      margin-bottom: 1.5rem;
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-
-      label {
-        display: block;
-        color: #333;
-        font-weight: 500;
-        margin-bottom: 0.5rem;
-      }
-    }
-
-    .filter-options {
-      display: flex;
-      gap: 2rem;
-    }
-
-    .checkbox {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-
-      input {
-        width: 16px;
-        height: 16px;
-      }
-
-      span {
-        color: #333;
-      }
-    }
-
-    .filter-actions {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 1.5rem;
-    }
-
-    .clear-btn {
-      padding: 0.5rem 1rem;
-      background: transparent;
-      color: #333;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
-
-      &:hover {
-        background: #f5f5f5;
-      }
-    }
-
-    .patients-table {
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      margin-bottom: 2rem;
-    }
-
-    .table-header {
-      padding: 1rem;
-      border-bottom: 1px solid #ddd;
-      background: #f5f5f5;
-    }
-
-    .results-count {
-      color: #666;
-      font-size: 0.875rem;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    th, td {
-      padding: 1rem;
-      text-align: left;
-      border-bottom: 1px solid #ddd;
-    }
-
-    th {
-      background: #f5f5f5;
-      font-weight: 500;
-      color: #333;
-    }
-
-    td {
-      color: #333;
-    }
-
-    .actions {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 3rem;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-
-      i {
-        font-size: 3rem;
-        color: #ddd;
-        margin-bottom: 1rem;
-      }
-
-      h3 {
-        color: #333;
-        margin: 0 0 0.5rem;
-      }
-
-      p {
-        color: #666;
-        margin: 0;
-      }
-    }
-
-    .pagination {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .page-btn {
-      padding: 0.5rem;
-      background: transparent;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
-
-      &:hover:not(:disabled) {
-        background: #f5f5f5;
-      }
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    }
-
-    .page-info {
-      color: #333;
-    }
-
-    @media (max-width: 768px) {
-      .header {
-        flex-direction: column;
-        gap: 1rem;
+      .patients-header {
+        @include flex(row, space-between, center);
+        margin-bottom: $spacing-xl;
       }
 
       .header-left {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
+        @include flex(row, flex-start, center);
+        gap: $spacing-xl;
+
+        h1 {
+          color: $primary-color;
+          margin: 0;
+        }
       }
 
       .search {
-        width: 100%;
+        position: relative;
+        width: 300px;
+
+        i {
+          position: absolute;
+          left: $spacing-sm;
+          top: 50%;
+          transform: translateY(-50%);
+          color: $text-secondary;
+        }
+
+        input {
+          width: 100%;
+          padding: $spacing-sm $spacing-sm $spacing-sm $spacing-xl;
+          border: 1px solid $border-color;
+          border-radius: $border-radius-lg;
+          background-color: $background-light;
+          @include typography($font-size-base);
+
+          &:focus {
+            outline: none;
+            border-color: $primary-color;
+          }
+        }
       }
 
       .header-right {
-        width: 100%;
-        justify-content: space-between;
+        @include flex(row, flex-end, center);
+        gap: $spacing-md;
+      }
+
+      .filter-btn,
+      .add-btn {
+        @include button;
+        @include flex(row, center, center);
+        gap: $spacing-sm;
+        padding: $spacing-sm $spacing-md;
+      }
+
+      .filter-btn {
+        background-color: $background-light;
+        color: $text-primary;
+        border: 1px solid $border-color;
+
+        &:hover {
+          background-color: $background-dark;
+        }
+      }
+
+      .add-btn {
+        background-color: $primary-color;
+        color: $text-light;
+        border: 1px solid $border-color;
+        box-shadow: $shadow-sm;
+
+        &:hover {
+          background-color: $primary-dark;
+          transform: translateY(-2px);
+        }
+      }
+
+      .filter-panel {
+        background-color: $background-light;
+        border: 1px solid $border-color;
+        border-radius: $border-radius-lg;
+        padding: $spacing-lg;
+        margin-bottom: $spacing-xl;
+        display: none;
+        box-shadow: $shadow-sm;
+
+        &.show {
+          display: block;
+        }
+      }
+
+      .filter-group {
+        margin-bottom: $spacing-lg;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        label {
+          display: block;
+          color: $text-primary;
+          @include typography($font-size-base, $font-weight-medium);
+          margin-bottom: $spacing-sm;
+        }
       }
 
       .filter-options {
-        flex-direction: column;
-        gap: 0.5rem;
+        @include flex(row, flex-start, center);
+        gap: $spacing-lg;
+        flex-wrap: wrap;
+      }
+
+      .checkbox {
+        @include flex(row, flex-start, center);
+        gap: $spacing-sm;
+        cursor: pointer;
+
+        input {
+          width: 16px;
+          height: 16px;
+        }
+
+        span {
+          color: $text-primary;
+          @include typography($font-size-base);
+        }
+      }
+
+      .filter-actions {
+        @include flex(row, flex-end, center);
+        margin-top: $spacing-lg;
+      }
+
+      .clear-btn {
+        @include button(transparent, $text-primary);
+        border: 1px solid $border-color;
+
+        &:hover {
+          background-color: $background-dark;
+        }
+      }
+
+      .patients-grid {
+        background-color: $background-light;
+        border: 1px solid $border-color;
+        border-radius: $border-radius-lg;
+        overflow: hidden;
+        box-shadow: $shadow-sm;
       }
 
       .patients-table {
         overflow-x: auto;
+
+        &::-webkit-scrollbar {
+          height: 8px;
+        }
+
+        &::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 4px;
+        }
+
+        &::-webkit-scrollbar-thumb {
+          background: $primary-color;
+          border-radius: 4px;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+
+        th,
+        td {
+          padding: $spacing-md;
+          text-align: left;
+          border-bottom: 1px solid $border-color;
+        }
+
+        th {
+          background-color: $background-dark;
+          color: $text-primary;
+          @include typography($font-size-base, $font-weight-medium);
+        }
+
+        td {
+          color: $text-primary;
+          @include typography($font-size-base);
+        }
+      }
+
+      .user-info {
+        @include flex(row, flex-start, center);
+        gap: $spacing-sm;
+      }
+
+      .patient-details {
+        @include flex(column, flex-start, flex-start);
+        gap: $spacing-xs;
+      }
+
+      .type-badge {
+        padding: $spacing-xs $spacing-sm;
+        background-color: rgba($primary-color, 0.1);
+        color: $primary-color;
+        border-radius: $border-radius-sm;
+        @include typography($font-size-sm, $font-weight-medium);
+      }
+
+      .status-badge {
+        padding: $spacing-xs $spacing-sm;
+        border-radius: $border-radius-sm;
+        @include typography($font-size-sm, $font-weight-medium);
+
+        &.active {
+          background-color: rgba($success-color, 0.1);
+          color: $success-color;
+        }
+
+        &.deleted {
+          background-color: rgba($error-color, 0.1);
+          color: $error-color;
+        }
+      }
+
+      .actions {
+        @include flex(row, flex-start, center);
+        gap: $spacing-sm;
       }
 
       .action-btn {
-        width: 100%;
-        justify-content: center;
+        @include button(transparent, $text-secondary);
+        padding: $spacing-xs;
+        font-size: $font-size-base;
+
+        &:hover {
+          color: $primary-color;
+          background-color: rgba($primary-color, 0.1);
+          box-shadow: $shadow-sm;
+          transform: translateY(-1px);
+        }
       }
-    }
-  `]
+
+      .empty-state {
+        text-align: center;
+        padding: $spacing-xl;
+        color: $text-secondary;
+
+        p {
+          margin: 0;
+        }
+      }
+
+      .pagination {
+        @include flex(row, center, center);
+        gap: $spacing-md;
+        margin-top: $spacing-xl;
+      }
+
+      .page-btn {
+        @include button(transparent, $text-primary);
+        padding: $spacing-sm;
+        border: 1px solid $border-color;
+        border-radius: $border-radius-sm;
+        box-shadow: $shadow-sm;
+
+        &:hover:not(:disabled) {
+          background-color: $background-dark;
+          transform: translateY(-1px);
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      }
+
+      .page-info {
+        color: $text-primary;
+        @include typography($font-size-base);
+      }
+
+      .loading-container {
+        @include flex(column, center, center);
+        padding: $spacing-xl;
+        text-align: center;
+      }
+
+      .loading-spinner {
+        @include flex(row, center, center);
+        gap: $spacing-md;
+        color: $text-secondary;
+        @include typography($font-size-base);
+
+        i {
+          font-size: $font-size-large;
+          color: $primary-color;
+        }
+      }
+
+      .error-message {
+        @include flex(row, center, center);
+        gap: $spacing-md;
+        padding: $spacing-lg;
+        background-color: rgba($error-color, 0.1);
+        border: 1px solid rgba($error-color, 0.3);
+        border-radius: $border-radius-lg;
+        color: $error-color;
+        @include typography($font-size-base);
+
+        i {
+          font-size: $font-size-large;
+        }
+
+        .retry-btn {
+          @include button($error-color, $text-light);
+          padding: $spacing-xs $spacing-sm;
+          font-size: $font-size-small;
+          margin-left: $spacing-md;
+        }
+      }
+
+      @include responsive(lg) {
+        .header-left {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: $spacing-md;
+        }
+
+        .search {
+          width: 100%;
+        }
+      }
+
+      @include responsive(md) {
+        .patients-header {
+          flex-direction: column;
+          gap: $spacing-md;
+        }
+
+        .header-right {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        .filter-options {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: $spacing-sm;
+        }
+      }
+    `,
+  ],
 })
 export class PatientsComponent implements OnInit {
   patients: Patient[] = [];
   filteredPatients: Patient[] = [];
-  searchTerm: string = '';
-  selectedStatus: string = '';
+  searchTerm = '';
   isFilterOpen = false;
-  currentPage: number = 1;
-  itemsPerPage: number = 10;
-  totalPages: number = 1;
-  isLoading: boolean = false;
-  errorMessage: string | null = null;
+  currentPage = 1;
+  itemsPerPage = 10;
+  totalPages = 1;
+  loading = false;
+  error = '';
+
+  // Modal states
+  showViewModal = false;
+  showFormModal = false;
+  showDeleteModal = false;
+  selectedPatient: Patient | null = null;
+  editingPatient: Patient | null = null;
+  patientToDelete: Patient | null = null;
+  formLoading = false;
+  deleteLoading = false;
 
   filters = {
     status: {
       active: true,
-      inactive: true
-    }
+      deleted: false,
+    },
   };
 
   constructor(
     private patientService: PatientService,
+    private route: ActivatedRoute,
     private router: Router
   ) {}
 
   ngOnInit(): void {
     this.loadPatients();
-  }
 
-  loadPatients(): void {
-    this.isLoading = true;
-    this.errorMessage = null;
-    
-    this.patientService.getPatients().subscribe({
-      next: (patients) => {
-        this.patients = patients;
-        this.filterPatients();
-        this.isLoading = false;
-      },
-      error: (error) => {
-        console.error('Erro ao carregar pacientes:', error);
-        this.errorMessage = 'Não foi possível carregar a lista de pacientes. Por favor, tente novamente.';
-        this.isLoading = false;
+    // Verifica query params para abrir modais automaticamente
+    this.route.queryParams.subscribe((params) => {
+      if (params['new'] === 'true') {
+        this.openPatientModal();
+        // Remove query param após abrir o modal
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { new: null },
+          queryParamsHandling: 'merge',
+        });
+      } else if (params['id']) {
+        // Buscar o paciente pelo ID e abrir o modal de visualização
+        this.patientService.getPatientById(params['id']).subscribe({
+          next: (patient) => {
+            this.viewPatient(patient);
+            // Remove query param após abrir o modal
+            this.router.navigate([], {
+              relativeTo: this.route,
+              queryParams: { id: null },
+              queryParamsHandling: 'merge',
+            });
+          },
+          error: (error) => {
+            console.error('Erro ao carregar cliente:', error);
+            // Remove query param em caso de erro
+            this.router.navigate([], {
+              relativeTo: this.route,
+              queryParams: { id: null },
+              queryParamsHandling: 'merge',
+            });
+          },
+        });
       }
     });
   }
 
-  retryLoading(): void {
-    this.loadPatients();
+  loadPatients(): void {
+    this.loading = true;
+    this.error = '';
+
+    this.patientService.getAllPatients().subscribe({
+      next: (patients) => {
+        this.patients = Array.isArray(patients) ? patients : [];
+        this.filterPatients();
+        this.loading = false;
+      },
+      error: (error) => {
+        this.error = 'Erro ao carregar clientes';
+        this.patients = [];
+        this.filterPatients();
+        this.loading = false;
+      },
+    });
   }
 
   filterPatients(): void {
     let filtered = [...this.patients];
 
+    // Filter by account type - apenas clientes
+    filtered = filtered.filter((patient) => {
+      const accountType = patient.TypeAccount?.type?.toLowerCase();
+      return accountType === 'client';
+    });
+
     // Search filter
-    if (this.searchTerm) {
-      const search = this.searchTerm.toLowerCase();
-      filtered = filtered.filter(patient =>
-        patient.nome.toLowerCase().includes(search) ||
-        patient.email.toLowerCase().includes(search) ||
-        patient.telefone.includes(search)
+    if (this.searchTerm.trim()) {
+      const search = this.searchTerm.toLowerCase().trim();
+      console.log('Aplicando filtro de busca:', search);
+      filtered = filtered.filter(
+        (cliente) =>
+          cliente.name?.toLowerCase().includes(search) ||
+          cliente.lastname?.toLowerCase().includes(search) ||
+          cliente.email?.toLowerCase().includes(search) ||
+          cliente.TypeAccount?.type?.toLowerCase().includes(search)
       );
     }
 
-    // Status filter
-    if (!this.filters.status.active || !this.filters.status.inactive) {
-      filtered = filtered.filter(patient => {
-        if (this.filters.status.active && patient.status === 'ativo') return true;
-        if (this.filters.status.inactive && patient.status === 'inativo') return true;
+    // Status filter - aplica apenas se não todos estão marcados
+    const allStatusSelected =
+      this.filters.status.active && this.filters.status.deleted;
+    if (!allStatusSelected) {
+      filtered = filtered.filter((patient) => {
+        // Ativo: deleted=false ou deleted não definido
+        if (this.filters.status.active && !patient.deleted) return true;
+        // Excluído: deleted=true
+        if (this.filters.status.deleted && patient.deleted === true)
+          return true;
         return false;
       });
     }
 
-    this.filteredPatients = filtered;
-    this.totalPages = Math.ceil(filtered.length / this.itemsPerPage);
-    this.currentPage = Math.min(this.currentPage, this.totalPages);
+    // Recalcular paginação
+    this.totalPages = Math.max(
+      1,
+      Math.ceil(filtered.length / this.itemsPerPage)
+    );
+    this.currentPage = Math.max(1, Math.min(this.currentPage, this.totalPages));
+
+    // Aplicar paginação
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    const end = start + this.itemsPerPage;
+    this.filteredPatients = [...filtered.slice(start, end)];
   }
 
   toggleFilter(): void {
@@ -615,53 +711,133 @@ export class PatientsComponent implements OnInit {
     this.filters = {
       status: {
         active: true,
-        inactive: true
-      }
+        deleted: false,
+      },
     };
+    this.currentPage = 1;
     this.filterPatients();
   }
 
   changePage(page: number): void {
     this.currentPage = page;
+    this.filterPatients();
+  }
+
+  openPatientModal(): void {
+    this.editingPatient = null;
+    this.showFormModal = true;
+  }
+
+  viewPatient(patient: Patient): void {
+    this.selectedPatient = patient;
+    this.showViewModal = true;
+  }
+
+  editPatient(patient: Patient): void {
+    this.editingPatient = patient;
+    this.showFormModal = true;
   }
 
   deletePatient(patient: Patient): void {
-    if (confirm(`Tem certeza que deseja excluir o paciente ${patient.nome}?`)) {
-      this.isLoading = true;
-      this.patientService.deletePatient(patient.id).subscribe({
+    this.patientToDelete = patient;
+    this.showDeleteModal = true;
+  }
+
+  // Modal methods
+  closeViewModal(): void {
+    this.showViewModal = false;
+    this.selectedPatient = null;
+  }
+
+  openEditModal(patient: Patient): void {
+    this.closeViewModal();
+    this.editPatient(patient);
+  }
+
+  closeFormModal(): void {
+    this.showFormModal = false;
+    this.editingPatient = null;
+    this.formLoading = false;
+  }
+
+  savePatient(patientData: CreatePatientRequest): void {
+    this.formLoading = true;
+
+    if (this.editingPatient) {
+      // Update existing patient
+      this.patientService
+        .updatePatient(this.editingPatient.id, patientData)
+        .subscribe({
+          next: () => {
+            console.log('Paciente atualizado com sucesso');
+            this.loadPatients();
+            this.closeFormModal();
+          },
+          error: (error) => {
+            this.error = 'Erro ao atualizar paciente';
+            console.error('Erro ao atualizar paciente:', error);
+            this.formLoading = false;
+          },
+        });
+    } else {
+      // Create new patient
+      this.patientService.createPatient(patientData).subscribe({
         next: () => {
+          console.log('Paciente criado com sucesso');
           this.loadPatients();
+          this.closeFormModal();
         },
         error: (error) => {
-          console.error('Erro ao excluir paciente:', error);
-          this.errorMessage = 'Não foi possível excluir o paciente. Por favor, tente novamente.';
-          this.isLoading = false;
-        }
+          this.error = 'Erro ao criar Cliente';
+          console.error('Erro ao criar Cliente:', error);
+          this.formLoading = false;
+        },
       });
     }
   }
 
-  getStatusLabel(status: Patient['status']): string {
-    return status === 'ativo' ? 'Ativo' : 'Inativo';
+  closeDeleteModal(): void {
+    this.showDeleteModal = false;
+    this.patientToDelete = null;
+    this.deleteLoading = false;
   }
 
-  getStatusClass(status: Patient['status']): string {
-    return status === 'ativo' ? 'active' : 'inactive';
+  confirmDelete(patient: Patient): void {
+    this.deleteLoading = true;
+
+    this.patientService.deletePatient(patient.id).subscribe({
+      next: () => {
+        console.log('Cliente excluído com sucesso');
+        this.loadPatients();
+        this.closeDeleteModal();
+      },
+      error: (error) => {
+        this.error = 'Erro ao excluir cliente';
+        console.error('Erro ao excluir cliente:', error);
+        this.deleteLoading = false;
+      },
+    });
   }
 
-  formatDate(date: string | undefined): string {
-    if (!date) return 'N/A';
-    try {
-      return new Date(date).toLocaleDateString('pt-BR');
-    } catch {
-      return 'Data inválida';
+  getStatusClass(patient: Patient): string {
+    if (patient.deleted) return 'deleted';
+    return 'active';
+  }
+
+  getStatusText(patient: Patient): string {
+    if (patient.deleted) return 'Excluído';
+    return 'Ativo';
+  }
+
+  getPatientEmail(patient: Patient): string {
+    // Primeiro tenta pegar do array de Emails
+    if (patient.Emails && patient.Emails.length > 0) {
+      return patient.Emails[0].email;
     }
-  }
-
-  get paginatedPatients() {
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    const end = start + this.itemsPerPage;
-    return this.filteredPatients.slice(start, end);
+    // Se não tiver array, tenta o campo direto
+    if (patient.email) {
+      return patient.email;
+    }
+    return '';
   }
 }
-

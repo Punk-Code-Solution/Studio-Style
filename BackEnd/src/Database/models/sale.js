@@ -18,6 +18,11 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Sale.init({
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
+    },
     name_product: DataTypes.STRING,
     amount_product: DataTypes.INTEGER,
     price_total: DataTypes.FLOAT,

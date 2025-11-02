@@ -5,22 +5,53 @@
     "database": "HMSDB",
     "host": "127.0.0.1",
     "dialect": "postgres",
-    "port" : 5432
+    "port": 5432,
+    "pool": {
+      "max": 5,
+      "min": 0,
+      "acquire": 60000,
+      "idle": 10000
+    },
+    "dialectOptions": {
+      "connectTimeout": 60000,
+      "requestTimeout": 60000,
+      "connectionTimeout": 60000
+    }
   },
   "test": {
     "username": "root",
     "password": null,
     "database": "database_test",
     "host": "127.0.0.1",
-    "dialect": "postgres"
+    "dialect": "postgres",
+    "pool": {
+      "max": 5,
+      "min": 0,
+      "acquire": 60000,
+      "idle": 10000
+    },
+    "dialectOptions": {
+      "connectTimeout": 60000,
+      "requestTimeout": 60000,
+      "connectionTimeout": 60000
+    }
   },
   "production": {
     "use_env_variable": "DATABASE_URL",
     "dialect": "postgres",
+    "pool": {
+      "max": 10,
+      "min": 2,
+      "acquire": 60000,
+      "idle": 10000
+    },
     "dialectOptions": {
       "ssl": {
         "require": true
-      }
+      },
+      "connectTimeout": 60000,
+      "requestTimeout": 60000,
+      "connectionTimeout": 60000
     }
   }
 }

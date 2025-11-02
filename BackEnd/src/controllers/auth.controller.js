@@ -28,6 +28,26 @@ class AuthController {
       }
 
       const user = userAllDate.Account;
+      const typeUser = userAllDate.Account.TypeAccount;
+      const userType = typeUser?.dataValues?.type?.toLowerCase();
+
+      // Check if user type is allowed to login (only admin and provider)
+      // Block client/cliente and any other types
+      const allowedTypes = ['admin', 'provider'];
+      const blockedTypes = ['client', 'cliente'];
+      
+      if (!userType) {
+        return ResponseHandler.unauthorized(res, 'Invalid user type');
+      }
+
+      if (blockedTypes.includes(userType)) {
+        return ResponseHandler.unauthorized(res, 'Access denied. Clients cannot access the system. Only administrators and providers can log in.');
+      }
+
+      if (!allowedTypes.includes(userType)) {
+        return ResponseHandler.unauthorized(res, 'Access denied. Only administrators and providers can access the system.');
+      }
+
       // Check password
       const isValidPassword = bcrypt.compareSync(password, user.dataValues.password);
       
@@ -37,23 +57,24 @@ class AuthController {
 
       // Generate JWT token
       const token = jwt.sign(
-        { 
-          id: user.id, 
-          email: email, 
-          role: user.role || 'user' 
+        {
+          id: user.id,
+          email: email,
+          role: typeUser.dataValues.type,
         },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '5m' }
+        { expiresIn: process.env.JWT_EXPIRES_IN || "60m" }
       );
 
       // Remove password from response
-      const { password: _, ...userWithoutPassword } = user;
+      const { password: _, ...userWithoutPassword } = user.toJSON();
 
       return ResponseHandler.success(res, 200, 'Login successful', {
         user: userWithoutPassword,
         token
       });
     } catch (error) {
+      console.log(error)
       return ResponseHandler.error(res, 500, 'Login failed', error);
     }
   }

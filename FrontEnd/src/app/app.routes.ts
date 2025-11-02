@@ -25,28 +25,7 @@ const patientRoutes: Routes = [
   {
     path: 'patients',
     canActivate: [RoleGuard],
-    children: [
-      {
-        path: '',
-        canActivate: [RoleGuard],
-        loadComponent: () => import('./features/patients/patients.component').then(m => m.PatientsComponent)
-      },
-      {
-        path: 'new',
-        canActivate: [RoleGuard],
-        loadComponent: () => import('./features/patients/patient-form/patient-form.component').then(m => m.PatientFormComponent)
-      },
-      {
-        path: ':id',
-        canActivate: [RoleGuard],
-        loadComponent: () => import('./features/patients/patient-details/patient-details.component').then(m => m.PatientDetailsComponent)
-      },
-      {
-        path: ':id/edit',
-        canActivate: [RoleGuard],
-        loadComponent: () => import('./features/patients/patient-form/patient-form.component').then(m => m.PatientFormComponent)
-      }
-    ]
+    loadComponent: () => import('./features/patients/patients.component').then(m => m.PatientsComponent)
   }
 ];
 
@@ -59,17 +38,17 @@ const consultationRoutes: Routes = [
       {
         path: '',
         canActivate: [RoleGuard],
-        loadComponent: () => import('./features/services/services.component').then(m => m.ConsultationsComponent)
+        loadComponent: () => import('./features/schedules/schedules.component').then(m => m.SchedulesComponent)
       },
       {
         path: 'new',
         canActivate: [RoleGuard],
-        loadComponent: () => import('./features/services/service-form/service-form.component').then(m => m.ConsultationFormComponent)
+        loadComponent: () => import('./features/schedules/schedule-view-modal/schedule-view-modal.component').then(m => m.ScheduleViewModalComponent)
       },
       {
         path: ':id',
         canActivate: [RoleGuard],
-        loadComponent: () => import('./features/services/services-details/services-details.component').then(m => m.ConsultationDetailsComponent)
+        loadComponent: () => import('./features/schedules/schedule-view-modal/schedule-view-modal.component').then(m => m.ScheduleViewModalComponent)
       }
     ]
   }

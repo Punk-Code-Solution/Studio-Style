@@ -8,7 +8,7 @@ npx sequelize-cli model:generate --name Product --attributes liters:float,weight
 npx sequelize-cli model:generate --name Adress --attributes city:string,neighborhood:string,road:string,account_id:string --force
 npx sequelize-cli model:generate --name Phone --attributes phone:integer,ddd:integer,active:date,type:string,account_id_phone:string,company_id_phone:string --force
 npx sequelize-cli model:generate --name Email --attributes name:string,email:string,active:date,account_id_email:string,company_id_email:string --force
-npx sequelize-cli model:generate --name Service --attributes service:string,date_service:date,additionalComments:string,client_id_service:string,provider_id_service:string --force
+npx sequelize-cli model:generate --name Service --attributes service:string,additionalComments:string,schedules_id:string --force
 npx sequelize-cli model:generate --name Payment --attributes valueTotal:float,discountValue:float,tipePayment:string,date:date,service_id_payment:string --force
 npx sequelize-cli model:generate --name Action --attributes name:string,additionalComments:string,service_id_action:string --force
 npx sequelize-cli model:generate --name Sale --attributes name_product:string,amount_product:integer,price_total:float,discount:integer,date_sale:date,paid_off:boolean,remaining:float,account_id_sale:string,client_id_sale:string --force
@@ -16,6 +16,7 @@ npx sequelize-cli model:generate --name Schedules --attributes name_client:strin
 npx sequelize-cli model:generate --name Purchase_Material --attributes name:string,amount:integer,value:float,date:date,product_description:string,account_id_purchase_material:string --force
 npx sequelize-cli model:generate --name SaleProducts --attributes saleId:string,productId:string --force
 npx sequelize-cli model:generate --name HairAccount --attributes hairId:string,accountId:string --force
+npx sequelize-cli model:generate --name Schedule_Service --attributes schedules_id:string,service_id:string --force
 npx sequelize-cli db:migrate
 
 npx sequelize-cli seed:generate --name adm

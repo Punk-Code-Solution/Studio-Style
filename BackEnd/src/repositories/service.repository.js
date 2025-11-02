@@ -1,4 +1,4 @@
-const { Service, Account } = require("../Database/models");
+const { Service } = require("../Database/models");
 const { v4: uuidv4 } = require('uuid');
 
 class serviceRepository{
@@ -24,14 +24,11 @@ class serviceRepository{
     
   async addService( services ) {
 
-    console.log(services)
-
     const { 
 
       service,
       additionalComments,
-      provider_id_service,
-      client_id_service
+      price
 
     } = services
 
@@ -39,16 +36,9 @@ class serviceRepository{
 
         id: uuidv4(),
         service,
-        date_service: Date.now(),
         additionalComments,
-        provider_id_service,
-        client_id_service
+        price
 
-      },
-      {
-        
-        association: [ Account ]
-        
       });
 
       if(result){
@@ -90,7 +80,7 @@ class serviceRepository{
     
   async deleteService(id) {
 
-    await Service.destroy({
+    return await Service.destroy({
       where: {
         id: id,
       },

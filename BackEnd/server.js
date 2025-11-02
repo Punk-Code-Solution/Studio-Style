@@ -21,6 +21,7 @@ const companyRoutes = require('./src/Routes/company.routes');
 const productRoutes = require('./src/Routes/product.routes');
 const purchaseRoutes = require('./src/Routes/purchase_sale.routes');
 const serviceRoutes = require('./src/Routes/service.routes');
+const schedulesRoutes = require('./src/Routes/schedules.routes');
 const whatsappRoutes = require('./src/Routes/whatsapp.routes');
 
 const app = express();
@@ -148,6 +149,7 @@ app.use('/api/company', authenticateToken, companyRoutes);
 app.use('/api/product', authenticateToken, productRoutes);
 app.use('/api/purchase', authenticateToken, purchaseRoutes);
 app.use('/api/service', authenticateToken, serviceRoutes);
+app.use('/api/schedules', authenticateToken, schedulesRoutes)
 app.use('/api/whatsapp', authenticateToken, whatsappRoutes);
 
 // 404 handler
