@@ -6,6 +6,14 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const authRoutes = require('./src/Routes/auth.routes.js');
+const accountRoutes = require('./src/Routes/account.routes.js');
+const companyRoutes = require('./src/Routes/company.routes.js');
+const productRoutes = require('./src/Routes/product.routes.js');
+const purchaseRoutes = require('./src/Routes/purchase_sale.routes.js');
+const serviceRoutes = require('./src/Routes/service.routes.js');
+const schedulesRoutes = require('./src/Routes/schedules.routes.js');
+const whatsappRoutes = require('./src/Routes/whatsapp.routes.js');
 
 // Import database connection
 let db;
@@ -25,16 +33,6 @@ try {
 // Import middlewares
 const errorHandler = require('./src/middlewares/errorHandler');
 const { authenticateToken } = require('./src/middlewares/auth');
-
-// Import routes
-const authRoutes = require('./src/Routes/auth.routes');
-const accountRoutes = require('./src/Routes/account.routes');
-const companyRoutes = require('./src/Routes/company.routes');
-const productRoutes = require('./src/Routes/product.routes');
-const purchaseRoutes = require('./src/Routes/purchase_sale.routes');
-const serviceRoutes = require('./src/Routes/service.routes');
-const schedulesRoutes = require('./src/Routes/schedules.routes');
-const whatsappRoutes = require('./src/Routes/whatsapp.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
