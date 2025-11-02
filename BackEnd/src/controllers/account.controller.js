@@ -109,10 +109,14 @@ class AccountController {
    */
   async getAllAccounts(req, res) {
     try {
+      console.log('📋 getAllAccounts: Iniciando busca de contas...');
       const result = await this.accountRepository.findAll();
+      console.log('✅ getAllAccounts: Contas encontradas:', result?.length || 0);
       return ResponseHandler.success(res, 200, 'Accounts retrieved successfully', result);
     } catch (error) {
-      return ResponseHandler.error(res, 500, 'Failed to retrieve accounts', error);
+      console.error('❌ getAllAccounts: Erro ao buscar contas:', error);
+      console.error('Stack:', error.stack);
+      return ResponseHandler.error(res, 500, 'Failed to retrieve accounts', error.message || error);
     }
   }
 

@@ -71,10 +71,14 @@ class SchedulesController {
    */
   async getAllSchedules(req, res) {
     try {
+      console.log('📋 getAllSchedules: Iniciando busca de agendamentos...');
       const result = await this.schedulesRepository.findAll();
-      return ResponseHandler.success(res, 200, 'Service retrieved successfully', result);
+      console.log('✅ getAllSchedules: Agendamentos encontrados:', result?.length || 0);
+      return ResponseHandler.success(res, 200, 'Schedules retrieved successfully', result);
     } catch (error) {
-      return ResponseHandler.error(res, 500, 'Failed to retrieve services', error);
+      console.error('❌ getAllSchedules: Erro ao buscar agendamentos:', error);
+      console.error('Stack:', error.stack);
+      return ResponseHandler.error(res, 500, 'Failed to retrieve schedules', error.message || error);
     }
   }
 

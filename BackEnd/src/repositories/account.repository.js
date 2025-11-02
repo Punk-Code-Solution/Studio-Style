@@ -42,22 +42,33 @@ module.exports = class accountRepository{
 
   //OK
   async findAll(){
-
-    return await Account.findAll({
-      include: [
-        { model: TypeAccount },
-        { model: Company },
-        { model: Email },
-        { model: Hair },
-        { model: Schedules },
-        { model: Sale },
-        { model: Purchase },
-        { model: Purchase_Material },
-        { model: Phone },
-        { model: Adress }
-      ]
-    });
-
+    try {
+      console.log('📊 Repository findAll: Verificando se Account está definido:', !!Account);
+      if (!Account) {
+        throw new Error('Account model is not defined');
+      }
+      
+      const result = await Account.findAll({
+        include: [
+          { model: TypeAccount },
+          { model: Company },
+          { model: Email },
+          { model: Hair },
+          { model: Schedules },
+          { model: Sale },
+          { model: Purchase },
+          { model: Purchase_Material },
+          { model: Phone },
+          { model: Adress }
+        ]
+      });
+      
+      console.log('✅ Repository findAll: Resultados encontrados:', result?.length || 0);
+      return result;
+    } catch (error) {
+      console.error('❌ Repository findAll: Erro:', error);
+      throw error;
+    }
   }
 
   async findEmail( eMail ){

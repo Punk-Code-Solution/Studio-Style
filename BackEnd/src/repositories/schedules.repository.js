@@ -5,6 +5,11 @@ class schedulesRepository{
 
   async findAll(limit = 10, offset = 0) {
     try {
+      console.log('📊 Repository findAll schedules: Verificando se Schedules está definido:', !!Schedules);
+      if (!Schedules) {
+        throw new Error('Schedules model is not defined');
+      }
+      
       const schedules = await Schedules.findAll({
         limit,
         offset,
