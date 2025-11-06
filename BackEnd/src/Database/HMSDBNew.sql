@@ -138,11 +138,19 @@ CREATE TABLE public."Schedules"(
 CREATE TABLE public."Services"(
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   service VARCHAR(255),
-  date_service TIMESTAMP,
-  additionalComments TEXT,
+  "additionalComments" TEXT,
+  price FLOAT,
   "client_id_service" UUID REFERENCES public."Accounts" (id),
   "provider_id_service" UUID REFERENCES public."Accounts" (id),
-  "schedule_id" UUID REFERENCES public."Schedules" (id) ON DELETE SET NULL,
+  "createdAt" TIMESTAMP DEFAULT NOW(),
+  "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+
+-- Create Schedule_Services Table (Junction Table for Many-to-Many Relationship)
+CREATE TABLE public."Schedule_Services"(
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "schedules_id" UUID NOT NULL REFERENCES public."Schedules" (id) ON DELETE CASCADE ON UPDATE CASCADE,
+  "service_id" UUID NOT NULL REFERENCES public."Services" (id) ON DELETE CASCADE ON UPDATE CASCADE,
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -150,11 +158,11 @@ CREATE TABLE public."Services"(
 -- Create Payment Table
 CREATE TABLE public."Payments"(
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  valueTotal FLOAT,
-  discountValue FLOAT,
-  tipePayment VARCHAR(200),
+  "valueTotal" FLOAT,
+  "discountValue" FLOAT,
+  "tipePayment" VARCHAR(200),
   date DATE,
-  "service_id_payment" UUID REFERENCES public."Services" (id),
+  "service_id_payment" UUID REFERENCES public."Schedules" (id),
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -250,8 +258,12 @@ ALTER TABLE public."Services" ADD CONSTRAINT "Services_fk_Account_Client" FOREIG
 ALTER TABLE public."Services" ADD CONSTRAINT "Services_fk_Account_Provider" FOREIGN KEY ("provider_id_service")
   REFERENCES public."Accounts" (id) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
-ALTER TABLE public."Services" ADD CONSTRAINT "Services_fk_Schedules" FOREIGN KEY ("schedule_id")
-  REFERENCES public."Schedules" (id) ON DELETE SET NULL ON UPDATE CASCADE;
+-- Foreign Keys for Schedule_Services
+ALTER TABLE public."Schedule_Services" ADD CONSTRAINT "Schedule_Services_fk_Schedules" FOREIGN KEY ("schedules_id")
+  REFERENCES public."Schedules" (id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE public."Schedule_Services" ADD CONSTRAINT "Schedule_Services_fk_Services" FOREIGN KEY ("service_id")
+  REFERENCES public."Services" (id) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE public."Schedules" ADD CONSTRAINT "Schedules_fk_Account_Client" FOREIGN KEY ("client_id_schedules")
   REFERENCES public."Accounts" (id) ON DELETE NO ACTION ON UPDATE NO ACTION;
@@ -274,15 +286,16 @@ ALTER TABLE public."Purchases" ADD CONSTRAINT "Purchases_fk_Company" FOREIGN KEY
 ALTER TABLE public."Products" ADD CONSTRAINT "Products_fk_Purchase" FOREIGN KEY ("purchase_id_product")
   REFERENCES public."Purchases" (id) ON DELETE NO ACTION ON UPDATE CASCADE;
 
-ALTER TABLE public."Payments" ADD CONSTRAINT "Payments_fk_Service" FOREIGN KEY ("service_id_payment")
-  REFERENCES public."Services" (id) ON DELETE NO ACTION ON UPDATE CASCADE;
+ALTER TABLE public."Payments" ADD CONSTRAINT "Payments_fk_Schedule" FOREIGN KEY ("service_id_payment")
+  REFERENCES public."Schedules" (id) ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- Create Indexes for better performance
-CREATE INDEX idx_services_schedule_id ON public."Services" ("schedule_id");
 CREATE INDEX idx_services_client_id ON public."Services" ("client_id_service");
 CREATE INDEX idx_services_provider_id ON public."Services" ("provider_id_service");
 CREATE INDEX idx_schedules_client_id ON public."Schedules" ("client_id_schedules");
 CREATE INDEX idx_schedules_provider_id ON public."Schedules" ("provider_id_schedules");
 CREATE INDEX idx_schedules_date ON public."Schedules" ("date_and_houres");
+CREATE INDEX idx_schedule_services_schedules_id ON public."Schedule_Services" ("schedules_id");
+CREATE INDEX idx_schedule_services_service_id ON public."Schedule_Services" ("service_id");
 CREATE INDEX idx_accounts_cpf ON public."Accounts" ("cpf");
 CREATE INDEX idx_companies_cnpj ON public."Companies" ("cnpj");

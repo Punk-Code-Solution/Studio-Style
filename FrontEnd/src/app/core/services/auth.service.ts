@@ -122,8 +122,6 @@ export class AuthService {
         const token = payload?.token as string;
         const user = payload?.user as User;
 
-        console.log('Resposta de login recebida:', payload);
-
         if (!token || !user) {
           throw new Error('Resposta de login inválida');
         }
