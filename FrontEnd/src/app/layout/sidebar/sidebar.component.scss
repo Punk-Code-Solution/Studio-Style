@@ -6,6 +6,9 @@
   @include flex(column, space-between, stretch);
   background-color: $background-light;
   border-right: 1px solid $border-color;
+  // MODIFICADO (Ponto 10): Adiciona transição
+  transition: width $transition-normal;
+  overflow-x: hidden; // Previne conteúdo de vazar durante a transição
 }
 
 .logo {
@@ -16,12 +19,15 @@
   align-items: center;
   justify-content: center;
   background-color: $background-light;
+  padding: $spacing-sm; // Adicionado padding
+  flex-shrink: 0; // Previne que o logo encolha
 
   img {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
     object-position: center;
+    transition: all $transition-normal; // Transição suave
   }
 }
 
@@ -29,6 +35,8 @@
   flex: 5;
   padding: $spacing-md 0;
   overflow-y: auto;
+  overflow-x: hidden; // Esconde o texto que vaza
+  white-space: nowrap; // Impede quebra de linha
 }
 
 .nav-item {
@@ -43,10 +51,14 @@
     width: 20px;
     margin-right: $spacing-md;
     font-size: $font-size-lg;
+    flex-shrink: 0; // Previne que o ícone encolha
+    transition: margin $transition-fast;
   }
 
   span {
     @include typography($font-size-base, $font-weight-medium);
+    transition: opacity $transition-fast; // Transição para o texto
+    opacity: 1;
   }
 
   &:hover {
@@ -64,6 +76,9 @@
 .sidebar-footer {
   padding: $spacing-md;
   border-top: 1px solid $border-color;
+  flex-shrink: 0; // Previne que o rodapé encolha
+  white-space: nowrap; // Impede quebra de linha
+  overflow: hidden;
 }
 
 .user-info {
@@ -84,10 +99,13 @@
   height: 40px;
   border-radius: $border-radius-full;
   object-fit: cover;
+  flex-shrink: 0; // Previne que o avatar encolha
 }
 
 .user-details {
   @include flex(column, center, flex-start);
+  transition: opacity $transition-fast;
+  opacity: 1;
 }
 
 .user-name {
@@ -99,6 +117,24 @@
   @include typography($font-size-sm);
   color: $text-secondary;
   text-transform: capitalize;
+}
+
+// MODIFICADO (Ponto 10): Estilo do botão de Toggle
+.toggle-btn {
+  @include button(transparent, $text-secondary);
+  padding: $spacing-xs;
+  font-size: $font-size-lg;
+  margin-left: auto; // Empurra para a direita
+  border-radius: $border-radius-full;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  transition: transform $transition-normal, background-color $transition-fast;
+
+  &:hover {
+    background-color: $background-dark;
+    color: $primary-color;
+  }
 }
 
 .logout-btn {
@@ -116,29 +152,16 @@
 
   i {
     font-size: $font-size-lg;
+    flex-shrink: 0;
   }
 
   span {
     @include typography($font-size-base, $font-weight-medium);
+    transition: opacity $transition-fast;
+    opacity: 1;
   }
 
   &:hover {
     background-color: rgba($error-color, 0.1);
   }
 }
-
-// @include responsive(lg) {
-//   .sidebar {
-//     position: fixed;
-//     left: -280px;
-//     top: 0;
-//     bottom: 0;
-//     width: 280px;
-//     transition: left $transition-normal;
-//     z-index: $z-index-fixed;
-
-//     &.open {
-//       left: 0;
-//     }
-//   }
-// }

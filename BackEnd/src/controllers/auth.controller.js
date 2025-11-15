@@ -50,7 +50,6 @@ class AuthController {
 
       // Check password
       const isValidPassword = bcrypt.compareSync(password, user.dataValues.password);
-      console.log(isValidPassword)
       
       if (!isValidPassword) {
         return ResponseHandler.unauthorized(res, 'Invalid credentials');

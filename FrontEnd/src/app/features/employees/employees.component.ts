@@ -146,7 +146,6 @@ interface Filters {
             <p class="role">{{ getRoleLabel(employee.role) }}</p>
             <p class="email">{{ employee.email }}</p>
             <p class="phone">{{ employee.phone }}</p>
-            <p class="department">{{ getDepartmentLabel(employee.department) }}</p>
           </div>
           <div class="employee-actions">
             <button 
@@ -629,7 +628,9 @@ export class EmployeesComponent implements OnInit {
       medico: true,
       enfermeiro: true,
       recepcionista: true,
-      administrativo: true
+      administrativo: true,
+      admin: false,
+      provider: false
     }
   };
 
@@ -675,14 +676,14 @@ export class EmployeesComponent implements OnInit {
       filtered = filtered.filter(employee =>
         employee.name.toLowerCase().includes(search) ||
         employee.email.toLowerCase().includes(search) ||
-        employee.phone.includes(search)
+        (employee.phone?.includes(search) ?? false)
       );
     }
 
     // Status filter
     const activeStatuses = Object.entries(this.filters.status)
       .filter(([_, isActive]) => isActive)
-      .map(([status]) => status);
+      .map(([status, _]) => status as Employee['status']);
 
     if (activeStatuses.length > 0) {
       filtered = filtered.filter(employee => activeStatuses.includes(employee.status));
@@ -735,7 +736,7 @@ export class EmployeesComponent implements OnInit {
       case 'active': return 'Ativo';
       case 'inactive': return 'Inativo';
       case 'on_leave': return 'Em Licença';
-      default: return status;
+      default: return 'Desconhecido';
     }
   }
 

@@ -13,41 +13,26 @@ const PUBLIC_ROUTES = ['/login', '/reset-password', '/unauthorized'];
   selector: 'app-root',
   standalone: true,
   imports: [CommonModule, RouterOutlet, SidebarComponent, NotificationsComponent],
+  // MODIFICADO (Ponto 10): Template agora é inline
   template: `
-    <div class="app-container">
-      <app-sidebar *ngIf="shouldShowSidebar"></app-sidebar>
+    <div class="app-container" [class.sidebar-collapsed]="isSidebarCollapsed">
+      <app-sidebar 
+        *ngIf="shouldShowSidebar"
+        (onToggle)="toggleSidebar()"
+      ></app-sidebar>
+      
       <main class="main-content" [class.no-sidebar]="!shouldShowSidebar">
         <router-outlet></router-outlet>
       </main>
       <app-notifications></app-notifications>
     </div>
   `,
-  styles: [`
-    .app-container {
-      display: flex;
-      min-height: 100vh;
-      background-color: #f5f6fa;
-    }
-
-    .main-content {
-      flex: 1;
-      padding: 0;
-      overflow-y: auto;
-    }
-
-    .main-content.no-sidebar {
-      margin-left: 0;
-    }
-
-    @media (max-width: 768px) {
-      .main-content {
-        margin-left: 0;
-      }
-    }
-  `]
+  // MODIFICADO (Ponto 10): Estilos movidos para app.component.scss (que já existia)
+  styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit, OnDestroy {
   shouldShowSidebar = false;
+  isSidebarCollapsed = false; // MODIFICADO (Ponto 10)
   private currentRoute = '';
   private subscriptions = new Subscription();
 
@@ -92,5 +77,10 @@ export class AppComponent implements OnInit, OnDestroy {
     // 1. O usuário estiver autenticado
     // 2. E não estiver em uma rota pública
     this.shouldShowSidebar = this.authService.isAuthenticated() && !isPublicRoute;
+  }
+
+  // MODIFICADO (Ponto 10): Método de toggle
+  toggleSidebar(): void {
+    this.isSidebarCollapsed = !this.isSidebarCollapsed;
   }
 }

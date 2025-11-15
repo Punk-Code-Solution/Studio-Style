@@ -14,7 +14,7 @@ import { PatientService, CreatePatientRequest, TypeAccount, HairType } from '../
         <div class="modal-header">
           <h3>
             <i class="fas" [class.fa-edit]="isEditMode" [class.fa-plus]="!isEditMode"></i>
-            {{ isEditMode ? 'Editar Paciente' : 'Novo Paciente' }}
+            {{ isEditMode ? 'Editar Cliente' : 'Novo Cliente' }}
           </h3>
           <button class="close-btn" (click)="closeModal()">
             <i class="fas fa-times"></i>
@@ -67,19 +67,18 @@ import { PatientService, CreatePatientRequest, TypeAccount, HairType } from '../
               <div class="form-group">
                 <label for="email">
                   <i class="fas fa-envelope"></i>
-                  E-mail
+                  E-mail (Opcional)
                 </label>
                 <input
                   type="email"
                   id="email"
                   [(ngModel)]="patientData.email"
                   name="email"
-                  required
                   email
-                  [class.error]="patientForm.submitted && (!patientData.email || patientForm.controls['email'].invalid)"
+                  [class.error]="patientForm.controls['email']?.invalid && patientForm.controls['email']?.touched"
                   placeholder="Digite o e-mail"
                 >
-                <div class="error-message" *ngIf="patientForm.submitted && patientForm.controls['email'].invalid">
+                <div class="error-message" *ngIf="patientForm.controls['email']?.invalid && patientForm.controls['email']?.touched">
                   E-mail inválido
                 </div>
               </div>
@@ -87,42 +86,32 @@ import { PatientService, CreatePatientRequest, TypeAccount, HairType } from '../
               <div class="form-group">
                 <label for="cpf">
                   <i class="fas fa-id-card"></i>
-                  CPF
+                  CPF (Opcional)
                 </label>
                 <input
                   type="text"
                   id="cpf"
                   [(ngModel)]="patientData.cpf"
                   name="cpf"
-                  required
-                  [class.error]="patientForm.submitted && !patientData.cpf"
                   placeholder="Digite o CPF"
                 >
-                <div class="error-message" *ngIf="patientForm.submitted && !patientData.cpf">
-                  CPF é obrigatório
                 </div>
-              </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
                 <label for="password">
                   <i class="fas fa-lock"></i>
-                  Senha {{ isEditMode ? '(deixe em branco para não alterar)' : '' }}
+                  Senha {{ isEditMode ? '(deixe em branco para não alterar)' : '(Opcional)' }}
                 </label>
                 <input
                   type="password"
                   id="password"
                   [(ngModel)]="patientData.password"
                   name="password"
-                  [required]="!isEditMode"
-                  [class.error]="patientForm.submitted && !isEditMode && !patientData.password"
                   placeholder="Digite a senha"
                 >
-                <div class="error-message" *ngIf="patientForm.submitted && !isEditMode && !patientData.password">
-                  Senha é obrigatória
                 </div>
-              </div>
 
               <div class="form-group">
                 <label for="birthday">
@@ -153,7 +142,7 @@ import { PatientService, CreatePatientRequest, TypeAccount, HairType } from '../
                   [class.error]="patientForm.submitted && !patientData.typeaccount_id"
                 >
                   <option value="">Selecione um tipo de conta</option>
-                  <option *ngFor="let typeAccount of typeAccounts" [value]="typeAccount.id">
+                  <option *ngFor="let typeAccount of clientTypeAccounts" [value]="typeAccount.id">
                     {{ typeAccount.type }} {{ typeAccount.name ? '- ' + typeAccount.name : '' }}
                   </option>
                 </select>
@@ -446,6 +435,7 @@ export class PatientFormModalComponent implements OnInit {
   };
 
   typeAccounts: TypeAccount[] = [];
+  clientTypeAccounts: TypeAccount[] = []; // MODIFICADO: Apenas tipos de cliente
   hairTypes: HairType[] = [];
   maxDate = '';
 
@@ -465,7 +455,7 @@ export class PatientFormModalComponent implements OnInit {
       this.patientData = {
         name: this.patient.name || '',
         lastname: this.patient.lastname || '',
-        email: this.patient.email || '',
+        email: this.getPatientEmail(this.patient) || '', // MODIFICADO: Puxa o email do array
         password: '', // Não preencher senha ao editar
         cpf: this.patient.cpf || '',
         birthday: this.patient.birthday ? this.formatDateForInput(this.patient.birthday) : '',
@@ -483,10 +473,16 @@ export class PatientFormModalComponent implements OnInit {
     this.patientService.getAllTypeAccounts().subscribe({
       next: (typeAccounts) => {
         this.typeAccounts = typeAccounts;
+        // MODIFICADO (Ponto 1): Filtra para mostrar apenas 'client' e atribui a ID padrão
+        this.clientTypeAccounts = this.typeAccounts.filter(t => t.type.toLowerCase() === 'client');
+        if (!this.isEditMode && this.clientTypeAccounts.length > 0) {
+          this.patientData.typeaccount_id = this.clientTypeAccounts[0].id; // Define 'client' como padrão
+        }
       },
       error: (error) => {
         console.error('Erro ao carregar tipos de conta:', error);
         this.typeAccounts = [];
+        this.clientTypeAccounts = [];
       }
     });
 
@@ -501,6 +497,14 @@ export class PatientFormModalComponent implements OnInit {
       }
     });
   }
+  
+  // Adicionado para pegar email do array
+  getPatientEmail(patient: Patient): string {
+    if (patient.Emails && patient.Emails.length > 0) {
+      return patient.Emails[0].email;
+    }
+    return patient.email || ''; // Fallback para o campo obsoleto
+  }
 
   closeModal(): void {
     this.close.emit();
@@ -511,28 +515,28 @@ export class PatientFormModalComponent implements OnInit {
     const dataToSend: CreatePatientRequest = { ...this.patientData };
     
     // Se estiver editando e não houver senha, remover do objeto
-    if (this.isEditMode && !dataToSend.password) {
+    if (this.isEditMode && (!dataToSend.password || dataToSend.password.trim() === '')) {
       delete (dataToSend as any).password;
     }
 
-    // Se birthday estiver vazio, não enviar
+    // Se campos opcionais estiverem vazios, não enviar (enviar null ou undefined)
     if (!dataToSend.birthday || dataToSend.birthday.trim() === '') {
       delete (dataToSend as any).birthday;
     }
-
-    // Se type_hair_id estiver vazio, não enviar
     if (!dataToSend.type_hair_id || dataToSend.type_hair_id.trim() === '') {
       delete (dataToSend as any).type_hair_id;
     }
-
-    // Se company_id_account estiver vazio, não enviar
     if (!dataToSend.company_id_account || dataToSend.company_id_account.trim() === '') {
       delete (dataToSend as any).company_id_account;
     }
-
-    // Se avatar estiver vazio, não enviar
     if (!dataToSend.avatar || dataToSend.avatar.trim() === '') {
       delete (dataToSend as any).avatar;
+    }
+    if (!dataToSend.email || dataToSend.email.trim() === '') {
+      dataToSend.email = undefined;
+    }
+    if (!dataToSend.cpf || dataToSend.cpf.trim() === '') {
+      dataToSend.cpf = undefined;
     }
 
     this.save.emit(dataToSend);
@@ -543,4 +547,3 @@ export class PatientFormModalComponent implements OnInit {
     return date.toISOString().split('T')[0];
   }
 }
-

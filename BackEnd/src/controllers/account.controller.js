@@ -4,6 +4,7 @@ const HairRepository = require('../repositories/hair.repository');
 const TypeAccountRepository = require('../repositories/type_account.repository');
 const ResponseHandler = require('../utils/responseHandler');
 const bcrypt = require('bcrypt');
+const { Op } = require('sequelize'); // Adicionado para filtros
 
 class AccountController {
   constructor() {
@@ -84,16 +85,28 @@ class AccountController {
     try {
       const account = req.body;
       
-      // Hash password if provided
-      if (account.password) {
+      // LÓGICA MODIFICADA (Ponto 1): Hash password only if provided
+      if (account.password && account.password.trim() !== '') {
         account.password = await bcrypt.hash(account.password, 10);
+      } else {
+        account.password = null; // Garante que seja nulo se vazio
+      }
+
+      // LÓGICA MODIFICADA (Ponto 1): Garante que CPF e Email sejam nulos se não fornecidos
+      if (!account.cpf || account.cpf.trim() === '') {
+        account.cpf = null;
+      }
+      if (!account.email || account.email.trim() === '') {
+        account.email = null;
       }
       
       const result = await this.accountRepository.addAccount(account);
       
       if (result) {
-        // Create associated email
-        await this.createEmail(result);
+        // Create associated email only if email is provided
+        if (result.email) {
+          await this.createEmail(result);
+        }
         
         return ResponseHandler.success(res, 201, 'Account created successfully', result);
       } else {
@@ -109,9 +122,28 @@ class AccountController {
    */
   async getAllAccounts(req, res) {
     try {
-      const result = await this.accountRepository.findAll();
+      // LÓGICA MODIFICADA (Ponto 4): Filtrar por role
+      const { role } = req.query;
+      let options = {};
+
+      if (role) {
+        const roles = role.split(','); // Permite "client" ou "provider,admin"
+        options = {
+          include: [{
+            model: this.accountRepository.TypeAccount, // Acessa o TypeAccount através da instância
+            where: {
+              type: {
+                [Op.in]: roles
+              }
+            }
+          }]
+        };
+      }
+
+      const result = await this.accountRepository.findAll(options); // Passa opções para o findAll
       return ResponseHandler.success(res, 200, 'Accounts retrieved successfully', result);
     } catch (error) {
+      console.error(error); // Log do erro
       return ResponseHandler.error(res, 500, 'Failed to retrieve accounts', error);
     }
   }
@@ -176,9 +208,11 @@ class AccountController {
         return ResponseHandler.validationError(res, 'Account ID is required');
       }
       
-      // Hash password if provided
-      if (accountData.password) {
+      // LÓGICA MODIFICADA (Ponto 1): Hash password only if provided
+      if (accountData.password && accountData.password.trim() !== '') {
         accountData.password = await bcrypt.hash(accountData.password, 10);
+      } else {
+        delete accountData.password; // Não atualiza a senha se vazia
       }
       
       // Passar ID junto com os dados para o repository
@@ -242,6 +276,11 @@ class AccountController {
    */
   async createEmail(account) {
     try {
+      // LÓGICA MODIFICADA (Ponto 1): Verifica se o email existe antes de criar
+      if (!account.email) {
+        console.log('ℹ️ Nenhum email fornecido, pulando criação de email.');
+        return;
+      }
       const emailData = {
         account_id_email: account.id,
         email: account.email,
