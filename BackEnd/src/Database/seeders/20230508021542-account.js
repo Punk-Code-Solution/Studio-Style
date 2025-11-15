@@ -8,7 +8,7 @@ module.exports = {
   async up (queryInterface, Sequelize) {
     // Cria o tipo de conta 'admin'
     const typeAccountAdminId = uuidv4();
-    await queryInterface.bulkInsert('TypeAccount', [{
+    await queryInterface.bulkInsert('TypeAccounts', [{
       id: typeAccountAdminId,
       type: 'admin',
       edit: 'true',
@@ -22,7 +22,7 @@ module.exports = {
     // Cria o usuario admin
     const adminAccountId = uuidv4();
     const passwordHash = await bcrypt.hash('123456', 10);
-    await queryInterface.bulkInsert('Account', [{
+    await queryInterface.bulkInsert('Accounts', [{
       id: adminAccountId,
       name: 'Administrador',
       lastname: 'Sistema',
@@ -40,11 +40,12 @@ module.exports = {
     }], {});
 
     // Cria o email do usuario admin
-    await queryInterface.bulkInsert('Email', [{
+    await queryInterface.bulkInsert('Emails', [{
       id: uuidv4(),
+      name: 'Administrador',
       account_id_email: adminAccountId,
       email: 'admin@admin.com',
-      type: 'primary',
+      active: new Date(),
       createdAt: new Date(),
       updatedAt: new Date()
     }], {});
