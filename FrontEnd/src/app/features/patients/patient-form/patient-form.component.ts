@@ -46,13 +46,12 @@ export class PatientFormComponent implements OnInit {
 
   loadPatient(): void {
     if (this.patientId) {
-      this.patientService.getPatient(this.patientId.toString()).subscribe({
+      this.patientService.getPatientById(this.patientId.toString()).subscribe({
         next: (patient) => {
           this.patientForm.patchValue({
-            nome: patient.nome,
+            nome: patient.name,
             email: patient.email,
-            telefone: patient.telefone,
-            status: patient.status
+            status: patient.TypeAccount
           });
         },
         error: (error) => {
@@ -67,14 +66,16 @@ export class PatientFormComponent implements OnInit {
     if (this.patientForm.valid) {
       this.isSubmitting = true;
       const formData = {
-        nome: this.patientForm.get('nome')?.value,
+        // CreatePatientRequest expects: name, lastname, typeaccount_id (plus other optional fields)
+        name: this.patientForm.get('name')?.value,
+        lastname: '', // form does not have a lastname control; set empty or add a control if needed
         email: this.patientForm.get('email')?.value,
-        telefone: this.patientForm.get('telefone')?.value,
-        status: this.patientForm.get('status')?.value
+        typeaccount_id: this.patientForm.get('status')?.value,
+        telefone: this.patientForm.get('telefone')?.value
       };
 
       const request = this.isEditMode
-        ? this.patientService.updatePatient(Number(this.patientId), formData)
+        ? this.patientService.updatePatient(this.patientId!, formData)
         : this.patientService.createPatient(formData);
 
       request.pipe(

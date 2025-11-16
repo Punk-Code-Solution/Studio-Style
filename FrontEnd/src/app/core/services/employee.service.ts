@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { environment } from '../../../environments/environment.prod';
+import { environment } from '../../../environments/environment';
 // MOCK_EMPLOYEES removido
 
 // Interface para a resposta padrão da API
@@ -12,22 +12,55 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-export interface Employee {
-  id: string; // ID agora é string (UUID)
-  name: string;
-  lastname: string; // Adicionado
-  email: string;
-  role: 'medico' | 'enfermeiro' | 'recepcionista' | 'administrativo' | 'admin' | 'provider'; // Tipos de role atualizados
-  department?: string; // Departamento é opcional
-  phone?: string; // Phone é opcional
-  address?: string; // Address é opcional
-  status: 'active' | 'inactive' | 'on_leave' | boolean; // Status pode ser booleano (deleted)
+export interface TypeAccount {
+  id: string;
+  type: 'admin' | 'provider' | 'client' | 'ninguem';
+  edit: boolean;
+  creat: boolean;
+  viwer: boolean;
+  delet: boolean;
   createdAt: string;
   updatedAt: string;
-  TypeAccount: { // Incluído para refletir o modelo real
-    type: string;
-  };
 }
+
+export interface Email {
+  id: string;
+  name: string;
+  email: string;
+  active: string;
+  account_id_email: string;
+  company_id_email?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Employee {
+    id: string;
+    name: string;
+    lastname: string;
+    password: string;
+    cpf: string;
+    start_date: string;
+    birthday?: string;
+    deleted?: string;
+    avatar?: string;
+    typeaccount_id: string;
+    company_id_account?: string;
+    type_hair_id?: string;
+    createdAt: string;
+    updatedAt: string;
+    TypeAccount: TypeAccount;
+    Company?: any;
+    Emails: Email[];
+    Hair?: any;
+    Schedules: any[];
+    Sales: any[];
+    Purchases: any[];
+    Purchase_Materials: any[];
+    Phones: any[];
+    Adress?: any;
+}
+
 
 @Injectable({
   providedIn: 'root'

@@ -5,8 +5,9 @@ import { FormsModule } from '@angular/forms';
 import { EmployeeService, Employee } from '../../core/services/employee.service';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { EmployeeFormModalComponent } from './employee-form-modal/employee-form-modal.component';
 
-type EmployeeRole = Employee['role'];
+type EmployeeRole = Employee['TypeAccount']['type'];
 
 interface RoleOption {
   value: EmployeeRole;
@@ -29,23 +30,13 @@ interface Filters {
 @Component({
   selector: 'app-employees',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, EmployeeFormModalComponent],
   template: `
     <div class="page-container">
       <!-- Loading State -->
       <div class="loading-state" *ngIf="isLoading">
         <div class="spinner"></div>
         <span>Carregando funcionários...</span>
-      </div>
-
-      <!-- Error Message -->
-      <div class="error-message" *ngIf="errorMessage">
-        <i class="fas fa-exclamation-circle"></i>
-        {{ errorMessage }}
-        <button class="retry-btn" (click)="loadEmployees()">
-          <i class="fas fa-redo"></i>
-          Tentar Novamente
-        </button>
       </div>
 
       <!-- Header Section -->
@@ -71,7 +62,7 @@ interface Filters {
           </button>
           <button 
             class="add-btn" 
-            routerLink="/employees/new" 
+            (click)="openCreateModal()" 
             [disabled]="isLoading"
           >
             <i class="fas fa-plus"></i>
@@ -131,60 +122,54 @@ interface Filters {
         </div>
       </div>
 
-      <!-- Employees List -->
-      <div class="employees-list" *ngIf="!isLoading">
-        <div class="table-header">
-          <span class="results-count">
-            {{ filteredEmployees.length }} funcionário{{ filteredEmployees.length !== 1 ? 's' : '' }} encontrado{{ filteredEmployees.length !== 1 ? 's' : '' }}
-          </span>
-        </div>
-
-        <div class="employee-card" *ngFor="let employee of paginatedEmployees">
-          <div class="employee-info">
-            <div class="status-indicator" [class]="employee.status"></div>
-            <h3>{{ employee.name }}</h3>
-            <p class="role">{{ getRoleLabel(employee.role) }}</p>
-            <p class="email">{{ employee.email }}</p>
-            <p class="phone">{{ employee.phone }}</p>
-          </div>
-          <div class="employee-actions">
-            <button 
-              class="edit-btn" 
-              [routerLink]="['/employees/', employee.id]"
-              title="Editar funcionário"
-              *ngIf="authService.canAccessRoute('employees/:id')"
-            >
-              <i class="fas fa-edit"></i>
-              Editar
-            </button>
-            <button 
-              class="status-btn" 
-              [class.inactive]="employee.status === 'inactive'" 
-              [class.on-leave]="employee.status === 'on_leave'"
-              (click)="toggleStatus(employee)"
-              title="Alterar status"
-              *ngIf="authService.canAccessRoute('employees/:id')"
-            >
-              <i class="fas" [class]="getStatusIcon(employee.status)"></i>
-              {{ getStatusLabel(employee.status) }}
-            </button>
-            <button 
-              class="delete-btn" 
-              (click)="confirmDelete(employee)"
-              title="Excluir funcionário"
-              *ngIf="authService.canAccessRoute('employees/:id')"
-            >
-              <i class="fas fa-trash"></i>
-              Excluir
-            </button>
-          </div>
-        </div>
-
-        <!-- Empty State -->
-        <div class="empty-state" *ngIf="filteredEmployees.length === 0">
-          <i class="fas fa-users"></i>
-          <h3>Nenhum funcionário encontrado</h3>
-          <p>Tente ajustar os filtros ou realizar uma nova busca</p>
+      <!-- Employees Grid -->
+      <div class="employees-grid" *ngIf="!isLoading">
+        <div class="employees-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>E-mail</th>
+                <th>Cargo</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let employee of employees">
+                <td>
+                  <div class="user-info">
+                    <div class="employee-details">
+                      <span>{{ employee.name }}</span>
+                      <span>{{ employee.lastname }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ employee.Emails || 'N/A' }}</td>
+                <td>{{ getRoleLabel(employee.TypeAccount.type) }}</td>
+                <td>
+                  <span class="status-badge" [class]="getStatusClass(employee)">
+                    {{ getStatusLabel(employee.deleted) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="actions">
+                    <button class="action-btn" [routerLink]="['/employees/', employee.id]" title="Editar funcionário">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn" (click)="confirmDelete(employee)" title="Excluir funcionário">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="employees.length === 0">
+                <td colspan="5" class="empty-state">
+                  <p>Nenhum funcionário encontrado</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -206,6 +191,15 @@ interface Filters {
           <i class="fas fa-chevron-right"></i>
         </button>
       </div>
+
+      <!-- Employee Form Modal -->
+      <app-employee-form-modal
+        *ngIf="isModalOpen"
+        [employee]="selectedEmployee"
+        [loading]="isSubmitting"
+        (close)="closeModal()"
+        (save)="onSaveEmployee($event)"
+      ></app-employee-form-modal>
     </div>
   `,
   styles: [`
@@ -348,129 +342,130 @@ interface Filters {
       background: #f5f5f5;
     }
 
-    .employees-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1.5rem;
-    }
-
-    .table-header {
-      grid-column: 1 / -1;
-      padding: 1rem;
-      background: #f5f5f5;
+    .employees-grid {
+      background-color: white;
+      border: 1px solid #ddd;
       border-radius: 8px;
-      margin-bottom: 1rem;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
-    .results-count {
-      color: #666;
+    .employees-table {
+      overflow-x: auto;
+    }
+
+    .employees-table::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    .employees-table::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+
+    .employees-table::-webkit-scrollbar-thumb {
+      background: #1976d2;
+      border-radius: 4px;
+    }
+
+    .employees-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .employees-table th,
+    .employees-table td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .employees-table th {
+      background-color: #f5f5f5;
+      color: #333;
+      font-weight: 500;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .employees-table td {
+      color: #333;
       font-size: 0.875rem;
     }
 
-    .employee-card {
-      background: white;
-      border-radius: 8px;
-      padding: 1.5rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      position: relative;
-    }
-
-    .status-indicator {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-
-    .status-indicator.active {
-      background: #4caf50;
-    }
-
-    .status-indicator.inactive {
-      background: #f44336;
-    }
-
-    .employee-info h3 {
-      margin: 0 0 0.5rem 0;
-      color: #333;
-    }
-
-    .role {
-      color: #1976d2;
-      font-weight: 500;
-      margin: 0 0 1rem 0;
-    }
-
-    .email, .phone, .crm {
-      color: #666;
-      margin: 0.25rem 0;
-    }
-
-    .employee-actions {
-      display: flex;
-      gap: 0.5rem;
-      margin-top: 1.5rem;
-    }
-
-    .employee-actions button {
+    .user-info {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      border: none;
+    }
+
+    .employee-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .employee-details span {
+      color: #333;
+    }
+
+    .employee-details span:first-child {
+      font-weight: 500;
+    }
+
+    .status-badge {
+      padding: 0.25rem 0.75rem;
       border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .status-badge.active {
+      background-color: rgba(76, 175, 80, 0.1);
+      color: #4caf50;
+    }
+
+    .status-badge.inactive {
+      background-color: rgba(244, 67, 54, 0.1);
+      color: #f44336;
+    }
+
+    .status-badge.on-leave {
+      background-color: rgba(255, 152, 0, 0.1);
+      color: #ff9800;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .action-btn {
+      background: transparent;
+      border: none;
+      color: #666;
       cursor: pointer;
+      padding: 0.25rem;
       font-size: 0.875rem;
       transition: all 0.2s;
     }
 
-    .edit-btn {
-      background: #f5f5f5;
-      color: #666;
-    }
-
-    .status-btn {
-      background: #4caf50;
-      color: white;
-    }
-
-    .status-btn.inactive {
-      background: #f44336;
-    }
-
-    .delete-btn {
-      background: #f44336;
-      color: white;
-    }
-
-    .employee-actions button:hover {
-      opacity: 0.9;
+    .action-btn:hover {
+      color: #1976d2;
+      background-color: rgba(25, 118, 210, 0.1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transform: translateY(-1px);
     }
 
     .empty-state {
-      grid-column: 1 / -1;
       text-align: center;
-      padding: 3rem;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .empty-state i {
-      font-size: 3rem;
-      color: #ddd;
-      margin-bottom: 1rem;
-    }
-
-    .empty-state h3 {
-      color: #333;
-      margin: 0 0 0.5rem;
+      padding: 2rem;
+      color: #666;
     }
 
     .empty-state p {
-      color: #666;
       margin: 0;
     }
 
@@ -488,10 +483,12 @@ interface Filters {
       border: 1px solid #ddd;
       border-radius: 4px;
       cursor: pointer;
+      transition: all 0.2s;
     }
 
     .page-btn:hover:not(:disabled) {
       background: #f5f5f5;
+      transform: translateY(-1px);
     }
 
     .page-btn:disabled {
@@ -501,6 +498,7 @@ interface Filters {
 
     .page-info {
       color: #333;
+      font-size: 0.875rem;
     }
 
     .loading-state {
@@ -601,22 +599,14 @@ export class EmployeesComponent implements OnInit {
   totalPages = 1;
   isLoading = false;
   errorMessage: string | null = null;
+  isModalOpen = false;
+  isSubmitting = false;
+  selectedEmployee: Employee | null = null;
 
   roles: RoleOption[] = [
-    { value: 'medico', label: 'Médico' },
-    { value: 'enfermeiro', label: 'Enfermeiro' },
-    { value: 'recepcionista', label: 'Recepcionista' },
-    { value: 'administrativo', label: 'Administrativo' }
+    { value: 'admin', label: 'Administrador' },
+    { value: 'provider', label: 'Colaborador' }
   ];
-
-  departments = {
-    clinica: 'Clínica Geral',
-    pediatria: 'Pediatria',
-    cardiologia: 'Cardiologia',
-    neurologia: 'Neurologia',
-    ortopedia: 'Ortopedia',
-    administrativo: 'Administrativo'
-  };
 
   filters: Filters = {
     status: {
@@ -625,12 +615,10 @@ export class EmployeesComponent implements OnInit {
       on_leave: true
     },
     roles: {
-      medico: true,
-      enfermeiro: true,
-      recepcionista: true,
-      administrativo: true,
-      admin: false,
-      provider: false
+      admin: true,
+      provider: true,
+      client: false,
+      ninguem: false
     }
   };
 
@@ -650,11 +638,13 @@ export class EmployeesComponent implements OnInit {
 
     this.employeeService.getEmployees().subscribe({
       next: (employees) => {
+        console.log('Employees loaded:', employees);
         this.employees = employees;
         this.filterEmployees();
         this.isLoading = false;
       },
       error: (error) => {
+        console.error('Error loading employees:', error);
         this.errorMessage = 'Erro ao carregar funcionários. Por favor, tente novamente.';
         this.isLoading = false;
       }
@@ -674,19 +664,19 @@ export class EmployeesComponent implements OnInit {
     if (this.searchTerm) {
       const search = this.searchTerm.toLowerCase();
       filtered = filtered.filter(employee =>
-        employee.name.toLowerCase().includes(search) ||
-        employee.email.toLowerCase().includes(search) ||
-        (employee.phone?.includes(search) ?? false)
+        (employee.name?.toLowerCase?.() ?? '').includes(search) ||
+        (employee.Emails ?? '') ||
+        (employee.Phones?.includes(search) ?? false)
       );
     }
 
     // Status filter
     const activeStatuses = Object.entries(this.filters.status)
       .filter(([_, isActive]) => isActive)
-      .map(([status, _]) => status as Employee['status']);
+      .map(([status, _]) => status as Employee['TypeAccount']['type']);
 
     if (activeStatuses.length > 0) {
-      filtered = filtered.filter(employee => activeStatuses.includes(employee.status));
+      filtered = filtered.filter(employee => activeStatuses.includes(employee.TypeAccount.type));
     }
 
     // Role filter
@@ -695,12 +685,12 @@ export class EmployeesComponent implements OnInit {
       .map(([role]) => role as EmployeeRole);
 
     if (activeRoles.length > 0) {
-      filtered = filtered.filter(employee => activeRoles.includes(employee.role));
+      filtered = filtered.filter(employee => activeRoles.includes(employee.TypeAccount.type));
     }
 
     this.filteredEmployees = filtered;
-    this.totalPages = Math.ceil(filtered.length / this.itemsPerPage);
-    this.currentPage = Math.min(this.currentPage, this.totalPages);
+    this.totalPages = Math.max(1, Math.ceil(filtered.length / this.itemsPerPage));
+    this.currentPage = Math.min(this.currentPage, this.totalPages || 1);
   }
 
   toggleFilter() {
@@ -727,43 +717,14 @@ export class EmployeesComponent implements OnInit {
     return roleObj ? roleObj.label : role;
   }
 
-  getDepartmentLabel(department: string): string {
-    return this.departments[department as keyof typeof this.departments] || department;
+  getStatusLabel(status: Employee['deleted']): string {
+    if (status === null) {return 'Ativo'}
+    else {return 'Inativo';}
   }
 
-  getStatusLabel(status: Employee['status']): string {
-    switch (status) {
-      case 'active': return 'Ativo';
-      case 'inactive': return 'Inativo';
-      case 'on_leave': return 'Em Licença';
-      default: return 'Desconhecido';
-    }
-  }
-
-  getStatusIcon(status: Employee['status']): string {
-    switch (status) {
-      case 'active': return 'fa-check';
-      case 'inactive': return 'fa-times';
-      case 'on_leave': return 'fa-clock';
-      default: return 'fa-question';
-    }
-  }
-
-  toggleStatus(employee: Employee) {
-    const newStatus = employee.status === 'active' ? 'inactive' : 'active';
-    this.employeeService.updateEmployee(employee.id, { status: newStatus }).subscribe({
-      next: () => {
-        this.notificationService.success(
-          `Funcionário ${newStatus === 'active' ? 'ativado' : 'desativado'} com sucesso!`
-        );
-        this.loadEmployees();
-      },
-      error: (error) => {
-        this.notificationService.error(
-          'Erro ao alterar status do funcionário. Por favor, tente novamente.'
-        );
-      }
-    });
+  getStatusClass(employee: Employee): string {
+    if (employee.deleted != null) {return 'active';}
+    else{ return "inactive";}
   }
 
   confirmDelete(employee: Employee) {
@@ -780,5 +741,49 @@ export class EmployeesComponent implements OnInit {
         }
       });
     }
+  }
+
+  openCreateModal(): void {
+    this.selectedEmployee = null;
+    this.isModalOpen = true;
+  }
+
+  closeModal(): void {
+    this.isModalOpen = false;
+    this.selectedEmployee = null;
+  }
+
+  onSaveEmployee(employeeData: Partial<Employee>): void {
+    if (!employeeData.name || !employeeData.lastname || !employeeData.Emails?.find(e => e.email)|| !employeeData.TypeAccount?.type) {
+      this.notificationService.error('Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    this.isSubmitting = true;
+    const request: Partial<Employee> = {
+      ...employeeData,
+      deleted: 'active'
+    };
+
+    this.employeeService.createEmployee(request).subscribe({
+      next: () => {
+        this.notificationService.success('Funcionário criado com sucesso!');
+        this.closeModal();
+        this.loadEmployees();
+        this.isSubmitting = false;
+      },
+      error: (error: any) => {
+        let errorMsg = 'Erro ao criar funcionário. Por favor, tente novamente.';
+        
+        if (error.status === 409) {
+          errorMsg = 'Este funcionário já existe. Por favor, use um e-mail diferente.';
+        } else if (error.error?.message) {
+          errorMsg = error.error.message;
+        }
+        
+        this.notificationService.error(errorMsg);
+        this.isSubmitting = false;
+      }
+    });
   }
 }

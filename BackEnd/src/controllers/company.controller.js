@@ -47,6 +47,9 @@ class CompanyController {
     try{    
 
         const result = await emailRepo.createEmail( email );
+        if (result && result.error) {
+          return response.status(409).json({ message: 'Duplicate field', field: result.error });
+        }
         return response.status(201).json( result )
   
     }catch( erro ){
