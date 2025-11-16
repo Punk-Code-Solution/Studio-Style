@@ -81,28 +81,58 @@ export class EmployeeService {
   getEmployees(): Observable<Employee[]> {
     // MODIFICADO: Chama a API real filtrando por roles
     return this.http.get<ApiResponse<Employee[]>>(`${this.apiUrl}?role=provider,admin`).pipe(
-      map(response => response.data || [])
+      map(response => {
+        const employees = response.data || [];
+        return employees.map(emp => this.mapEmployee(emp));
+      })
     );
   }
 
   getEmployeeById(id: number | string): Observable<Employee> {
     // MODIFICADO: Chama a API real
     return this.http.get<ApiResponse<Employee>>(`${this.apiUrl}/id?id=${id}`).pipe(
-      map(response => response.data)
+      map(response => this.mapEmployee(response.data))
     );
+  }
+
+  private mapEmployee(emp: Employee): Employee {
+    // Mapear email da array Emails para propriedade email
+    if (emp.Emails && emp.Emails.length > 0) {
+      emp.email = emp.Emails[0].email;
+    }
+    
+    // Mapear telefone da array Phones para propriedade phone
+    if (emp.Phones && emp.Phones.length > 0) {
+      emp.phone = emp.Phones[0];
+    }
+    
+    // Mapear endereço de Adress para address
+    if (emp.Adress) {
+      emp.address = emp.Adress;
+    }
+    
+    // Mapear role do TypeAccount
+    if (emp.TypeAccount && emp.TypeAccount.type) {
+      emp.role = emp.TypeAccount.type as any;
+    }
+    
+    // Mapear status a partir de deleted
+    emp.status = emp.deleted ? 'inactive' : 'active';
+    
+    return emp;
   }
 
   createEmployee(employee: Partial<Employee>): Observable<Employee> {
     // MODIFICADO: Chama a API real
     return this.http.post<ApiResponse<Employee>>(this.apiUrl, employee).pipe(
-      map(response => response.data)
+      map(response => this.mapEmployee(response.data))
     );
   }
 
   updateEmployee(id: number | string, employee: Partial<Employee>): Observable<Employee> {
     // MODIFICADO: Chama a API real
     return this.http.put<ApiResponse<Employee>>(`${this.apiUrl}/id`, { id, ...employee }).pipe(
-      map(response => response.data)
+      map(response => this.mapEmployee(response.data))
     );
   }
 

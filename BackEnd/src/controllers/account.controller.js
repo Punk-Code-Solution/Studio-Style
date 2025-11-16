@@ -100,6 +100,25 @@ class AccountController {
       if (!account.email || account.email.trim() === '') {
         account.email = null;
       }
+
+      // LÓGICA MODIFICADA (Ponto 5): Se role for fornecido, encontrar o typeaccount_id correspondente
+      if (account.role && !account.typeaccount_id) {
+        try {
+          const typeAccount = await TypeAccount.findOne({
+            where: { type: account.role.toLowerCase() }
+          });
+          if (typeAccount) {
+            account.typeaccount_id = typeAccount.id;
+            console.log(`Mapped role '${account.role}' to typeaccount_id '${typeAccount.id}'`);
+          } else {
+            console.warn(`TypeAccount not found for role: ${account.role}`);
+            return ResponseHandler.error(res, 400, `Invalid role: ${account.role}. TypeAccount not found.`);
+          }
+        } catch (err) {
+          console.error('Error finding TypeAccount:', err.message);
+          return ResponseHandler.error(res, 500, 'Failed to resolve role to TypeAccount', err);
+        }
+      }
       
       const result = await this.accountRepository.addAccount(account);
 
