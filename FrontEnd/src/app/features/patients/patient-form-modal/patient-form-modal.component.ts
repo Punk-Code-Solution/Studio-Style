@@ -130,22 +130,20 @@ import { PatientService, CreatePatientRequest, TypeAccount, HairType } from '../
                 placeholder="URL da imagem do avatar"
               >
             </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn-secondary" (click)="closeModal()">
+                <i class="fas fa-times"></i>
+                Cancelar
+              </button>
+              <button type="submit" class="btn-primary" [disabled]="loading || (patientForm && patientForm.invalid)">
+                <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
+                <i class="fas" [class.fa-save]="isEditMode" [class.fa-plus]="!isEditMode" *ngIf="!loading"></i>
+                {{ loading ? 'Salvando...' : (isEditMode ? 'Salvar' : 'Criar') }}
+              </button>
+            </div>
           </form>
         </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn-secondary" (click)="closeModal()">
-            <i class="fas fa-times"></i>
-            Cancelar
-          </button>
-          <button type="submit" class="btn-primary" [disabled]="loading || (patientForm && patientForm.invalid)">
-            <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
-            <i class="fas" [class.fa-save]="isEditMode" [class.fa-plus]="!isEditMode" *ngIf="!loading"></i>
-            {{ loading ? 'Salvando...' : (isEditMode ? 'Salvar' : 'Criar') }}
-          </button>
-        </div>
-      </div>
-    </div>
   `,
   styles: [`
     @use 'sass:color';
@@ -446,13 +444,17 @@ export class PatientFormModalComponent implements OnInit {
   }
 
   onSubmit(form?: NgForm): void {
+    console.log('📝 onSubmit chamado', { isFormExists: !!form, isFormInvalid: form?.invalid });
+    
     // If form exists and is invalid, do not proceed
     if (form && form.invalid) {
+      console.warn('⚠️ Formulário inválido. Erros:', form.errors);
       return;
     }
 
     // Preparar dados para envio
     const dataToSend: CreatePatientRequest = { ...this.patientData };
+    console.log('📦 Dados antes de processar:', dataToSend);
 
     // Se estiver editando e não houver senha, remover do objeto
     if (this.isEditMode && (!dataToSend.password || dataToSend.password.trim() === '')) {
@@ -479,25 +481,32 @@ export class PatientFormModalComponent implements OnInit {
       dataToSend.cpf = undefined;
     }
 
+    console.log('📦 Dados após limpeza:', dataToSend);
+
     // Ensure typeaccount_id exists: if not, fetch it and then emit
     if (!dataToSend.typeaccount_id) {
+      console.log('🔍 typeaccount_id não definido, buscando...');
       this.patientService.getAllTypeAccounts().subscribe({
         next: (typeAccounts) => {
           const clientType = typeAccounts.find(t => t.type?.toLowerCase() === 'client');
           if (clientType) {
             dataToSend.typeaccount_id = clientType.id;
+            console.log('✅ typeaccount_id obtido:', clientType.id);
           }
+          console.log('🚀 Emitindo save event com dados:', dataToSend);
           this.save.emit(dataToSend);
         },
         error: (err) => {
-          console.error('Erro ao obter tipo de conta cliente:', err);
+          console.error('❌ Erro ao obter tipo de conta cliente:', err);
           // Emitir mesmo sem typeaccount_id se não foi possível obter
+          console.log('🚀 Emitindo save event sem typeaccount_id:', dataToSend);
           this.save.emit(dataToSend);
         }
       });
       return;
     }
 
+    console.log('🚀 Emitindo save event com dados:', dataToSend);
     this.save.emit(dataToSend);
   }
 

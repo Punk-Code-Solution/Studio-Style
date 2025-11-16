@@ -151,7 +151,7 @@ interface Filters {
                 <td>{{ getRoleLabel(employee.TypeAccount.type) }}</td>
                 <td>
                   <span class="status-badge" [class]="getStatusClass(employee)">
-                    {{ getStatusLabel(employee.status) }}
+                    {{ getStatusLabel(employee.deleted) }}
                   </span>
                 </td>
                 <td>
@@ -748,7 +748,7 @@ export class EmployeesComponent implements OnInit {
   }
 
   getStatusClass(employee: Employee): string {
-    if (employee.deleted != null) {return 'active';}
+    if (employee.deleted === null) {return 'active';}
     else{ return "inactive";}
   }
 
