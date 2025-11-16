@@ -59,6 +59,13 @@ export interface Employee {
     Purchase_Materials: any[];
     Phones: any[];
     Adress?: any;
+    // Propriedades adicionais para compatibilidade com o template
+    email?: string;
+    role?: 'enfermeiro' | 'recepcionista' | 'administrativo' | 'admin' | 'provider';
+    phone?: string;
+    address?: string;
+    status?: 'active' | 'inactive' | 'on_leave';
+    department?: string;
 }
 
 

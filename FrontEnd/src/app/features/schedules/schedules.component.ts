@@ -295,8 +295,8 @@ export class SchedulesComponent implements OnInit {
 
     this.userService.getUsers().subscribe({
       next: (users) => {
-        this.providers = users.filter(user => user.TypeAccount.type === 'provider' || user.TypeAccount.type === 'admin');
-        this.clients = users.filter(user => user.TypeAccount.type === 'client');
+        this.providers = users.filter(user => user.TypeAccount?.type === 'provider' || user.TypeAccount?.type === 'admin');
+        this.clients = users.filter(user => user.TypeAccount?.type === 'client');
       },
       error: (error) => {
         console.error('❌ Erro ao carregar usuários:', error);

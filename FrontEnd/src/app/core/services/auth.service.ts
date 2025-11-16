@@ -46,14 +46,14 @@ export class AuthService {
   private readonly permissions: Permissions = {
     routes: {
       // Rotas principais
-      dashboard: ['admin'],
+      dashboard: ['admin', 'provider'],
       patients: ['admin'],
       calendar: ['ninguem'],
       messages: ['ninguem'],
       documents: ['ninguem'],
-      employees: ['admin'],
+      employees: ['admin', 'provider'],
       feedbacks: ['ninguem'],
-      services: ['admin'],
+      services: ['admin', 'provider'],
 
       // Sub-rotas de pacientes
       'patients/new': ['admin'],
@@ -61,12 +61,12 @@ export class AuthService {
       'patients/:id/edit': ['admin'],
 
       // Sub-rotas de consultas
-      'services/new': ['admin'],
-      'services/:id': ['admin'],
+      'services/new': ['admin', 'provider'],
+      'services/:id': ['admin', 'provider'],
 
       // Sub-rotas de funcionários
-      'employees/new': ['admin'],
-      'employees/:id': ['admin'],
+      'employees/new': ['admin', 'provider'],
+      'employees/:id': ['admin', 'provider'],
     },
     fields: {
       'patient.medicalRecord': ['ninguem'],
