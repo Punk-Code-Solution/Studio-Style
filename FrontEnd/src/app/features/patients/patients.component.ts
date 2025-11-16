@@ -751,35 +751,47 @@ export class PatientsComponent implements OnInit {
   }
 
   savePatient(patientData: CreatePatientRequest): void {
+    console.log('📊 savePatient chamado com dados:', patientData);
     this.formLoading = true;
+    this.error = '';
 
     if (this.editingPatient) {
       // Update existing patient
+      console.log('🔄 Atualizando paciente ID:', this.editingPatient.id);
       this.patientService
         .updatePatient(this.editingPatient.id, patientData)
         .subscribe({
-          next: () => {
-            console.log('Paciente atualizado com sucesso');
+          next: (response) => {
+            console.log('✅ Paciente atualizado com sucesso:', response);
             this.loadPatients();
             this.closeFormModal();
           },
           error: (error) => {
-            this.error = 'Erro ao atualizar paciente';
-            console.error('Erro ao atualizar paciente:', error);
+            console.error('❌ Erro ao atualizar paciente:', error);
+            this.error = 'Erro ao atualizar paciente: ' + (error?.error?.message || error?.message || 'Erro desconhecido');
             this.formLoading = false;
           },
         });
     } else {
       // Create new patient
+      console.log('➕ Criando novo paciente');
       this.patientService.createPatient(patientData).subscribe({
-        next: () => {
-          console.log('Paciente criado com sucesso');
+        next: (response) => {
+          console.log('✅ Paciente criado com sucesso:', response);
+          this.error = '';
           this.loadPatients();
           this.closeFormModal();
         },
         error: (error) => {
-          this.error = 'Erro ao criar Cliente';
-          console.error('Erro ao criar Cliente:', error);
+          console.error('❌ Erro ao criar paciente:', error);
+          console.error('Detalhes do erro:', {
+            status: error?.status,
+            statusText: error?.statusText,
+            message: error?.message,
+            error: error?.error,
+            fullError: error
+          });
+          this.error = 'Erro ao criar Cliente: ' + (error?.error?.message || error?.message || 'Erro desconhecido');
           this.formLoading = false;
         },
       });
