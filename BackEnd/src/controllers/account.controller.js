@@ -109,7 +109,6 @@ class AccountController {
           });
           if (typeAccount) {
             account.typeaccount_id = typeAccount.id;
-            console.log(`Mapped role '${account.role}' to typeaccount_id '${typeAccount.id}'`);
           } else {
             console.warn(`TypeAccount not found for role: ${account.role}`);
             return ResponseHandler.error(res, 400, `Invalid role: ${account.role}. TypeAccount not found.`);
@@ -151,22 +150,18 @@ class AccountController {
     try {
       // LÓGICA MODIFICADA (Ponto 4): Filtrar por role
       const { role } = req.query;
-      console.log('getAllAccounts - role param:', role);
       
       if (!role) {
         // No filter, return all accounts
         const result = await this.accountRepository.findAll({});
-        console.log('getAllAccounts (no filter) - result count:', result.length);
         return ResponseHandler.success(res, 200, 'Accounts retrieved successfully', result);
       }
 
       // With role filter - use specialized method
       const roles = role.split(',').map(r => r.trim());
-      console.log('getAllAccounts - filtering by roles:', roles);
       
       try {
         const result = await this.accountRepository.findByRoles(roles);
-        console.log('getAllAccounts (with filter) - result count:', result.length);
         return ResponseHandler.success(res, 200, 'Accounts retrieved successfully', result);
       } catch (filterError) {
         console.error('Filter error:', filterError.message);
@@ -174,7 +169,6 @@ class AccountController {
         return ResponseHandler.success(res, 200, 'Accounts retrieved successfully', []);
       }
     } catch (error) {
-      console.error('Error in getAllAccounts:', error.message, error.stack);
       return ResponseHandler.error(res, 500, 'Failed to retrieve accounts', error);
     }
   }
@@ -309,7 +303,6 @@ class AccountController {
     try {
       // LÓGICA MODIFICADA (Ponto 1): Verifica se o email existe antes de criar
       if (!account.email) {
-        console.log('ℹ️ Nenhum email fornecido, pulando criação de email.');
         return null;
       }
       const emailData = {
@@ -366,16 +359,12 @@ class AccountController {
    */
   async createTypeAccount(req, res) {
     try {
-      console.log('Controller: createTypeAccount called with body:', req.body);
       const typeAccount = req.body;
       
-      console.log('Controller: Calling repository addTypeAccount...');
       const result = await this.typeAccountRepository.addTypeAccount(typeAccount);
-      console.log('Controller: Repository call completed, result:', result);
       
       return ResponseHandler.success(res, 201, 'Type account created successfully', result);
     } catch (error) {
-      console.error('Controller: Error in createTypeAccount:', error);
       return ResponseHandler.error(res, 500, 'Failed to create type account', error);
     }
   }
@@ -385,8 +374,6 @@ class AccountController {
    */
   async getAllTypeAccounts(req, res) {
     try {
-
-      console.log('Fetching all type accounts...');
 
       const result = await this.typeAccountRepository.findAll();
       return ResponseHandler.success(res, 200, 'Type accounts retrieved successfully', result);

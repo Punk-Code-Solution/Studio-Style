@@ -16,7 +16,6 @@ class ProductController{
         return ResponseHandler.success(res, 200, "Produtos", result )
     
         }catch(erro){
-        console.log(erro)
         return ResponseHandler.error(res, 500, "Faild", erro)
 
         }

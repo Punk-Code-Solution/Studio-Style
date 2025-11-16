@@ -35,8 +35,6 @@ module.exports = class purchase_saleController{
     
     
         }catch(erro){
-
-            console.log( erro )
             return response.status(500).json({"erro" : erro})
     
         }
@@ -100,7 +98,6 @@ module.exports = class purchase_saleController{
             return response.status(404)
         }
         catch(erro){
-            console.log(erro)
             return response.status(501).json({"erro" : erro})  
 
         } 

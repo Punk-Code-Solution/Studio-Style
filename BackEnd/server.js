@@ -88,7 +88,6 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 // Basic logging middleware (minimal)
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'development') {
-    console.log(`${req.method} ${req.path}`);
   }
   next();
 });

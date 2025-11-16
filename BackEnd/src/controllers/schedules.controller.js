@@ -37,7 +37,6 @@ class SchedulesController {
 
       // LÓGICA MODIFICADA (Ponto 2): Se client_id_schedules não for fornecido, crie um novo cliente
       if (!clientId) {
-        console.log('ℹ️ client_id_schedules não fornecido. Criando novo cliente...');
 
         // 1. Encontrar o TypeAccount 'client'
         const typeAccounts = await this.typeAccountRepository.findAll();
@@ -67,16 +66,7 @@ class SchedulesController {
 
         clientId = newAccount.id; // Usar o ID do cliente recém-criado
         schedules.client_id_schedules = clientId; // Adicionar ao objeto schedules
-        console.log(`✅ Novo cliente criado com ID: ${clientId}`);
       }
-
-      console.log('📋 Criando agendamento:', {
-        cliente: schedules.name_client,
-        data: schedules.date_and_houres,
-        provider: schedules.provider_id_schedules,
-        client: clientId,
-        services: schedules.services
-      });
 
       // 3. Criar o agendamento
       const result = await this.schedulesRepository.addSchedules(schedules);
@@ -84,8 +74,6 @@ class SchedulesController {
       if (!result) {
         return ResponseHandler.error(res, 400, 'Falha ao criar agendamento');
       }
-
-      console.log('✅ Agendamento criado com ID:', result.dataValues.id);
 
       // 4. Adicionar serviços ao agendamento
       const result_services = await this.schedules_serviceRepository.addSchedule_Service(result.dataValues.id, schedules.services);
@@ -96,14 +84,11 @@ class SchedulesController {
         return ResponseHandler.error(res, 400, 'Falha ao associar serviços ao agendamento');
       }
 
-      console.log('✅ Serviços associados ao agendamento:', result_services.length);
-
       return ResponseHandler.success(res, 201, 'Agendamento criado com sucesso', {
         schedule: result,
         services: result_services
       });
     } catch (error) {
-      console.error('❌ Erro ao criar agendamento:', error);
       return ResponseHandler.error(res, 500, 'Falha ao criar agendamento', error.message);
     }
   }
@@ -161,7 +146,6 @@ class SchedulesController {
       
       return ResponseHandler.success(res, 200, 'Service updated successfully', result);
     } catch (error) {
-      console.log("error", error)
       return ResponseHandler.error(res, 500, 'Failed to update service', error);
     }
   }
@@ -177,7 +161,6 @@ class SchedulesController {
       await this.schedules_serviceRepository.deleteSchedule_Service(id, null, true); // Deleta por schedule_id
 
       const result = await this.schedulesRepository.deleteSchedules(id);
-      console.log(result)
       
       if (!result) {
         return ResponseHandler.notFound(res, 'Service not found');

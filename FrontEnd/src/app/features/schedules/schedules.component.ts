@@ -465,13 +465,11 @@ export class SchedulesComponent implements OnInit {
       // Update existing schedule
       this.schedulesService.updateSchedule(this.editingSchedule.id, scheduleData).subscribe({
         next: () => {
-          console.log('Agendamento atualizado com sucesso');
           this.loadSchedules();
           this.closeFormModal();
         },
         error: (error) => {
           this.error = 'Erro ao atualizar agendamento';
-          console.error('Erro ao atualizar agendamento:', error);
           this.formLoading = false;
         }
       });
@@ -479,13 +477,11 @@ export class SchedulesComponent implements OnInit {
       // Create new schedule
       this.schedulesService.createSchedule(scheduleData).subscribe({
         next: () => {
-          console.log('Agendamento criado com sucesso');
           this.loadSchedules();
           this.closeFormModal();
         },
         error: (error) => {
           this.error = 'Erro ao criar agendamento';
-          console.error('Erro ao criar agendamento:', error);
           this.formLoading = false;
         }
       });
@@ -503,7 +499,6 @@ export class SchedulesComponent implements OnInit {
 
     this.schedulesService.deleteSchedule(schedule.id).subscribe({
       next: () => {
-        console.log('Agendamento excluído com sucesso');
         this.loadSchedules();
         this.closeDeleteModal();
       },

@@ -5,7 +5,6 @@ module.exports = {
     // Remover a constraint de unicidade se ela existir
     try {
       await queryInterface.removeConstraint('Schedule_Services', 'Schedule_Services_schedules_id_service_id_key');
-      console.log('✅ Constraint de unicidade removida com sucesso');
     } catch (error) {
       console.log('ℹ️ Constraint de unicidade não encontrada ou já removida');
     }
