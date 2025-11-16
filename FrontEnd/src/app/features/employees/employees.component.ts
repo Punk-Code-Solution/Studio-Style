@@ -146,7 +146,7 @@ interface Filters {
                   </div>
                 </td>
                 <td>{{ employee.email || 'N/A' }}</td>
-                <td>{{ getRoleLabel(employee.role) }}</td>
+                <td>{{ getRoleLabel(employee.TypeAccount.type) }}</td>
                 <td>
                   <span class="status-badge" [class]="getStatusClass(employee)">
                     {{ getStatusLabel(employee.status) }}

@@ -186,7 +186,7 @@ interface EmployeeFormData {
             <i class="fas fa-times"></i>
             Cancelar
           </button>
-          <button type="submit" class="btn-primary" [disabled]="loading || employeeForm.invalid" (click)="employeeForm.onSubmit(null)">
+          <button type="submit" class="btn-primary" [disabled]="loading || employeeForm.invalid" (click)="onSubmit(employeeForm)">
             <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
             <i class="fas" [class.fa-save]="isEditMode" [class.fa-plus]="!isEditMode" *ngIf="!loading"></i>
             {{ loading ? 'Salvando...' : (isEditMode ? 'Salvar' : 'Criar') }}
