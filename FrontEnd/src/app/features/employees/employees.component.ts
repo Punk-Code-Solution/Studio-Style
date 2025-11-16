@@ -663,13 +663,11 @@ export class EmployeesComponent implements OnInit {
 
     this.employeeService.getEmployees().subscribe({
       next: (employees) => {
-        console.log('Employees loaded:', employees);
         this.employees = employees;
         this.filterEmployees();
         this.isLoading = false;
       },
       error: (error) => {
-        console.error('Error loading employees:', error);
         this.errorMessage = 'Erro ao carregar funcionários. Por favor, tente novamente.';
         this.isLoading = false;
       }

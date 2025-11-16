@@ -33,8 +33,6 @@ class WhatsAppController {
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
 
-    console.log("Mode: ", mode);
-
     const result = this.whatsappService.verifyWebhook(mode, token, challenge);
 
     if (result) {
@@ -76,12 +74,10 @@ class WhatsAppController {
       let account = await this.accountRepo.findAccountByPhone(phone);
 
       if (account) {
-        console.log(`Cliente encontrado: ${account.name} (ID: ${account.id})`);
         return account;
       }
 
       // 2. Se não encontrar, cria um novo cliente
-      console.log(`Criando novo cliente para o número: ${phone}`);
 
       // 2a. Busca o TypeAccount 'client'
       const clientType = await this.typeAccountRepo.findClientType();
@@ -112,8 +108,6 @@ class WhatsAppController {
         account_id_phone: newAccount.id
       };
       await this.accountRepo.createPhone(phoneData); // Usando o método do account.repository
-      
-      console.log(`Novo cliente criado com ID: ${newAccount.id}`);
       
       // Retorna o objeto Account completo
       // Precisamos recarregar para obter os dados completos (ou apenas retornar o newAccount)

@@ -74,7 +74,6 @@ class AuthController {
         token
       });
     } catch (error) {
-      console.log(error)
       return ResponseHandler.error(res, 500, 'Login failed', error);
     }
   }
@@ -152,7 +151,6 @@ class AuthController {
         token
       });
     } catch (error) {
-      console.log(error);
       return ResponseHandler.error(res, 500, 'Registration failed', error);
     }
   }

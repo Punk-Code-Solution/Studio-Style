@@ -34,7 +34,6 @@ class typeAccountRepository{
  
   async addTypeAccount(typeAccount) {
     try {
-      console.log('Starting addTypeAccount with data:', typeAccount);
       
       const { 
         type,
@@ -43,14 +42,6 @@ class typeAccountRepository{
         viwer,
         delet
       } = typeAccount
-      
-      console.log('Creating TypeAccount with values:', {
-        type,
-        edit,
-        creat,
-        viwer,
-        delet
-      });
       
       const result = await TypeAccount.create({
         id: uuidv4(),
@@ -61,10 +52,8 @@ class typeAccountRepository{
         delet
       });
       
-      console.log('TypeAccount created successfully:', result);
       return result;
     } catch (error) {
-      console.error('Error in addTypeAccount:', error);
       throw error;
     }
   }

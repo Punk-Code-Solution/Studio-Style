@@ -28,22 +28,14 @@ class schedules_serviceRepository{
     
   async addSchedule_Service(schedules_id, services) {
     if (!Array.isArray(services) || services.length === 0) {
-      console.log('❌ Array de serviços vazio ou inválido');
       return false;
     }
 
     try {
-      console.log(`🔗 Associando ${services.length} serviços ao agendamento ${schedules_id}`);
-      
       // Primeiro, remover todas as relações existentes para este agendamento
       await Schedule_Service.destroy({
         where: { schedules_id }
       });
-      console.log('🗑️ Relações anteriores removidas');
-
-      // NÃO remover duplicatas - permitir múltiplas instâncias do mesmo serviço
-      console.log(`📋 Serviços para associar: ${services.length} (incluindo duplicatas)`);
-      
       // Criar array de objetos para bulkCreate (mantendo duplicatas)
       const scheduleServicesData = services.map(service => ({
         id: uuidv4(),
@@ -51,22 +43,12 @@ class schedules_serviceRepository{
         service_id: service
       }));
 
-      console.log('📝 Dados para inserção:', scheduleServicesData);
-
       // Adiciona todos os relacionamentos de uma só vez
       const result = await Schedule_Service.bulkCreate(scheduleServicesData, { 
         returning: true
       });
-      
-      console.log(`✅ Criadas ${result.length} relações para o agendamento ${schedules_id}`);
       return result;
     } catch (error) {
-      console.error('❌ Erro ao adicionar Schedule_Service:', error);
-      console.error('Detalhes do erro:', {
-        message: error.message,
-        name: error.name,
-        constraint: error.parent?.constraint
-      });
       return false;
     }
   }

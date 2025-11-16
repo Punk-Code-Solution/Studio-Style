@@ -39,7 +39,6 @@ export class EmployeeFormComponent implements OnInit {
   onSubmit() {
     if (this.employeeForm.valid) {
       // TODO: Implementar salvamento
-      console.log(this.employeeForm.value);
       this.router.navigate(['/employees']);
     }
   }

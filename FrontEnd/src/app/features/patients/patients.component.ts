@@ -656,7 +656,6 @@ export class PatientsComponent implements OnInit {
     // Search filter
     if (this.searchTerm.trim()) {
       const search = this.searchTerm.toLowerCase().trim();
-      console.log('Aplicando filtro de busca:', search);
       filtered = filtered.filter(
         (cliente) =>
           cliente.name?.toLowerCase().includes(search) ||
@@ -751,46 +750,31 @@ export class PatientsComponent implements OnInit {
   }
 
   savePatient(patientData: CreatePatientRequest): void {
-    console.log('📊 savePatient chamado com dados:', patientData);
     this.formLoading = true;
     this.error = '';
 
     if (this.editingPatient) {
       // Update existing patient
-      console.log('🔄 Atualizando paciente ID:', this.editingPatient.id);
       this.patientService
         .updatePatient(this.editingPatient.id, patientData)
         .subscribe({
           next: (response) => {
-            console.log('✅ Paciente atualizado com sucesso:', response);
             this.loadPatients();
             this.closeFormModal();
           },
           error: (error) => {
-            console.error('❌ Erro ao atualizar paciente:', error);
             this.error = 'Erro ao atualizar paciente: ' + (error?.error?.message || error?.message || 'Erro desconhecido');
             this.formLoading = false;
           },
         });
     } else {
-      // Create new patient
-      console.log('➕ Criando novo paciente');
       this.patientService.createPatient(patientData).subscribe({
         next: (response) => {
-          console.log('✅ Paciente criado com sucesso:', response);
           this.error = '';
           this.loadPatients();
           this.closeFormModal();
         },
         error: (error) => {
-          console.error('❌ Erro ao criar paciente:', error);
-          console.error('Detalhes do erro:', {
-            status: error?.status,
-            statusText: error?.statusText,
-            message: error?.message,
-            error: error?.error,
-            fullError: error
-          });
           this.error = 'Erro ao criar Cliente: ' + (error?.error?.message || error?.message || 'Erro desconhecido');
           this.formLoading = false;
         },
@@ -809,7 +793,6 @@ export class PatientsComponent implements OnInit {
 
     this.patientService.deletePatient(patient.id).subscribe({
       next: () => {
-        console.log('Cliente excluído com sucesso');
         this.loadPatients();
         this.closeDeleteModal();
       },

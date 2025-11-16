@@ -18,8 +18,6 @@ class CompanyController {
         return response.status(201).json(result)
   
     }catch(erro){
-        const  { errors  } = erro
-        console.log(erro)
         return response.status(500).json({"erro" : erro})
     }
   
@@ -34,7 +32,7 @@ class CompanyController {
 
     }catch( e ){
 
-      console.log(e)
+      return response.status(500).json({"erro" : erro})
 
     }
 
@@ -53,9 +51,6 @@ class CompanyController {
         return response.status(201).json( result )
   
     }catch( erro ){
-
-        const  { errors  } = erro
-        console.log(erro)
         return response.status(500).json({"erro" : erro})
 
     }
@@ -94,7 +89,6 @@ class CompanyController {
       return ResponseHandler.success(res, 200, "Companies", result )
   
     }catch(erro){
-      console.log(erro)
       return ResponseHandler.error(res, 500, "Faild", erro)
 
     }
@@ -104,7 +98,6 @@ class CompanyController {
   async getCompanyId( request, response ) {
 
     const { id } = request.query;
-    console.log(id)
   
     try{
 
@@ -112,9 +105,6 @@ class CompanyController {
       return response.status(201).json( { result } )
   
     }catch(erro){
-
-      const  { errors  } = erro
-      console.log(erro)
       return response.status(500).json( { "erro" : erro } )
 
     }

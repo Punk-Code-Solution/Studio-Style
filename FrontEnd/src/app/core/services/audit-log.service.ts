@@ -14,8 +14,6 @@ export class AuditLogService {
 
   addLog(log: AuditLog) {
     this.logs.push(log);
-    // Aqui você pode enviar para o backend se desejar
-    console.log('AuditLog:', log);
   }
 
   getLogs(): AuditLog[] {

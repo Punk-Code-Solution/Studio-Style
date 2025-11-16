@@ -106,7 +106,6 @@ export class SchedulesService {
             service.price !== undefined;
           
           if (!isValid) {
-            console.log('❌ Serviço inválido filtrado:', service);
           }
           
           return isValid;

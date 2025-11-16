@@ -18,7 +18,7 @@ module.exports = {
     'quotes': ['error', 'single'],
     'semi': ['error', 'always'],
     'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-    'no-console': 'off', // Allow console.log in development
+    'no-console': 'off',
     'no-debugger': 'error',
     'prefer-const': 'error',
     'no-var': 'error',

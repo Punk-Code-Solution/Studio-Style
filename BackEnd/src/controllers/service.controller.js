@@ -46,7 +46,6 @@ module.exports = class serviceController{
             return response.status(400).json({ "result" : "something is wrong" })
         }
         catch(erro){
-            console.log(erro)
             return response.status(501).json({"erro" : erro}) 
 
         }    

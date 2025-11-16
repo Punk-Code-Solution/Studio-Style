@@ -24,11 +24,9 @@ export class RoleGuard {
 
     // Obtém o caminho completo da rota
     const fullPath = this.getFullPath(route);
-    console.log('RoleGuard: Verificando acesso à rota:', fullPath);
     
     // Se for a rota raiz ou dashboard, permite acesso
     if (!fullPath || fullPath === 'dashboard') {
-      console.log('RoleGuard: Acesso permitido à rota raiz/dashboard');
       return true;
     }
 

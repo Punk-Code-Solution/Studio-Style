@@ -56,8 +56,6 @@ class SaleRepository{
       }
     })
 
-    console.log( id )
-
     const sale = await Sale.findOne({
 
         where:{
