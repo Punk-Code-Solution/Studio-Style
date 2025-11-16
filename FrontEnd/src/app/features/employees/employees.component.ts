@@ -6,6 +6,8 @@ import { EmployeeService, Employee } from '../../core/services/employee.service'
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { EmployeeFormModalComponent } from './employee-form-modal/employee-form-modal.component';
+import { EmployeeViewModalComponent } from './employee-view-modal/employee-view-modal.component';
+import { EmployeeDeleteModalComponent } from './employee-delete-modal/employee-delete-modal.component';
 
 type EmployeeRole = Employee['TypeAccount']['type'];
 
@@ -30,7 +32,7 @@ interface Filters {
 @Component({
   selector: 'app-employees',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, EmployeeFormModalComponent],
+  imports: [CommonModule, RouterModule, FormsModule, EmployeeFormModalComponent, EmployeeViewModalComponent, EmployeeDeleteModalComponent],
   template: `
     <div class="page-container">
       <!-- Loading State -->
@@ -203,6 +205,23 @@ interface Filters {
         (close)="closeModal()"
         (save)="onSaveEmployee($event)"
       ></app-employee-form-modal>
+
+      <!-- Employee View Modal -->
+      <app-employee-view-modal
+        *ngIf="isViewModalOpen"
+        [employee]="selectedEmployee"
+        (close)="onCloseViewModal()"
+        (edit)="onEditFromViewModal()"
+      ></app-employee-view-modal>
+
+      <!-- Employee Delete Modal -->
+      <app-employee-delete-modal
+        *ngIf="isDeleteModalOpen"
+        [employee]="selectedEmployee"
+        [loading]="isDeleteLoading"
+        (close)="onCloseDeleteModal()"
+        (confirm)="onConfirmDelete()"
+      ></app-employee-delete-modal>
     </div>
   `,
   styles: [`
@@ -605,6 +624,9 @@ export class EmployeesComponent implements OnInit {
   isModalOpen = false;
   isSubmitting = false;
   selectedEmployee: Employee | null = null;
+  isViewModalOpen = false;
+  isDeleteModalOpen = false;
+  isDeleteLoading = false;
 
   roles: RoleOption[] = [
     { value: 'admin', label: 'Administrador' },
@@ -731,19 +753,33 @@ export class EmployeesComponent implements OnInit {
   }
 
   confirmDelete(employee: Employee) {
-    if (confirm(`Tem certeza que deseja excluir o funcionário ${employee.name}?`)) {
-      this.employeeService.deleteEmployee(employee.id).subscribe({
-        next: () => {
-          this.notificationService.success('Funcionário excluído com sucesso!');
-          this.loadEmployees();
-        },
-        error: (error) => {
-          this.notificationService.error(
-            'Erro ao excluir funcionário. Por favor, tente novamente.'
-          );
-        }
-      });
-    }
+    this.selectedEmployee = employee;
+    this.isDeleteModalOpen = true;
+  }
+
+  onCloseDeleteModal(): void {
+    this.isDeleteModalOpen = false;
+    this.selectedEmployee = null;
+  }
+
+  onConfirmDelete(): void {
+    if (!this.selectedEmployee) return;
+
+    this.isDeleteLoading = true;
+    this.employeeService.deleteEmployee(this.selectedEmployee.id).subscribe({
+      next: () => {
+        this.notificationService.success('Funcionário excluído com sucesso!');
+        this.onCloseDeleteModal();
+        this.loadEmployees();
+        this.isDeleteLoading = false;
+      },
+      error: (error) => {
+        this.notificationService.error(
+          'Erro ao excluir funcionário. Por favor, tente novamente.'
+        );
+        this.isDeleteLoading = false;
+      }
+    });
   }
 
   openCreateModal(): void {
@@ -753,6 +789,16 @@ export class EmployeesComponent implements OnInit {
 
   openViewModal(employee: Employee): void {
     this.selectedEmployee = employee;
+    this.isViewModalOpen = true;
+  }
+
+  onCloseViewModal(): void {
+    this.isViewModalOpen = false;
+    this.selectedEmployee = null;
+  }
+
+  onEditFromViewModal(): void {
+    this.onCloseViewModal();
     this.isModalOpen = true;
   }
 
@@ -767,15 +813,20 @@ export class EmployeesComponent implements OnInit {
   }
 
   onSaveEmployee(employeeData: Partial<Employee>): void {
-    if (!employeeData.name || !employeeData.lastname || !employeeData.Emails || !employeeData.TypeAccount?.type) {
+    if (!employeeData.name || !employeeData.lastname || !employeeData.email || !employeeData.role) {
       this.notificationService.error('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
 
     this.isSubmitting = true;
     const request: Partial<Employee> = {
-      ...employeeData,
-      deleted: 'active'
+      name: employeeData.name,
+      lastname: employeeData.lastname,
+      email: employeeData.email,
+      password: (employeeData as any).password,
+      phone: employeeData.phone,
+      role: employeeData.role,
+      address: employeeData.address
     };
 
     this.employeeService.createEmployee(request).subscribe({

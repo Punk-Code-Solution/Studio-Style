@@ -154,7 +154,7 @@ interface EmployeeFormData {
                   [(ngModel)]="employeeData.password"
                   name="password"
                   [required]="!isEditMode"
-                  [minlength]="!isEditMode ? 6 : 0"
+                  minlength="6"
                   placeholder="Digite a senha"
                   #passwordField="ngModel"
                 >
@@ -186,7 +186,7 @@ interface EmployeeFormData {
             <i class="fas fa-times"></i>
             Cancelar
           </button>
-          <button type="submit" class="btn-primary" [disabled]="loading || employeeForm.invalid" (click)="onSubmit(employeeForm)">
+          <button type="submit" class="btn-primary" [disabled]="loading" (click)="onSubmit(employeeForm)">
             <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
             <i class="fas" [class.fa-save]="isEditMode" [class.fa-plus]="!isEditMode" *ngIf="!loading"></i>
             {{ loading ? 'Salvando...' : (isEditMode ? 'Salvar' : 'Criar') }}
@@ -428,7 +428,11 @@ export class EmployeeFormModalComponent implements OnInit {
   }
 
   onSubmit(form?: NgForm): void {
-    if (!form || form.invalid) {
+    if (!form) {
+      return;
+    }
+
+    if (form.invalid) {
       return;
     }
 
