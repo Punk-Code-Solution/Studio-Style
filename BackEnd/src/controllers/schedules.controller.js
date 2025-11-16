@@ -2,6 +2,9 @@ const SchedulesRepository = require('../repositories/schedules.repository');
 const ServiceRepository = require('../repositories/service.repository');
 const ResponseHandler = require('../utils/responseHandler');
 const Schedules_Service = require('../repositories/schedules_service.repository');
+// ADICIONADO: Repositórios para criar novo cliente
+const AccountRepository = require('../repositories/account.repository');
+const TypeAccountRepository = require('../repositories/type_account.repository');
 
 class SchedulesController {
 
@@ -9,18 +12,22 @@ class SchedulesController {
         this.schedulesRepository = new SchedulesRepository();
         this.servicesRepository = new ServiceRepository();
         this.schedules_serviceRepository = new Schedules_Service();
+        // ADICIONADO: Instâncias dos repositórios
+        this.accountRepository = new AccountRepository();
+        this.typeAccountRepository = new TypeAccountRepository();
     }
 
     /**
-   * Create a new account
+   * Create a new schedule
    */
   async createSchedules(req, res) {
     try {
       const schedules = req.body;
-      
+      let clientId = schedules.client_id_schedules;
+
       // Validar dados obrigatórios
-      if (!schedules.name_client || !schedules.date_and_houres || !schedules.provider_id_schedules || !schedules.client_id_schedules) {
-        return ResponseHandler.error(res, 400, 'Dados obrigatórios não fornecidos');
+      if (!schedules.name_client || !schedules.date_and_houres || !schedules.provider_id_schedules) {
+        return ResponseHandler.error(res, 400, 'Nome do cliente, data/hora e prestador são obrigatórios');
       }
 
       // Validar se há serviços
@@ -28,15 +35,50 @@ class SchedulesController {
         return ResponseHandler.error(res, 400, 'Pelo menos um serviço deve ser selecionado');
       }
 
+      // LÓGICA MODIFICADA (Ponto 2): Se client_id_schedules não for fornecido, crie um novo cliente
+      if (!clientId) {
+        console.log('ℹ️ client_id_schedules não fornecido. Criando novo cliente...');
+
+        // 1. Encontrar o TypeAccount 'client'
+        const typeAccounts = await this.typeAccountRepository.findAll();
+        const clientType = typeAccounts.find(t => t.type.toLowerCase() === 'client');
+
+        if (!clientType) {
+          return ResponseHandler.error(res, 500, 'Tipo de conta "client" não encontrado. Não é possível criar novo cliente.');
+        }
+
+        // 2. Criar a nova conta de cliente (campos mínimos)
+        const [firstName, ...lastNameParts] = schedules.name_client.split(' ');
+        const newClientData = {
+          name: firstName,
+          lastname: lastNameParts.join(' ') || 'Cliente',
+          // Email, password e CPF são opcionais (Ponto 1)
+          email: null, 
+          password: null,
+          cpf: null,
+          typeaccount_id: clientType.id,
+          deleted: false
+        };
+
+        const newAccount = await this.accountRepository.addAccount(newClientData);
+        if (!newAccount) {
+          return ResponseHandler.error(res, 500, 'Falha ao criar a nova conta de cliente');
+        }
+
+        clientId = newAccount.id; // Usar o ID do cliente recém-criado
+        schedules.client_id_schedules = clientId; // Adicionar ao objeto schedules
+        console.log(`✅ Novo cliente criado com ID: ${clientId}`);
+      }
+
       console.log('📋 Criando agendamento:', {
         cliente: schedules.name_client,
         data: schedules.date_and_houres,
         provider: schedules.provider_id_schedules,
-        client: schedules.client_id_schedules,
+        client: clientId,
         services: schedules.services
       });
 
-      // Criar o agendamento
+      // 3. Criar o agendamento
       const result = await this.schedulesRepository.addSchedules(schedules);
 
       if (!result) {
@@ -45,11 +87,11 @@ class SchedulesController {
 
       console.log('✅ Agendamento criado com ID:', result.dataValues.id);
 
-      // Adicionar serviços ao agendamento
+      // 4. Adicionar serviços ao agendamento
       const result_services = await this.schedules_serviceRepository.addSchedule_Service(result.dataValues.id, schedules.services);
 
       if (!result_services) {
-        // Se falhou ao adicionar serviços, remover o agendamento criado
+        // Se falhou ao adicionar serviços, remover o agendamento criado (rollback manual)
         await this.schedulesRepository.deleteSchedules(result.dataValues.id);
         return ResponseHandler.error(res, 400, 'Falha ao associar serviços ao agendamento');
       }
@@ -108,6 +150,14 @@ class SchedulesController {
       if (!result) {
         return ResponseHandler.notFound(res, 'Service not found');
       }
+
+      // LÓGICA ADICIONADA: Atualizar serviços se eles forem enviados
+      if (scheduleData.services && Array.isArray(scheduleData.services) && scheduleData.services.length > 0) {
+        const result_services = await this.schedules_serviceRepository.addSchedule_Service(scheduleData.id, scheduleData.services);
+        if (!result_services) {
+          console.warn(`⚠️ Agendamento ${scheduleData.id} atualizado, mas falha ao atualizar serviços.`);
+        }
+      }
       
       return ResponseHandler.success(res, 200, 'Service updated successfully', result);
     } catch (error) {
@@ -122,6 +172,10 @@ class SchedulesController {
   async deleteScheduleById(req, res) {
     try {
       const { id } = req.query;
+
+      // ADICIONADO: Deletar associações de serviço primeiro
+      await this.schedules_serviceRepository.deleteSchedule_Service(id, null, true); // Deleta por schedule_id
+
       const result = await this.schedulesRepository.deleteSchedules(id);
       console.log(result)
       

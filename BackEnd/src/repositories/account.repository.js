@@ -13,12 +13,21 @@ const {
   Adress } = require("../Database/models");
 const { v4: uuidv4 } = require('uuid');
 const bkrypt = require('bcrypt');
+const { Op } = require('sequelize');
 
 module.exports = class accountRepository{
 
   async createEmail( emailUser ){
 
     const { account_id_email, name, email, active, company_id_email } = emailUser
+
+    // Prevent duplicate email
+    if (email) {
+      const existing = await Email.findOne({ where: { email } });
+      if (existing) {
+        return { error: 'email' };
+      }
+    }
     
     const result = Email.create({
 
@@ -41,23 +50,71 @@ module.exports = class accountRepository{
   }
 
   //OK
-  async findAll(){
+  async findAll(options = {}){
+    // Merge custom options with default includes
+    const defaultInclude = [
+      { model: TypeAccount },
+      { model: Company },
+      { model: Email },
+      { model: Hair },
+      { model: Schedules },
+      { model: Sale },
+      { model: Purchase },
+      { model: Purchase_Material },
+      { model: Phone },
+      { model: Adress }
+    ];
 
-    return await Account.findAll({
-      include: [
-        { model: TypeAccount },
-        { model: Company },
-        { model: Email },
-        { model: Hair },
-        { model: Schedules },
-        { model: Sale },
-        { model: Purchase },
-        { model: Purchase_Material },
-        { model: Phone },
-        { model: Adress }
-      ]
-    });
+    // If custom include is provided (e.g., for filtering), merge it with defaults
+    let includeList = defaultInclude;
+    if (options.include && options.include.length > 0) {
+      // Merge custom include with defaults (custom ones take precedence for filtering)
+      includeList = options.include.map(customInc => {
+        // If custom include is for filtering (has 'where' clause), use it as is
+        if (customInc.where) {
+          return customInc;
+        }
+        // Otherwise, merge with defaults
+        const defaultInc = defaultInclude.find(d => d.model === customInc.model);
+        return defaultInc || customInc;
+      });
+      // Add default includes that are not in custom includes
+      defaultInclude.forEach(def => {
+        if (!includeList.some(inc => inc.model === def.model)) {
+          includeList.push(def);
+        }
+      });
+    }
 
+    const mergedOptions = {
+      ...options,
+      include: includeList
+    };
+
+    return await Account.findAll(mergedOptions);
+
+  }
+
+  // NEW: Simple method to find accounts by TypeAccount roles
+  async findByRoles(roles = []) {
+    try {
+      const result = await Account.findAll({
+        include: [{
+          model: TypeAccount,
+          where: {
+            type: {
+              [Op.in]: roles
+            }
+          },
+          required: true  // INNER JOIN - only accounts with matching roles
+        }],
+        attributes: { include: [] } // Include all account attributes
+      });
+      return result;
+    } catch (err) {
+      console.error('Error in findByRoles:', err.message);
+      throw err;
+    }
   }
 
   async findEmail( eMail ){
@@ -187,6 +244,22 @@ module.exports = class accountRepository{
       type_hair_id
 
     } = account;
+
+    // Prevent duplicate by CPF
+    if (cpf) {
+      const existingByCpf = await this.findAccountCpf(cpf);
+      if (existingByCpf) {
+        return { error: 'cpf' }; // Duplicate CPF
+      }
+    }
+
+    // Prevent duplicate by email (if provided)
+    if (email) {
+      const existingEmail = await this.findEmail(email);
+      if (existingEmail) {
+        return { error: 'email' }; // Duplicate email
+      }
+    }
 
     const result = await Account.create({     
 

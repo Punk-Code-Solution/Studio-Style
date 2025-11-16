@@ -28,7 +28,7 @@ import { PatientDeleteModalComponent } from './patient-delete-modal/patient-dele
             <i class="fas fa-search"></i>
             <input
               type="text"
-              placeholder="Buscar pacientes..."
+              placeholder="Buscar clientes..."
               [(ngModel)]="searchTerm"
               (ngModelChange)="filterPatients()"
             />
@@ -77,7 +77,6 @@ import { PatientDeleteModalComponent } from './patient-delete-modal/patient-dele
         </div>
       </div>
 
-      <!-- Loading indicator -->
       <div *ngIf="loading" class="loading-container">
         <div class="loading-spinner">
           <i class="fas fa-spinner fa-spin"></i>
@@ -85,7 +84,6 @@ import { PatientDeleteModalComponent } from './patient-delete-modal/patient-dele
         </div>
       </div>
 
-      <!-- Error message -->
       <div *ngIf="error" class="error-message">
         <i class="fas fa-exclamation-triangle"></i>
         <span>{{ error }}</span>
@@ -101,7 +99,6 @@ import { PatientDeleteModalComponent } from './patient-delete-modal/patient-dele
               <tr>
                 <th>Nome</th>
                 <th>E-mail</th>
-                <th>Tipo de Conta</th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
@@ -117,11 +114,6 @@ import { PatientDeleteModalComponent } from './patient-delete-modal/patient-dele
                   </div>
                 </td>
                 <td>{{ getPatientEmail(patient) || 'N/A' }}</td>
-                <td>
-                  <span class="type-badge">
-                    {{ patient.TypeAccount?.type || 'N/A' }}
-                  </span>
-                </td>
                 <td>
                   <span class="status-badge" [class]="getStatusClass(patient)">
                     {{ getStatusText(patient) }}
@@ -142,7 +134,7 @@ import { PatientDeleteModalComponent } from './patient-delete-modal/patient-dele
                 </td>
               </tr>
               <tr *ngIf="filteredPatients.length === 0">
-                <td colspan="5" class="empty-state">
+                <td colspan="4" class="empty-state">
                   <p>Nenhum cliente encontrado</p>
                 </td>
               </tr>
@@ -172,7 +164,6 @@ import { PatientDeleteModalComponent } from './patient-delete-modal/patient-dele
       </div>
     </div>
 
-    <!-- Modais -->
     <app-patient-view-modal
       *ngIf="showViewModal"
       [patient]="selectedPatient"
@@ -656,7 +647,7 @@ export class PatientsComponent implements OnInit {
   filterPatients(): void {
     let filtered = [...this.patients];
 
-    // Filter by account type - apenas clientes
+    // MODIFICADO (Ponto 4): Este filtro já não é necessário, pois a API já traz apenas 'client'
     filtered = filtered.filter((patient) => {
       const accountType = patient.TypeAccount?.type?.toLowerCase();
       return accountType === 'client';
@@ -670,8 +661,7 @@ export class PatientsComponent implements OnInit {
         (cliente) =>
           cliente.name?.toLowerCase().includes(search) ||
           cliente.lastname?.toLowerCase().includes(search) ||
-          cliente.email?.toLowerCase().includes(search) ||
-          cliente.TypeAccount?.type?.toLowerCase().includes(search)
+          this.getPatientEmail(cliente)?.toLowerCase().includes(search) // MODIFICADO: Usa a função helper
       );
     }
 
@@ -834,7 +824,7 @@ export class PatientsComponent implements OnInit {
     if (patient.Emails && patient.Emails.length > 0) {
       return patient.Emails[0].email;
     }
-    // Se não tiver array, tenta o campo direto
+    // Se não tiver array, tenta o campo direto (legado)
     if (patient.email) {
       return patient.email;
     }

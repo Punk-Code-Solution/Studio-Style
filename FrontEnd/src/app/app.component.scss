@@ -7,48 +7,91 @@
 
 .app-container {
   display: flex;
-  height: 100vh;
-  background-color: vars.$background-color;
-}
-
-.app-layout {
-  display: flex;
   min-height: 100vh;
-  background: #e3f0ff;
-}
+  background-color: #f5f6fa;
+  transition: all vars.$transition-normal; // Transição suave
 
-app-sidebar {
-  flex: 0 0 240px;
-  height: 100vh;
-  background: vars.$background-hover;
-  box-shadow: 2px 0 12px rgba(30, 80, 180, 0.07);
-  z-index: 10;
-}
+  app-sidebar {
+    width: 280px; // Largura padrão da sidebar
+    flex-shrink: 0;
+    transition: width vars.$transition-normal;
+  }
 
-.main-content {
-  flex: 1;
-  height: 50vh;
-  transition: margin-left 0.3s ease;
-  background: vars.$background-light;
-  overflow-y: auto;
-}
-
-@media (max-width: 768px) {
   .main-content {
+    flex: 1;
+    padding: 0;
+    overflow-y: auto;
+    transition: margin-left vars.$transition-normal;
+  }
+
+  .main-content.no-sidebar {
     margin-left: 0;
   }
 }
 
-@media (max-width: 900px) {
-  .main-content {
-    padding: 1.2rem 0.5rem;
-  }
+// MODIFICADO (Ponto 10): Estilos da sidebar recolhida
+.app-container.sidebar-collapsed {
   app-sidebar {
-    min-width: 60px;
-    padding: 1rem 0.2rem;
+    width: 80px; // Largura recolhida
+
+    // Esconde o texto e ajusta ícones (o SASS afeta os componentes filhos)
+    ::ng-deep .nav-item span,
+    ::ng-deep .user-details,
+    ::ng-deep .logout-btn span {
+      display: none;
+    }
+
+    ::ng-deep .nav-item {
+      justify-content: center;
+      padding: vars.$spacing-md;
+    }
+    
+    ::ng-deep .nav-item i {
+      margin-right: 0;
+    }
+
+    ::ng-deep .sidebar-footer {
+      padding: vars.$spacing-md;
+    }
+    
+    ::ng-deep .user-info {
+      justify-content: center;
+    }
+
+    ::ng-deep .logout-btn {
+      justify-content: center;
+    }
+    
+    // Gira o botão de toggle
+    ::ng-deep .toggle-btn {
+      transform: rotate(180deg);
+    }
+    
+    ::ng-deep .logo img {
+      width: 50px; // Logo menor
+    }
   }
 }
 
-.footer {
-  background: vars.$background-color;
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+    
+    // Em telas pequenas, a sidebar não é mostrada (ou vira um menu hamburguer - não implementado)
+    // Por agora, vamos apenas esconder e deixar o main-content tomar 100%
+    app-sidebar {
+       display: none; // Esconde no mobile
+    }
+  }
+
+  .main-content {
+    margin-left: 0;
+  }
+
+  // Se a sidebar colapsada estiver ativa, resetamos no mobile
+  .app-container.sidebar-collapsed {
+    app-sidebar {
+      display: none;
+    }
+  }
 }

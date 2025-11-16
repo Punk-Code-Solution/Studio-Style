@@ -14,9 +14,9 @@ export interface ApiResponse<T> {
 export interface CreatePatientRequest {
   name: string;
   lastname: string;
-  email: string;
-  password?: string;
-  cpf: string;
+  email?: string; // Modificado para opcional
+  password?: string; // Modificado para opcional
+  cpf?: string; // Modificado para opcional
   birthday?: string;
   deleted?: boolean;
   avatar?: string;
@@ -51,7 +51,8 @@ export class PatientService {
   constructor(private http: HttpClient) {}
 
   getAllPatients(): Observable<Patient[]> {
-    return this.http.get<ApiResponse<Patient[]>>(this.apiUrl).pipe(
+    // LÓGICA MODIFICADA (Ponto 4): Adicionado filtro de role
+    return this.http.get<ApiResponse<Patient[]>>(`${this.apiUrl}?role=client`).pipe(
       map(response => response.data || [])
     );
   }

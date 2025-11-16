@@ -2,9 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { AuthService } from '../../../core/services/auth.service';
 import { PatientService } from '../../../core/services/patient.service';
-import { ConsultationService } from '../../../core/services/consultation.service';
 import { Patient } from '../../../core/models/patient.model';
 import { Consultation } from '../../../core/models/consultation.model';
 import { AuditLogService } from '../../../core/services/audit-log.service';
@@ -481,7 +479,6 @@ export class PatientDetailsComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private patientService: PatientService,
-    private consultationService: ConsultationService,
     private auditLogService: AuditLogService
   ) {}
 
@@ -489,7 +486,6 @@ export class PatientDetailsComponent implements OnInit {
     const patientId = this.route.snapshot.paramMap.get('id');
     if (patientId) {
       this.loadPatientData(patientId);
-      this.loadPatientConsultations(patientId);
     }
 
     if (this.patient) {
@@ -507,7 +503,7 @@ export class PatientDetailsComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = null;
 
-    this.patientService.getPatient(patientId).subscribe({
+    this.patientService.getPatientById(patientId).subscribe({
       next: (patient) => {
         this.patient = patient;
         this.isLoading = false;
@@ -520,29 +516,8 @@ export class PatientDetailsComponent implements OnInit {
     });
   }
 
-  loadPatientConsultations(patientId: string) {
-    this.consultationService.getConsultations().subscribe({
-      next: (consultations) => {
-        this.consultations = consultations
-          .filter(c => c.pacienteId === +patientId)
-          .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-      },
-      error: (error) => {
-        console.error('Erro ao carregar consultas do paciente:', error);
-      }
-    });
-  }
-
-  retryLoading() {
-    const patientId = this.route.snapshot.paramMap.get('id');
-    if (patientId) {
-      this.loadPatientData(patientId);
-      this.loadPatientConsultations(patientId);
-    }
-  }
-
   deletePatient() {
-    if (this.patient && confirm(`Tem certeza que deseja excluir o paciente ${this.patient.nome}?`)) {
+    if (this.patient && confirm(`Tem certeza que deseja excluir o paciente ${this.patient.name}?`)) {
       this.patientService.deletePatient(this.patient.id).subscribe({
         next: () => {
           this.router.navigate(['/patients']);

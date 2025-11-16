@@ -29,7 +29,7 @@ const patientRoutes: Routes = [
   }
 ];
 
-// Rotas de consultas
+// Rotas de consultas (Agendamentos)
 const consultationRoutes: Routes = [
   {
     path: 'services',
@@ -100,21 +100,22 @@ const protectedRoutes: Routes = [
       ...consultationRoutes,
       ...employeeRoutes,
       // Outras rotas protegidas
-      {
-        path: 'calendar',
-        canActivate: [RoleGuard],
-        loadComponent: () => import('./features/calendar/calendar.component').then(m => m.CalendarComponent)
-      },
-      {
-        path: 'messages',
-        canActivate: [RoleGuard],
-        loadComponent: () => import('./features/messages/messages.component').then(m => m.MessagesComponent)
-      },
-      {
-        path: 'documents',
-        canActivate: [RoleGuard],
-        loadComponent: () => import('./features/documents/documents.component').then(m => m.DocumentsComponent)
-      },
+      // MODIFICADO (Ponto 6, 8): Rotas removidas
+      // {
+      //   path: 'calendar',
+      //   canActivate: [RoleGuard],
+      //   loadComponent: () => import('./features/calendar/calendar.component').then(m => m.CalendarComponent)
+      // },
+      // {
+      //   path: 'messages',
+      //   canActivate: [RoleGuard],
+      //   loadComponent: () => import('./features/messages/messages.component').then(m => m.MessagesComponent)
+      // },
+      // {
+      //   path: 'documents',
+      //   canActivate: [RoleGuard],
+      //   loadComponent: () => import('./features/documents/documents.component').then(m => m.DocumentsComponent)
+      // },
       {
         path: 'feedbacks',
         canActivate: [RoleGuard],

@@ -30,20 +30,20 @@ export class EmployeeEditComponent implements OnInit {
       email: ['', [Validators.required, Validators.email]],
       role: ['', Validators.required],
       department: ['', Validators.required],
-      phone: ['', [Validators.required, Validators.pattern(/^\+?[\d\s-]{10,}$/)]],
+      phone: ['', [Validators.required, Validators.pattern(/^\d{10,11}$/)]],
       address: ['', Validators.required],
       status: ['active', Validators.required]
     });
   }
 
   ngOnInit(): void {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
+    const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.loadEmployee(id);
     }
   }
 
-  private loadEmployee(id: number): void {
+  private loadEmployee(id: string): void {
     this.isLoading = true;
     this.errorMessage = '';
 

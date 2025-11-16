@@ -24,9 +24,59 @@ import { User } from '../../../core/services/user.service';
         <div class="modal-body">
           <form (ngSubmit)="onSubmit()" #scheduleForm="ngForm">
             <div class="form-group">
-              <label for="name_client">
+              <label for="client_id_schedules">
                 <i class="fas fa-user"></i>
-                Nome do Cliente
+                Cliente
+              </label>
+              <div class="client-selection">
+                <div class="selection-mode">
+                  <label class="radio-label">
+                    <input
+                      type="radio"
+                      name="clientMode"
+                      value="select"
+                      [(ngModel)]="clientMode"
+                      (change)="onClientModeChange()"
+                    >
+                    <span>Selecionar cliente existente</span>
+                  </label>
+                  <label class="radio-label">
+                    <input
+                      type="radio"
+                      name="clientMode"
+                      value="manual"
+                      [(ngModel)]="clientMode"
+                      (change)="onClientModeChange()"
+                    >
+                    <span>Cadastrar novo cliente</span>
+                  </label>
+                </div>
+
+                <div *ngIf="clientMode === 'select'" class="client-select">
+                  <select
+                    id="client_id_schedules"
+                    [(ngModel)]="scheduleData.client_id_schedules"
+                    name="client_id_schedules"
+                    [required]="clientMode === 'select'"
+                    [class.error]="scheduleForm.submitted && clientMode === 'select' && !scheduleData.client_id_schedules"
+                    (change)="onClientSelect()"
+                  >
+                    <option value="">Selecione um cliente</option>
+                    <option *ngFor="let client of clients" [value]="client.id">
+                      {{ client.name }} {{ client.lastname }}
+                    </option>
+                  </select>
+                  <div class="error-message" *ngIf="scheduleForm.submitted && clientMode === 'select' && !scheduleData.client_id_schedules">
+                    Cliente é obrigatório
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="name_client">
+                <i class="fas fa-user-edit"></i>
+                Nome do Cliente (para o agendamento)
               </label>
               <input
                 type="text"
@@ -34,6 +84,7 @@ import { User } from '../../../core/services/user.service';
                 [(ngModel)]="scheduleData.name_client"
                 name="name_client"
                 required
+                [disabled]="clientMode === 'select' && !!scheduleData.client_id_schedules"
                 [class.error]="scheduleForm.submitted && !scheduleData.name_client"
                 placeholder="Digite o nome do cliente"
               >
@@ -86,73 +137,6 @@ import { User } from '../../../core/services/user.service';
 
             <div class="form-row">
               <div class="form-group">
-                <label for="client_id_schedules">
-                  <i class="fas fa-user"></i>
-                  Cliente
-                </label>
-                <div class="client-selection">
-                  <div class="selection-mode">
-                    <label class="radio-label">
-                      <input
-                        type="radio"
-                        name="clientMode"
-                        value="select"
-                        [(ngModel)]="clientMode"
-                        (change)="onClientModeChange()"
-                      >
-                      <span>Selecionar cliente existente</span>
-                    </label>
-                    <label class="radio-label">
-                      <input
-                        type="radio"
-                        name="clientMode"
-                        value="manual"
-                        [(ngModel)]="clientMode"
-                        (change)="onClientModeChange()"
-                      >
-                      <span>Inserir dados manualmente</span>
-                    </label>
-                  </div>
-
-                  <!-- Seleção de cliente existente -->
-                  <div *ngIf="clientMode === 'select'" class="client-select">
-                    <select
-                      id="client_id_schedules"
-                      [(ngModel)]="scheduleData.client_id_schedules"
-                      name="client_id_schedules"
-                      required
-                      [class.error]="scheduleForm.submitted && !scheduleData.client_id_schedules"
-                      (change)="onClientSelect()"
-                    >
-                      <option value="">Selecione um cliente</option>
-                      <option *ngFor="let client of clients" [value]="client.id">
-                        {{ client.name }} {{ client.lastname }}
-                      </option>
-                    </select>
-                    <div class="error-message" *ngIf="scheduleForm.submitted && !scheduleData.client_id_schedules">
-                      Cliente é obrigatório
-                    </div>
-                  </div>
-
-                  <!-- Inserção manual -->
-                  <div *ngIf="clientMode === 'manual'" class="client-manual">
-                    <input
-                      type="text"
-                      id="client_id_manual"
-                      [(ngModel)]="scheduleData.client_id_schedules"
-                      name="client_id_manual"
-                      required
-                      [class.error]="scheduleForm.submitted && !scheduleData.client_id_schedules"
-                      placeholder="ID do cliente"
-                    >
-                    <div class="error-message" *ngIf="scheduleForm.submitted && !scheduleData.client_id_schedules">
-                      ID do cliente é obrigatório
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-group">
                 <label for="status">
                   <i class="fas fa-info-circle"></i>
                   Status
@@ -176,9 +160,8 @@ import { User } from '../../../core/services/user.service';
                 Serviços
               </label>
               <div class="services-selection">
-                <!-- Debug info -->
                 <div *ngIf="availableServices.length === 0" style="padding: 10px; background: #f0f0f0; border-radius: 4px; margin-bottom: 10px;">
-                  <small>Debug: Nenhum serviço disponível ({{ availableServices.length }} serviços carregados)</small>
+                  <small>Nenhum serviço disponível ({{ availableServices.length }} serviços carregados)</small>
                 </div>
 
                 <div class="service-option" *ngFor="let service of availableServices">
@@ -323,6 +306,11 @@ import { User } from '../../../core/services/user.service';
 
         &.error {
           border-color: $error-color;
+        }
+        
+        &:disabled {
+          background-color: $background-dark;
+          color: $text-secondary;
         }
       }
 
@@ -534,7 +522,7 @@ export class ScheduleFormModalComponent implements OnInit {
       this.isEditMode = true;
       this.scheduleData = {
         name_client: this.schedule.name_client,
-        date_and_houres: this.schedule.date_and_houres,
+        date_and_houres: this.formatDateForInput(this.schedule.date_and_houres), // Formatar data
         active: this.schedule.active,
         finished: this.schedule.finished,
         provider_id_schedules: this.schedule.provider_id_schedules,
@@ -550,8 +538,32 @@ export class ScheduleFormModalComponent implements OnInit {
       } else {
         this.statusValue = 'active';
       }
-    }
+      
+      // Define o clientMode com base se o ID do cliente existe
+      if (this.schedule) {
+        this.clientMode = this.clients.some(c => c.id === this.schedule!.client_id_schedules) ? 'select' : 'manual';
+        if (this.clientMode === 'manual') {
+          console.warn(`Agendamento ${this.schedule.id} está no modo manual pois o cliente ID ${this.schedule.client_id_schedules} não foi encontrado na lista de clientes.`);
+          // Se for manual e não houver ID, limpamos para evitar IDs "órfãos"
+          if (!this.clients.some(c => c.id === this.schedule!.client_id_schedules)) {
+            this.scheduleData.client_id_schedules = '';
+          }
+        }
+      }
 
+    } else {
+      // Novo agendamento
+      this.isEditMode = false;
+      this.clientMode = 'select'; // Padrão para novo agendamento
+    }
+  }
+  
+  // Adicionada função para formatar a data para o input datetime-local
+  private formatDateForInput(dateString: string): string {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    // Formato YYYY-MM-DDTHH:mm
+    return date.toISOString().slice(0, 16);
   }
 
   closeModal(): void {
@@ -561,6 +573,12 @@ export class ScheduleFormModalComponent implements OnInit {
   onSubmit(): void {
     this.updateStatus();
     this.scheduleData.services = this.selectedServices;
+
+    // LÓGICA MODIFICADA (Ponto 2): Se for modo manual, limpar o client_id
+    // O backend saberá que precisa criar um novo cliente
+    if (this.clientMode === 'manual') {
+      this.scheduleData.client_id_schedules = ''; 
+    }
 
     this.save.emit(this.scheduleData);
   }
@@ -596,11 +614,14 @@ export class ScheduleFormModalComponent implements OnInit {
   }
 
   onClientModeChange(): void {
-    // Limpa os dados quando muda o modo
+    // MODIFICADO (Ponto 2): Limpa os dados ao trocar de modo
     this.scheduleData.client_id_schedules = '';
     this.selectedClient = null;
 
     if (this.clientMode === 'manual') {
+      this.scheduleData.name_client = ''; // Limpa o nome para inserção manual
+    } else {
+      // Se voltar para 'select', limpa o nome (será preenchido ao selecionar)
       this.scheduleData.name_client = '';
     }
   }

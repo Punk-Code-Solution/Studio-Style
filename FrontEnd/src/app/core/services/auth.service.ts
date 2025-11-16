@@ -1,6 +1,6 @@
 import { Injectable, PLATFORM_ID, Inject } from '@angular/core';
-import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
-import { delay, tap, map } from 'rxjs/operators';
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { User, UserService } from './user.service';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -8,7 +8,7 @@ import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
 
 // Tipos centralizados
-export type UserRole =  | 'admin' | 'ninguem' | 'provider' | 'client';
+export type UserRole = 'admin' | 'ninguem' | 'provider' | 'client';
 
 interface AuthState {
   user: User | null;
@@ -51,7 +51,7 @@ export class AuthService {
       calendar: ['ninguem'],
       messages: ['ninguem'],
       documents: ['ninguem'],
-      employees: ['ninguem'],
+      employees: ['admin'],
       feedbacks: ['ninguem'],
       services: ['admin'],
 
@@ -65,8 +65,8 @@ export class AuthService {
       'services/:id': ['admin'],
 
       // Sub-rotas de funcionários
-      'employees/new': ['ninguem'],
-      'employees/:id': ['ninguem'],
+      'employees/new': ['admin'],
+      'employees/:id': ['admin'],
     },
     fields: {
       'patient.medicalRecord': ['ninguem'],
@@ -103,10 +103,7 @@ export class AuthService {
   }
 
   get currentUser$(): Observable<User | null> {
-    return this.authState$.pipe(
-      map((state) => state.user),
-      tap((user) => console.log('Estado do usuário atualizado:', user))
-    );
+    return this.authState$.pipe(map((state) => state.user));
   }
 
   // Métodos de autenticação
@@ -121,9 +118,7 @@ export class AuthService {
         const payload = res?.data ?? res;
         const token = payload?.token as string;
         const user = payload?.user as User;
-
-        console.log('Resposta de login recebida:', payload);
-
+        // Não logar payload com tokens/usuário em produção
         if (!token || !user) {
           throw new Error('Resposta de login inválida');
         }
@@ -131,7 +126,6 @@ export class AuthService {
         if (this.isJwtExpired(token)) {
           throw new Error('Token expirado');
         }
-
         this.setToken(token);
         this.setCurrentUser(user);
         this.clearPermissionCache();
@@ -184,13 +178,16 @@ export class AuthService {
 
   // Verificações de role
   hasRole(role: UserRole): boolean {
-    return this.currentUser?.TypeAccount.type === role;
+    const current = this.currentUser?.TypeAccount?.type;
+    if (!current) return false;
+    return String(current).toLowerCase() === String(role).toLowerCase();
   }
 
   hasAnyRole(roles: UserRole[]): boolean {
-    return this.currentUser
-      ? roles.includes(this.currentUser.TypeAccount.type)
-      : false;
+    const current = this.currentUser?.TypeAccount?.type;
+    if (!current) return false;
+    const lc = String(current).toLowerCase();
+    return roles.map(r => String(r).toLowerCase()).includes(lc);
   }
 
   // Métodos de estado
@@ -213,15 +210,16 @@ export class AuthService {
   private checkPermission(type: keyof Permissions, key: string): boolean {
     const user = this.currentUser;
     if (!user) return false;
-
-    const cacheKey = `${type}:${key}:${user.TypeAccount.type}`;
+    const role = String(user?.TypeAccount?.type ?? '').toLowerCase();
+    const cacheKey = `${type}:${key}:${role}`;
     if (this.permissionCache.has(cacheKey)) {
       return this.permissionCache.get(cacheKey)!;
     }
 
     const normalizedKey = key.startsWith('/') ? key.substring(1) : key;
     const allowedRoles = this.permissions[type][normalizedKey];
-    const result = allowedRoles?.includes(user.TypeAccount.type) ?? false;
+    const allowed = (allowedRoles || []).map(r => String(r).toLowerCase());
+    const result = allowed.includes(role);
 
     this.permissionCache.set(cacheKey, result);
     return result;
@@ -239,8 +237,8 @@ export class AuthService {
 
   private setCurrentUser(user: User): void {
     // Garante que o campo 'perfil' seja preenchido com o tipo de conta
-    if (user['TypeAccount']?.type) {
-      user.TypeAccount.type = user['TypeAccount'].type;
+    if (user?.TypeAccount?.type) {
+      user.TypeAccount.type = String(user.TypeAccount.type).toLowerCase() as UserRole;
     }
     if (this.isBrowser) {
       localStorage.setItem(this.userKey, JSON.stringify(user));
@@ -273,12 +271,22 @@ export class AuthService {
     try {
       const parts = token.split('.');
       if (parts.length !== 3) return true;
-      const payload = JSON.parse(atob(parts[1]));
+      const payloadJson = this.base64UrlDecode(parts[1]);
+      const payload = JSON.parse(payloadJson);
       if (!payload?.exp) return true;
       const nowInSeconds = Math.floor(Date.now() / 1000);
       return payload.exp <= nowInSeconds;
     } catch {
       return true;
     }
+  }
+
+  private base64UrlDecode(str: string): string {
+    // Replace URL-safe characters and add padding if necessary
+    str = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (str.length % 4 !== 0) {
+      str += '=';
+    }
+    return atob(str);
   }
 }

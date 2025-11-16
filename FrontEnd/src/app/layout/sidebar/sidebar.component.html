@@ -19,21 +19,6 @@
     <span>Clientes</span>
   </a>
 
-  <a routerLink="/calendar" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/calendar')">
-    <i class="fas fa-calendar-alt"></i>
-    <span>Calendário</span>
-  </a>
-
-  <a routerLink="/messages" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/messages')">
-    <i class="fas fa-comments"></i>
-    <span>Mensagens</span>
-  </a>
-
-  <!-- <a routerLink="/documents" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/documents')">
-    <i class="fas fa-file-alt"></i>
-    <span>Documentos</span>
-  </a> -->
-
   <a routerLink="/employees" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/employees')">
     <i class="fas fa-user-md"></i>
     <span>Colaboradores</span>
@@ -54,6 +39,10 @@
       <span class="user-name">{{ currentUser?.name }}</span>
       <span class="user-role">{{ userRole }}</span>
     </div>
+    
+    <button class="toggle-btn" (click)="toggleSidebar()" title="Recolher menu">
+      <i class="fas fa-chevron-left"></i>
+    </button>
   </div>
   <button class="logout-btn" (click)="logout()">
     <i class="fas fa-sign-out-alt"></i>

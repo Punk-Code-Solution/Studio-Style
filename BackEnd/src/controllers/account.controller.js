@@ -4,6 +4,8 @@ const HairRepository = require('../repositories/hair.repository');
 const TypeAccountRepository = require('../repositories/type_account.repository');
 const ResponseHandler = require('../utils/responseHandler');
 const bcrypt = require('bcrypt');
+const { Op } = require('sequelize'); // Adicionado para filtros
+const { TypeAccount } = require('../Database/models'); // Import TypeAccount model
 
 class AccountController {
   constructor() {
@@ -84,17 +86,36 @@ class AccountController {
     try {
       const account = req.body;
       
-      // Hash password if provided
-      if (account.password) {
+      // LÓGICA MODIFICADA (Ponto 1): Hash password only if provided
+      if (account.password && account.password.trim() !== '') {
         account.password = await bcrypt.hash(account.password, 10);
+      } else {
+        account.password = null; // Garante que seja nulo se vazio
+      }
+
+      // LÓGICA MODIFICADA (Ponto 1): Garante que CPF e Email sejam nulos se não fornecidos
+      if (!account.cpf || account.cpf.trim() === '') {
+        account.cpf = null;
+      }
+      if (!account.email || account.email.trim() === '') {
+        account.email = null;
       }
       
       const result = await this.accountRepository.addAccount(account);
-      
+
+      if (result && result.error) {
+        return ResponseHandler.error(res, 409, `Duplicate field: ${result.error}`, { field: result.error });
+      }
+
       if (result) {
-        // Create associated email
-        await this.createEmail(result);
-        
+        // Create associated email only if email is provided
+        if (result.email) {
+          const emailResult = await this.createEmail(result);
+          if (emailResult && emailResult.error) {
+            return ResponseHandler.error(res, 409, `Duplicate field: ${emailResult.error}`, { field: emailResult.error });
+          }
+        }
+
         return ResponseHandler.success(res, 201, 'Account created successfully', result);
       } else {
         return ResponseHandler.error(res, 400, 'Failed to create account');
@@ -109,9 +130,32 @@ class AccountController {
    */
   async getAllAccounts(req, res) {
     try {
-      const result = await this.accountRepository.findAll();
-      return ResponseHandler.success(res, 200, 'Accounts retrieved successfully', result);
+      // LÓGICA MODIFICADA (Ponto 4): Filtrar por role
+      const { role } = req.query;
+      console.log('getAllAccounts - role param:', role);
+      
+      if (!role) {
+        // No filter, return all accounts
+        const result = await this.accountRepository.findAll({});
+        console.log('getAllAccounts (no filter) - result count:', result.length);
+        return ResponseHandler.success(res, 200, 'Accounts retrieved successfully', result);
+      }
+
+      // With role filter - use specialized method
+      const roles = role.split(',').map(r => r.trim());
+      console.log('getAllAccounts - filtering by roles:', roles);
+      
+      try {
+        const result = await this.accountRepository.findByRoles(roles);
+        console.log('getAllAccounts (with filter) - result count:', result.length);
+        return ResponseHandler.success(res, 200, 'Accounts retrieved successfully', result);
+      } catch (filterError) {
+        console.error('Filter error:', filterError.message);
+        // If filtering fails, return empty array instead of error
+        return ResponseHandler.success(res, 200, 'Accounts retrieved successfully', []);
+      }
     } catch (error) {
+      console.error('Error in getAllAccounts:', error.message, error.stack);
       return ResponseHandler.error(res, 500, 'Failed to retrieve accounts', error);
     }
   }
@@ -176,9 +220,11 @@ class AccountController {
         return ResponseHandler.validationError(res, 'Account ID is required');
       }
       
-      // Hash password if provided
-      if (accountData.password) {
+      // LÓGICA MODIFICADA (Ponto 1): Hash password only if provided
+      if (accountData.password && accountData.password.trim() !== '') {
         accountData.password = await bcrypt.hash(accountData.password, 10);
+      } else {
+        delete accountData.password; // Não atualiza a senha se vazia
       }
       
       // Passar ID junto com os dados para o repository
@@ -242,6 +288,11 @@ class AccountController {
    */
   async createEmail(account) {
     try {
+      // LÓGICA MODIFICADA (Ponto 1): Verifica se o email existe antes de criar
+      if (!account.email) {
+        console.log('ℹ️ Nenhum email fornecido, pulando criação de email.');
+        return null;
+      }
       const emailData = {
         account_id_email: account.id,
         email: account.email,
@@ -250,7 +301,11 @@ class AccountController {
         company_id_email: account.company_id || null
       };
       
-      return await this.emailRepository.createEmail(emailData);
+      const result = await this.emailRepository.createEmail(emailData);
+      if (result && result.error) {
+        return result; // propagate error object
+      }
+      return result;
     } catch (error) {
       console.error('Failed to create email:', error);
       throw error;

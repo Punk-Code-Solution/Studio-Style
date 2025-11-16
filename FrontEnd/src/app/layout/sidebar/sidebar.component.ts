@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter } from '@angular/core'; // Adicionado Output e EventEmitter
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService, UserRole } from '../../core/services/auth.service';
@@ -7,7 +7,7 @@ import { User } from '../../core/services/user.service';
 // Constante centralizada para labels de roles
 const ROLE_LABELS: Record<UserRole, string> = {
   'admin': 'Administrador',
-  'ninguem': 'Usuário',
+  'ninguem': 'Usuário', // 'ninguem' parece ser um tipo legado, mas mantido
   'provider': 'Colaborador',
   'client': 'Cliente' 
 
@@ -21,6 +21,9 @@ const ROLE_LABELS: Record<UserRole, string> = {
   styleUrls: ['./sidebar.component.scss']
 })
 export class SidebarComponent implements OnInit {
+  // MODIFICADO (Ponto 10): Adicionado EventEmitter
+  @Output() onToggle = new EventEmitter<void>();
+
   currentUser: User | null = null;
   userAvatar = 'assets/images/avatar.png';
 
@@ -59,5 +62,10 @@ export class SidebarComponent implements OnInit {
       fragment: 'ignored',
       matrixParams: 'ignored'
     });
+  }
+
+  // MODIFICADO (Ponto 10): Adicionado método
+  toggleSidebar(): void {
+    this.onToggle.emit();
   }
 }

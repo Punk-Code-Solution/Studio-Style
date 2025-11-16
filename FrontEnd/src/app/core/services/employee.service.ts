@@ -1,76 +1,108 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { environment } from '../../../environments/environment.prod';
-import { MOCK_EMPLOYEES } from '../mocks/employee.mock';
-import { delay } from 'rxjs/operators';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
+// MOCK_EMPLOYEES removido
 
-export interface Employee {
-  id: number;
-  name: string;
-  email: string;
-  role: 'medico' | 'enfermeiro' | 'recepcionista' | 'administrativo';
-  department: 'clinica' | 'pediatria' | 'cardiologia' | 'neurologia' | 'ortopedia' | 'administrativo';
-  phone: string;
-  address: string;
-  status: 'active' | 'inactive' | 'on_leave';
+// Interface para a resposta padrão da API
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+export interface TypeAccount {
+  id: string;
+  type: 'admin' | 'provider' | 'client' | 'ninguem';
+  edit: boolean;
+  creat: boolean;
+  viwer: boolean;
+  delet: boolean;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface Email {
+  id: string;
+  name: string;
+  email: string;
+  active: string;
+  account_id_email: string;
+  company_id_email?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Employee {
+    id: string;
+    name: string;
+    lastname: string;
+    password: string;
+    cpf: string;
+    start_date: string;
+    birthday?: string;
+    deleted?: string;
+    avatar?: string;
+    typeaccount_id: string;
+    company_id_account?: string;
+    type_hair_id?: string;
+    createdAt: string;
+    updatedAt: string;
+    TypeAccount: TypeAccount;
+    Company?: any;
+    Emails: Email[];
+    Hair?: any;
+    Schedules: any[];
+    Sales: any[];
+    Purchases: any[];
+    Purchase_Materials: any[];
+    Phones: any[];
+    Adress?: any;
+}
+
 
 @Injectable({
   providedIn: 'root'
 })
 export class EmployeeService {
-  private apiUrl = `${environment.apiUrl}/employees`;
-  private employees = [...MOCK_EMPLOYEES];
+  private apiUrl = `${environment.apiUrl}/account`;
+  // MOCK_EMPLOYEES removido
 
   constructor(private http: HttpClient) {}
 
   getEmployees(): Observable<Employee[]> {
-    // Simulate network delay
-    return of([...MOCK_EMPLOYEES]).pipe(delay(500));
+    // MODIFICADO: Chama a API real filtrando por roles
+    return this.http.get<ApiResponse<Employee[]>>(`${this.apiUrl}?role=provider,admin`).pipe(
+      map(response => response.data || [])
+    );
   }
 
-  getEmployeeById(id: number): Observable<Employee> {
-    const employee = MOCK_EMPLOYEES.find(emp => emp.id === id);
-    if (!employee) {
-      throw new Error('Employee not found');
-    }
-    return of({ ...employee }).pipe(delay(300));
+  getEmployeeById(id: number | string): Observable<Employee> {
+    // MODIFICADO: Chama a API real
+    return this.http.get<ApiResponse<Employee>>(`${this.apiUrl}/id?id=${id}`).pipe(
+      map(response => response.data)
+    );
   }
 
-  createEmployee(employee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>): Observable<Employee> {
-    const newEmployee: Employee = {
-      ...employee,
-      id: Math.max(...MOCK_EMPLOYEES.map(emp => emp.id)) + 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    MOCK_EMPLOYEES.push(newEmployee);
-    return of({ ...newEmployee }).pipe(delay(500));
+  createEmployee(employee: Partial<Employee>): Observable<Employee> {
+    // MODIFICADO: Chama a API real
+    return this.http.post<ApiResponse<Employee>>(this.apiUrl, employee).pipe(
+      map(response => response.data)
+    );
   }
 
-  updateEmployee(id: number, employee: Partial<Employee>): Observable<Employee> {
-    const index = MOCK_EMPLOYEES.findIndex(emp => emp.id === id);
-    if (index === -1) {
-      throw new Error('Employee not found');
-    }
-    const updatedEmployee = {
-      ...MOCK_EMPLOYEES[index],
-      ...employee,
-      updatedAt: new Date().toISOString()
-    };
-    MOCK_EMPLOYEES[index] = updatedEmployee;
-    return of({ ...updatedEmployee }).pipe(delay(500));
+  updateEmployee(id: number | string, employee: Partial<Employee>): Observable<Employee> {
+    // MODIFICADO: Chama a API real
+    return this.http.put<ApiResponse<Employee>>(`${this.apiUrl}/id`, { id, ...employee }).pipe(
+      map(response => response.data)
+    );
   }
 
-  deleteEmployee(id: number): Observable<void> {
-    const index = MOCK_EMPLOYEES.findIndex(emp => emp.id === id);
-    if (index === -1) {
-      throw new Error('Employee not found');
-    }
-    MOCK_EMPLOYEES.splice(index, 1);
-    return of(void 0).pipe(delay(500));
+  deleteEmployee(id: number | string): Observable<void> {
+    // MODIFICADO: Chama a API real
+    return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/id?id=${id}`).pipe(
+      map(response => response.data)
+    );
   }
-} 
+}

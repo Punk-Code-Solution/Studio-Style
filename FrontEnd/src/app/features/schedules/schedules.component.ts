@@ -75,7 +75,6 @@ import { User, UserService } from '../../core/services/user.service';
         </div>
       </div>
 
-      <!-- Loading indicator -->
       <div *ngIf="loading" class="loading-container">
         <div class="loading-spinner">
           <i class="fas fa-spinner fa-spin"></i>
@@ -83,7 +82,6 @@ import { User, UserService } from '../../core/services/user.service';
         </div>
       </div>
 
-      <!-- Error message -->
       <div *ngIf="error" class="error-message">
         <i class="fas fa-exclamation-triangle"></i>
         <span>{{ error }}</span>
@@ -104,20 +102,24 @@ import { User, UserService } from '../../core/services/user.service';
               </tr>
             </thead>
             <tbody>
+              <tr *ngIf="filteredSchedules.length === 0">
+                <td colspan="6" class="empty-state">
+                  <p>Nenhum agendamento encontrado</p>
+                </td>
+              </tr>
               <tr *ngFor="let schedule of filteredSchedules">
                 <td>
                   <div class="user-info">
                     <div class="doctor-details">
-                      <span>{{ schedule.client?.name || 'N/A' }}</span>
-                      <span>{{ schedule.client?.lastname || '' }}</span>
+                      <span>{{ schedule.provider?.name || 'N/A' }}</span>
+                      <span>{{ schedule.provider?.lastname || '' }}</span>
                     </div>
                   </div>
                 </td>
                 <td>
                   <div class="user-info">
                     <div class="doctor-details">
-                      <span>{{ schedule.provider?.name || 'N/A' }}</span>
-                      <span>{{ schedule.provider?.lastname || '' }}</span>
+                      <span>{{ schedule.name_client || 'N/A' }}</span>
                     </div>
                   </div>
                 </td>
@@ -167,7 +169,6 @@ import { User, UserService } from '../../core/services/user.service';
       </div>
     </div>
 
-    <!-- Modais -->
     <app-schedule-view-modal
       *ngIf="showViewModal"
       [schedule]="selectedSchedule"
@@ -294,7 +295,7 @@ export class SchedulesComponent implements OnInit {
 
     this.userService.getUsers().subscribe({
       next: (users) => {
-        this.providers = users.filter(user => user.TypeAccount.type === 'provider');
+        this.providers = users.filter(user => user.TypeAccount.type === 'provider' || user.TypeAccount.type === 'admin');
         this.clients = users.filter(user => user.TypeAccount.type === 'client');
       },
       error: (error) => {

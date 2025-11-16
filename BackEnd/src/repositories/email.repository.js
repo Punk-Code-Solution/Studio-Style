@@ -42,6 +42,13 @@ module.exports = class emailRepository{
   async createEmail( emailUser ){
 
     const { account_id_email, name, email, active, company_id_email } = emailUser
+    // Prevent duplicate email entries
+    if (email) {
+      const existing = await Email.findOne({ where: { email } });
+      if (existing) {
+        return { error: 'email' }; // Duplicate email
+      }
+    }
     
     const result = Email.create({
 

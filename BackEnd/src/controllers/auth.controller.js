@@ -50,7 +50,6 @@ class AuthController {
 
       // Check password
       const isValidPassword = bcrypt.compareSync(password, user.dataValues.password);
-      console.log(isValidPassword)
       
       if (!isValidPassword) {
         return ResponseHandler.unauthorized(res, 'Invalid credentials');
@@ -113,15 +112,22 @@ class AuthController {
 
       const user = await this.accountRepository.addAccount(userData);
 
+      if (user && user.error) {
+        return ResponseHandler.error(res, 409, `Duplicate field: ${user.error}`, { field: user.error });
+      }
+
       let emailData = {
-        account_id_email:user.id, // Assuming user.id is the account ID
+        account_id_email: user.id, // Assuming user.id is the account ID
         name: name, 
         email: email, 
         active: true, // Default to active
         company_id_email: null // Assuming no company association for now
       };
 
-      await this.accountRepository.createEmail(emailData)
+      const emailResult = await this.accountRepository.createEmail(emailData);
+      if (emailResult && emailResult.error) {
+        return ResponseHandler.error(res, 409, `Duplicate field: ${emailResult.error}`, { field: emailResult.error });
+      }
 
       if (!user) {
         return ResponseHandler.error(res, 400, 'Failed to create user');
