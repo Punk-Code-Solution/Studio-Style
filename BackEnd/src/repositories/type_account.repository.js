@@ -111,6 +111,19 @@ class typeAccountRepository{
       throw error;
     }
   }
+
+  async findClientType() {
+    try {
+      return await TypeAccount.findOne({
+        where: {
+          type: 'client'
+        }
+      });
+    } catch (error) {
+      console.error('Error in findClientType:', error);
+      throw error;
+    }
+  }
     
 }
 

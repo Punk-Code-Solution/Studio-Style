@@ -359,4 +359,54 @@ module.exports = class accountRepository{
 
   }
 
+  async findAccountByPhone(phoneNumber) {
+    try {
+      // Remove caracteres não numéricos para garantir a busca
+      const cleanPhone = phoneNumber.replace(/\D/g, '');
+      
+      const phoneRecord = await Phone.findOne({
+        where: { 
+          phone: {
+            [Op.like]: `%${cleanPhone}` // Busca flexível
+          } 
+        },
+        include: [{
+          model: Account,
+          include: [TypeAccount] // Inclui o tipo de conta
+        }]
+      });
+      
+      // Retorna o objeto Account se encontrado
+      return phoneRecord ? phoneRecord.Account : null;
+
+    } catch (error) {
+      console.error('Erro ao buscar conta por telefone:', error);
+      return null;
+    }
+  }
+
+  /**
+   * (NOVO) Cria um registro de telefone associado a uma conta.
+   */
+  async createPhone(phoneData) {
+    const { phone, ddd, type, account_id_phone } = phoneData;
+    
+    // Limpa o telefone para armazenamento
+    const cleanPhone = phone.replace(/\D/g, '');
+
+    try {
+      return await Phone.create({
+        id: uuidv4(),
+        phone: cleanPhone, // Armazena o número limpo
+        ddd: ddd || cleanPhone.substring(2, 4), // Tenta extrair DDD
+        type: type || 'whatsapp',
+        active: new Date(),
+        account_id_phone: account_id_phone
+      });
+    } catch (error) {
+       console.error('Erro ao criar registro de telefone:', error);
+       return null;
+    }
+  }
+
 }

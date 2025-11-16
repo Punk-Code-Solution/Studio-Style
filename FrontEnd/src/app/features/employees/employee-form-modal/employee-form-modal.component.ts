@@ -2,7 +2,16 @@ import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
 import { EmployeeService, Employee } from '../../../core/services/employee.service';
-import { Email } from '../../../core/services/user.service';
+
+interface EmployeeFormData {
+  name: string;
+  lastname: string;
+  email: string;
+  password: string;
+  phone: string;
+  role: 'enfermeiro' | 'recepcionista' | 'administrativo' | 'admin' | 'provider' | '';
+  address: string;
+}
 
 @Component({
   selector: 'app-employee-form-modal',
@@ -16,13 +25,13 @@ import { Email } from '../../../core/services/user.service';
             <i class="fas" [class.fa-edit]="isEditMode" [class.fa-plus]="!isEditMode"></i>
             {{ isEditMode ? 'Editar Funcionário' : 'Novo Funcionário' }}
           </h3>
-          <button class="close-btn" (click)="closeModal()">
+          <button class="close-btn" (click)="closeModal()" type="button">
             <i class="fas fa-times"></i>
           </button>
         </div>
 
         <div class="modal-body">
-          <form (ngSubmit)="onSubmit(employeeForm)" #employeeForm="ngForm">
+          <form (ngSubmit)="onSubmit(employeeForm)" #employeeForm="ngForm" novalidate>
             <div class="form-row">
               <div class="form-group">
                 <label for="name">
@@ -36,12 +45,12 @@ import { Email } from '../../../core/services/user.service';
                   name="name"
                   required
                   minlength="3"
-                  [class.error]="(employeeForm.submitted || (employeeForm.controls && employeeForm.controls['name'] && employeeForm.controls['name'].touched)) && (employeeForm.controls && employeeForm.controls['name'] ? employeeForm.controls['name'].invalid : !employeeData.name)"
                   placeholder="Digite o nome"
+                  #nameField="ngModel"
                 >
-                <div class="error-message" *ngIf="(employeeForm.controls && employeeForm.controls['name'] && employeeForm.controls['name'].invalid) && (employeeForm.submitted || employeeForm.controls['name'].touched)">
-                  <span *ngIf="employeeForm.controls['name']?.errors?.['required']">Nome é obrigatório</span>
-                  <span *ngIf="employeeForm.controls['name']?.errors?.['minlength']">Nome deve ter pelo menos 3 caracteres</span>
+                <div class="error-message" *ngIf="nameField.invalid && nameField.touched">
+                  <span *ngIf="nameField.errors?.['required']">Nome é obrigatório</span>
+                  <span *ngIf="nameField.errors?.['minlength']">Nome deve ter pelo menos 3 caracteres</span>
                 </div>
               </div>
 
@@ -57,12 +66,12 @@ import { Email } from '../../../core/services/user.service';
                   name="lastname"
                   required
                   minlength="2"
-                  [class.error]="(employeeForm.submitted || (employeeForm.controls && employeeForm.controls['lastname'] && employeeForm.controls['lastname'].touched)) && (employeeForm.controls && employeeForm.controls['lastname'] ? employeeForm.controls['lastname'].invalid : !employeeData.lastname)"
                   placeholder="Digite o sobrenome"
+                  #lastnameField="ngModel"
                 >
-                <div class="error-message" *ngIf="(employeeForm.controls && employeeForm.controls['lastname'] && employeeForm.controls['lastname'].invalid) && (employeeForm.submitted || employeeForm.controls['lastname'].touched)">
-                  <span *ngIf="employeeForm.controls['lastname']?.errors?.['required']">Sobrenome é obrigatório</span>
-                  <span *ngIf="employeeForm.controls['lastname']?.errors?.['minlength']">Sobrenome deve ter pelo menos 2 caracteres</span>
+                <div class="error-message" *ngIf="lastnameField.invalid && lastnameField.touched">
+                  <span *ngIf="lastnameField.errors?.['required']">Sobrenome é obrigatório</span>
+                  <span *ngIf="lastnameField.errors?.['minlength']">Sobrenome deve ter pelo menos 2 caracteres</span>
                 </div>
               </div>
             </div>
@@ -76,16 +85,16 @@ import { Email } from '../../../core/services/user.service';
                 <input
                   type="email"
                   id="email"
-                  [(ngModel)]="employeeData.Emails"
+                  [(ngModel)]="employeeData.email"
                   name="email"
                   required
                   email
-                  [class.error]="(employeeForm.submitted || (employeeForm.controls && employeeForm.controls['email'] && employeeForm.controls['email'].touched)) && (employeeForm.controls && employeeForm.controls['email'] ? employeeForm.controls['email'].invalid : !employeeData.Emails)"
                   placeholder="Digite o e-mail"
+                  #emailField="ngModel"
                 >
-                <div class="error-message" *ngIf="(employeeForm.controls && employeeForm.controls['email'] && employeeForm.controls['email'].invalid) && (employeeForm.submitted || employeeForm.controls['email'].touched)">
-                  <span *ngIf="employeeForm.controls['email']?.errors?.['required']">E-mail é obrigatório</span>
-                  <span *ngIf="employeeForm.controls['email']?.errors?.['email']">E-mail inválido</span>
+                <div class="error-message" *ngIf="emailField.invalid && emailField.touched">
+                  <span *ngIf="emailField.errors?.['required']">E-mail é obrigatório</span>
+                  <span *ngIf="emailField.errors?.['email']">E-mail inválido</span>
                 </div>
               </div>
 
@@ -97,13 +106,13 @@ import { Email } from '../../../core/services/user.service';
                 <input
                   type="tel"
                   id="phone"
-                  [(ngModel)]="employeeData.Phones"
+                  [(ngModel)]="employeeData.phone"
                   name="phone"
                   required
-                  [class.error]="(employeeForm.submitted || (employeeForm.controls && employeeForm.controls['phone'] && employeeForm.controls['phone'].touched)) && (employeeForm.controls && employeeForm.controls['phone'] ? employeeForm.controls['Phones'].invalid : !employeeData.Phones)"
                   placeholder="(00) 00000-0000"
+                  #phoneField="ngModel"
                 >
-                <div class="error-message" *ngIf="(employeeForm.controls && employeeForm.controls['phone'] && employeeForm.controls['phone'].invalid) && (employeeForm.submitted || employeeForm.controls['phone'].touched)">
+                <div class="error-message" *ngIf="phoneField.invalid && phoneField.touched">
                   Telefone é obrigatório
                 </div>
               </div>
@@ -117,20 +126,43 @@ import { Email } from '../../../core/services/user.service';
                 </label>
                 <select
                   id="role"
-                  [(ngModel)]="employeeData.TypeAccount"
+                  [(ngModel)]="employeeData.role"
                   name="role"
                   required
-                  [class.error]="(employeeForm.submitted || (employeeForm.controls && employeeForm.controls['role'] && employeeForm.controls['role'].touched)) && (employeeForm.controls && employeeForm.controls['role'] ? employeeForm.controls['role'].invalid : !employeeData.TypeAccount)"
+                  #roleField="ngModel"
                 >
                   <option value="">Selecione um cargo</option>
                   <option value="provider">Prestador de Serviço</option>
                   <option value="admin">Administrador</option>
+                  <option value="enfermeiro">Enfermeiro</option>
+                  <option value="recepcionista">Recepcionista</option>
+                  <option value="administrativo">Administrativo</option>
                 </select>
-                <div class="error-message" *ngIf="(employeeForm.controls && employeeForm.controls['role'] && employeeForm.controls['role'].invalid) && (employeeForm.submitted || employeeForm.controls['role'].touched)">
+                <div class="error-message" *ngIf="roleField.invalid && roleField.touched">
                   Cargo é obrigatório
                 </div>
               </div>
 
+              <div class="form-group">
+                <label for="password">
+                  <i class="fas fa-lock"></i>
+                  Senha {{ isEditMode ? '(opcional)' : '*' }}
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  [(ngModel)]="employeeData.password"
+                  name="password"
+                  [required]="!isEditMode"
+                  [minlength]="!isEditMode ? 6 : 0"
+                  placeholder="Digite a senha"
+                  #passwordField="ngModel"
+                >
+                <div class="error-message" *ngIf="passwordField.invalid && passwordField.touched">
+                  <span *ngIf="passwordField.errors?.['required']">Senha é obrigatória</span>
+                  <span *ngIf="passwordField.errors?.['minlength']">Senha deve ter pelo menos 6 caracteres</span>
+                </div>
+              </div>
             </div>
 
             <div class="form-group">
@@ -141,7 +173,7 @@ import { Email } from '../../../core/services/user.service';
               <input
                 type="text"
                 id="address"
-                [(ngModel)]="employeeData.Adress"
+                [(ngModel)]="employeeData.address"
                 name="address"
                 placeholder="Digite o endereço completo"
               >
@@ -154,7 +186,7 @@ import { Email } from '../../../core/services/user.service';
             <i class="fas fa-times"></i>
             Cancelar
           </button>
-          <button type="submit" class="btn-primary" [disabled]="loading || (employeeForm && employeeForm.invalid)" (click)="onSubmit(employeeForm)">
+          <button type="submit" class="btn-primary" [disabled]="loading || employeeForm.invalid" (click)="employeeForm.onSubmit(null)">
             <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
             <i class="fas" [class.fa-save]="isEditMode" [class.fa-plus]="!isEditMode" *ngIf="!loading"></i>
             {{ loading ? 'Salvando...' : (isEditMode ? 'Salvar' : 'Criar') }}
@@ -212,6 +244,8 @@ import { Email } from '../../../core/services/user.service';
         @include button(transparent, $text-secondary);
         padding: $spacing-xs;
         font-size: $font-size-lg;
+        border: none;
+        cursor: pointer;
 
         &:hover {
           color: $error-color;
@@ -295,13 +329,16 @@ import { Email } from '../../../core/services/user.service';
       background-color: $background-light;
 
       button {
-        @include button;
         @include flex(row, center, center);
         gap: $spacing-sm;
         padding: $spacing-sm $spacing-md;
         min-width: 120px;
         border: 1px solid $border-color;
         box-shadow: $shadow-sm;
+        cursor: pointer;
+        @include typography($font-size-base, $font-weight-medium);
+        border-radius: $border-radius-sm;
+        transition: all 0.2s ease;
 
         &:disabled {
           opacity: 0.6;
@@ -312,6 +349,7 @@ import { Email } from '../../../core/services/user.service';
       .btn-secondary {
         background-color: $text-secondary;
         color: $text-light;
+        border: 1px solid $text-secondary;
 
         &:hover:not(:disabled) {
           background-color: color.adjust($text-secondary, $lightness: -10%);
@@ -322,6 +360,7 @@ import { Email } from '../../../core/services/user.service';
       .btn-primary {
         background-color: $primary-color;
         color: $text-light;
+        border: 1px solid $primary-color;
 
         &:hover:not(:disabled) {
           background-color: $primary-dark;
@@ -330,7 +369,7 @@ import { Email } from '../../../core/services/user.service';
       }
     }
 
-    @include responsive(md) {
+    @media (max-width: 768px) {
       .modal-container {
         width: 95%;
         margin: $spacing-sm;
@@ -357,34 +396,31 @@ export class EmployeeFormModalComponent implements OnInit {
   @Output() save = new EventEmitter<Partial<Employee>>();
 
   isEditMode = false;
-  employeeData: Partial<Employee> = {
+  employeeData: EmployeeFormData = {
     name: '',
     lastname: '',
-    Emails: [],
-    TypeAccount: [] as any,
-    Phones: [],
-    Adress: ''
+    email: '',
+    password: '',
+    phone: '',
+    role: '',
+    address: ''
   };
 
   constructor() {}
 
   ngOnInit(): void {
-    // Se estiver editando, preencher os dados
     if (this.employee) {
       this.isEditMode = true;
       this.employeeData = {
         name: this.employee.name || '',
         lastname: this.employee.lastname || '',
-        Emails: this.employee.Emails || [],
-        TypeAccount: this.employee.TypeAccount,
-        Phones: this.employee.Phones || [],
-        Adress: this.employee.Adress || ''
+        email: this.employee.email || '',
+        password: '',
+        phone: this.employee.phone || '',
+        role: this.employee.role || '',
+        address: this.employee.address || ''
       };
     }
-  }
-
-  getEmployeeEmail(employee: Employee): Email[] {
-    return employee.Emails || [];
   }
 
   closeModal(): void {
@@ -392,30 +428,23 @@ export class EmployeeFormModalComponent implements OnInit {
   }
 
   onSubmit(form?: NgForm): void {
-    if (form && form.invalid) {
+    if (!form || form.invalid) {
       return;
     }
 
-    // Build a payload that matches the backend Employee interface.
-    // The component uses `phone` and `address` locally, but the Employee type
-    // appears to have `Phones` (array) and `Adress` (typo), so map accordingly.
-    const payload: Partial<Employee> = {
+    const dataToSend: Partial<Employee> = {
       name: this.employeeData.name,
       lastname: this.employeeData.lastname,
-      Emails: this.employeeData.Emails ? this.employeeData.Emails : [],
-      TypeAccount: this.employeeData.TypeAccount
+      email: this.employeeData.email,
+      phone: this.employeeData.phone || undefined,
+      role: this.employeeData.role as any,
+      address: this.employeeData.address || undefined
     };
 
-    // Map the single phone string to the Employee.Phones array if provided
-    if (this.employeeData.Phones && this.employeeData.Phones?.length === 0) {
-      (payload as any).Phones = [this.employeeData.Phones];
+    if (this.employeeData.password && this.employeeData.password.trim()) {
+      (dataToSend as any).password = this.employeeData.password;
     }
 
-    // Map the address to the Employee.Adress property if provided (keeping existing backend naming)
-    if (this.employeeData.Adress && this.employeeData.Adress.trim() !== '') {
-      (payload as any).Adress = this.employeeData.Adress.trim();
-    }
-
-    this.save.emit(payload);
+    this.save.emit(dataToSend);
   }
 }

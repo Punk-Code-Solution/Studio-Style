@@ -145,16 +145,19 @@ interface Filters {
                     </div>
                   </div>
                 </td>
-                <td>{{ employee.Emails || 'N/A' }}</td>
-                <td>{{ getRoleLabel(employee.TypeAccount.type) }}</td>
+                <td>{{ employee.email || 'N/A' }}</td>
+                <td>{{ getRoleLabel(employee.role) }}</td>
                 <td>
                   <span class="status-badge" [class]="getStatusClass(employee)">
-                    {{ getStatusLabel(employee.deleted) }}
+                    {{ getStatusLabel(employee.status) }}
                   </span>
                 </td>
                 <td>
                   <div class="actions">
-                    <button class="action-btn" [routerLink]="['/employees/', employee.id]" title="Editar funcionário">
+                    <button class="action-btn" (click)="openViewModal(employee)" title="Visualizar funcionário">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="action-btn" (click)="openEditModal(employee)" title="Editar funcionário">
                       <i class="fas fa-edit"></i>
                     </button>
                     <button class="action-btn" (click)="confirmDelete(employee)" title="Excluir funcionário">
@@ -748,13 +751,23 @@ export class EmployeesComponent implements OnInit {
     this.isModalOpen = true;
   }
 
+  openViewModal(employee: Employee): void {
+    this.selectedEmployee = employee;
+    this.isModalOpen = true;
+  }
+
+  openEditModal(employee: Employee): void {
+    this.selectedEmployee = employee;
+    this.isModalOpen = true;
+  }
+
   closeModal(): void {
     this.isModalOpen = false;
     this.selectedEmployee = null;
   }
 
   onSaveEmployee(employeeData: Partial<Employee>): void {
-    if (!employeeData.name || !employeeData.lastname || !employeeData.Emails?.find(e => e.email)|| !employeeData.TypeAccount?.type) {
+    if (!employeeData.name || !employeeData.lastname || !employeeData.Emails || !employeeData.TypeAccount?.type) {
       this.notificationService.error('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
