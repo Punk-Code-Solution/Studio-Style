@@ -4,6 +4,7 @@ import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { User, UserService } from '../../core/services/user.service';
 import { SchedulesService, Schedule } from '../../core/services/schedules.service';
+import { NotificationService } from '../../core/services/notification.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -33,7 +34,8 @@ export class DashboardComponent implements OnInit {
     private authService: AuthService,
     private router: Router,
     private schedulesService: SchedulesService,
-    private userService: UserService
+    private userService: UserService,
+    private notificationService: NotificationService
   ) {
     this.currentUser = this.authService.currentUser;
   }
@@ -55,6 +57,7 @@ export class DashboardComponent implements OnInit {
     } catch (err) {
       this.error = 'Erro ao carregar dados do dashboard';
       console.error('Erro ao carregar dashboard:', err);
+      this.notificationService.error('Erro ao carregar dados do dashboard. Por favor, tente novamente.');
     } finally {
       this.isLoading = false;
     }
@@ -85,6 +88,7 @@ export class DashboardComponent implements OnInit {
         error: (error) => {
           console.error('Erro ao carregar agendamentos:', error);
           this.error = 'Erro ao carregar agendamentos';
+          this.notificationService.error('Erro ao carregar agendamentos. Por favor, tente novamente.');
         }
       });
     } catch (error) {
@@ -109,6 +113,7 @@ export class DashboardComponent implements OnInit {
         },
         error: (error) => {
           console.error('Erro ao carregar usuários:', error);
+          this.notificationService.error('Erro ao carregar dados de clientes.');
         }
       });
     } catch (error) {
@@ -151,11 +156,14 @@ export class DashboardComponent implements OnInit {
           // Atualizar localmente
           appointment.active = active;
           appointment.finished = finished;
+          this.notificationService.success('Status do agendamento atualizado com sucesso!');
         },
         error: (error) => {
+          const errorMsg = error?.error?.message || error?.message || 'Erro desconhecido';
           console.error('Erro ao atualizar status:', error);
           // Reverter para o status anterior
           select.value = this.getStatusValue(appointment);
+          this.notificationService.error(`Erro ao atualizar status: ${errorMsg}`);
         }
       });
     } catch (err) {

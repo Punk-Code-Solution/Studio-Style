@@ -63,7 +63,37 @@ import { PatientService, CreatePatientRequest, TypeAccount, HairType } from '../
               </div>
             </div>
 
-            <div class="form-row">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="phone">
+                    <i class="fas fa-phone"></i>
+                    Telefone (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    id="phone"
+                    [(ngModel)]="patientData.phone"
+                    name="phone"
+                    placeholder="(99) 99999-9999"
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label for="birthday">
+                    <i class="fas fa-calendar"></i>
+                    Data de Nascimento (Opcional)
+                  </label>
+                  <input
+                    type="date"
+                    id="birthday"
+                    [(ngModel)]="patientData.birthday"
+                    name="birthday"
+                    [max]="maxDate"
+                  >
+                </div>
+              </div>
+
+              <div class="form-row">
               <div class="form-group">
                 <label for="email">
                   <i class="fas fa-envelope"></i>
@@ -358,6 +388,7 @@ export class PatientFormModalComponent implements OnInit {
   patientData: CreatePatientRequest = {
     name: '',
     lastname: '',
+    phone: '',
     email: '',
     password: '',
     cpf: '',
@@ -390,6 +421,7 @@ export class PatientFormModalComponent implements OnInit {
       this.patientData = {
         name: this.patient.name || '',
         lastname: this.patient.lastname || '',
+        phone: this.patient.phone || '',
         email: this.getPatientEmail(this.patient) || '', // MODIFICADO: Puxa o email do array
         password: '', // Não preencher senha ao editar
         cpf: this.patient.cpf || '',
@@ -472,6 +504,9 @@ export class PatientFormModalComponent implements OnInit {
     }
     if (!dataToSend.email || dataToSend.email.trim() === '') {
       dataToSend.email = undefined;
+    }
+    if (!dataToSend.phone || dataToSend.phone.trim() === '') {
+      dataToSend.phone = undefined;
     }
     if (!dataToSend.cpf || dataToSend.cpf.trim() === '') {
       dataToSend.cpf = undefined;

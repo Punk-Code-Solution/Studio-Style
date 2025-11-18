@@ -42,6 +42,7 @@ export interface CreateScheduleRequest {
   finished: boolean;
   provider_id_schedules: string;
   client_id_schedules: string;
+  phone?: string;
   services: string[];
 }
 

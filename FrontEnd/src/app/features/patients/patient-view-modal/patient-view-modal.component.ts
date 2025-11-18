@@ -42,6 +42,14 @@ import { Patient } from '../../../core/models/patient.model';
 
                 <div class="detail-item">
                   <label>
+                    <i class="fas fa-phone"></i>
+                    Telefone
+                  </label>
+                  <span>{{ getPhone(patient) || 'N/A' }}</span>
+                </div>
+
+                <div class="detail-item">
+                  <label>
                     <i class="fas fa-id-card"></i>
                     CPF
                   </label>
@@ -335,6 +343,37 @@ export class PatientViewModalComponent {
   getStatusText(patient: Patient): string {
     if (patient.deleted) return 'Excluído';
     return 'Ativo';
+  }
+
+  getPhone(patient: Patient): string | null {
+    // Se já tem phone mapeado, usar
+    if (patient.phone) {
+      return patient.phone;
+    }
+    
+    // Caso contrário, tentar extrair do array Phones
+    if (patient.Phones && patient.Phones.length > 0) {
+      const phoneObj = patient.Phones[0];
+      
+      // Se phoneObj já é uma string, usar diretamente
+      if (typeof phoneObj === 'string') {
+        return phoneObj;
+      }
+      
+      // Se phoneObj é um objeto
+      if (phoneObj && typeof phoneObj === 'object') {
+        const phoneNumber = phoneObj.phone;
+        const ddd = phoneObj.ddd;
+        
+        if (ddd && phoneNumber) {
+          return `(${ddd}) ${phoneNumber}`;
+        } else if (phoneNumber) {
+          return String(phoneNumber);
+        }
+      }
+    }
+    
+    return null;
   }
 }
 

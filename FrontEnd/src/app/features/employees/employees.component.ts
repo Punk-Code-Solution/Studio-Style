@@ -132,6 +132,7 @@ interface Filters {
               <tr>
                 <th>Nome</th>
                 <th>E-mail</th>
+                <th>Telefone</th>
                 <th>Cargo</th>
                 <th>Status</th>
                 <th>Ações</th>
@@ -148,6 +149,7 @@ interface Filters {
                   </div>
                 </td>
                 <td>{{ employee.email || 'N/A' }}</td>
+                <td>{{ getEmployeePhone(employee) || 'N/A' }}</td>
                 <td>{{ getRoleLabel(employee.TypeAccount.type) }}</td>
                 <td>
                   <span class="status-badge" [class]="getStatusClass(employee)">
@@ -169,7 +171,7 @@ interface Filters {
                 </td>
               </tr>
               <tr *ngIf="employees.length === 0">
-                <td colspan="5" class="empty-state">
+                <td colspan="6" class="empty-state">
                   <p>Nenhum funcionário encontrado</p>
                 </td>
               </tr>
@@ -750,6 +752,37 @@ export class EmployeesComponent implements OnInit {
     else{ return "inactive";}
   }
 
+  getEmployeePhone(employee: Employee): string | null {
+    // Se já tem phone mapeado, usar
+    if (employee.phone) {
+      return employee.phone;
+    }
+    
+    // Caso contrário, tentar extrair do array Phones
+    if (employee.Phones && employee.Phones.length > 0) {
+      const phoneObj = employee.Phones[0];
+      
+      // Se phoneObj já é uma string, usar diretamente
+      if (typeof phoneObj === 'string') {
+        return phoneObj;
+      }
+      
+      // Se phoneObj é um objeto (Phones é any[], então usamos type assertion)
+      if (phoneObj && typeof phoneObj === 'object') {
+        const phoneNumber = (phoneObj as any).phone;
+        const ddd = (phoneObj as any).ddd;
+        
+        if (ddd && phoneNumber) {
+          return `(${ddd}) ${phoneNumber}`;
+        } else if (phoneNumber) {
+          return String(phoneNumber);
+        }
+      }
+    }
+    
+    return null;
+  }
+
   confirmDelete(employee: Employee) {
     this.selectedEmployee = employee;
     this.isDeleteModalOpen = true;
@@ -827,25 +860,69 @@ export class EmployeesComponent implements OnInit {
       address: employeeData.address
     };
 
-    this.employeeService.createEmployee(request).subscribe({
-      next: () => {
-        this.notificationService.success('Funcionário criado com sucesso!');
-        this.closeModal();
-        this.loadEmployees();
-        this.isSubmitting = false;
-      },
-      error: (error: any) => {
-        let errorMsg = 'Erro ao criar funcionário. Por favor, tente novamente.';
-        
-        if (error.status === 409) {
-          errorMsg = 'Este funcionário já existe. Por favor, use um e-mail diferente.';
-        } else if (error.error?.message) {
-          errorMsg = error.error.message;
+    // Incluir CPF se estiver disponível (para atualização)
+    if (this.selectedEmployee?.cpf) {
+      request.cpf = this.selectedEmployee.cpf;
+    }
+
+    // Verificar se está editando (selectedEmployee existe) ou criando novo
+    const employeeId = this.selectedEmployee?.id;
+
+    if (employeeId) {
+      // Atualizar funcionário existente
+      this.employeeService.updateEmployee(employeeId, request).subscribe({
+        next: () => {
+          this.notificationService.success('Funcionário atualizado com sucesso!');
+          this.closeModal();
+          this.loadEmployees();
+          this.isSubmitting = false;
+        },
+        error: (error: any) => {
+          let errorMsg = 'Erro ao atualizar funcionário. Por favor, tente novamente.';
+          
+          if (error.status === 400 || error.status === 422) {
+            // Erro de validação
+            if (error.error?.message) {
+              errorMsg = error.error.message;
+            } else if (error.error?.errors && Array.isArray(error.error.errors)) {
+              const validationErrors = error.error.errors.map((e: any) => e.message || e.msg).join(', ');
+              errorMsg = `Erro de validação: ${validationErrors}`;
+            } else {
+              errorMsg = 'Erro de validação. Verifique os dados informados.';
+            }
+          } else if (error.status === 409) {
+            errorMsg = error.error?.message || 'Este funcionário já existe. Por favor, use um e-mail diferente.';
+          } else if (error.error?.message) {
+            errorMsg = error.error.message;
+          }
+          
+          console.error('Erro ao atualizar funcionário:', error);
+          this.notificationService.error(errorMsg);
+          this.isSubmitting = false;
         }
-        
-        this.notificationService.error(errorMsg);
-        this.isSubmitting = false;
-      }
-    });
+      });
+    } else {
+      // Criar novo funcionário
+      this.employeeService.createEmployee(request).subscribe({
+        next: () => {
+          this.notificationService.success('Funcionário criado com sucesso!');
+          this.closeModal();
+          this.loadEmployees();
+          this.isSubmitting = false;
+        },
+        error: (error: any) => {
+          let errorMsg = 'Erro ao criar funcionário. Por favor, tente novamente.';
+          
+          if (error.status === 409) {
+            errorMsg = error.error?.message || 'Este funcionário já existe. Por favor, use um e-mail diferente.';
+          } else if (error.error?.message) {
+            errorMsg = error.error.message;
+          }
+          
+          this.notificationService.error(errorMsg);
+          this.isSubmitting = false;
+        }
+      });
+    }
   }
 }

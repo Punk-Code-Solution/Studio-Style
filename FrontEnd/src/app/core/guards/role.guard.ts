@@ -50,8 +50,6 @@ export class RoleGuard {
         return false;
       }
     }
-
-    console.log('RoleGuard: Acesso permitido à rota:', fullPath);
     return true;
   }
 

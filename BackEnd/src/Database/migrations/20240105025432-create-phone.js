@@ -10,7 +10,7 @@ module.exports = {
         defaultValue: Sequelize.UUIDV4
       },
       phone: {
-        type: Sequelize.INTEGER
+        type: Sequelize.STRING
       },
       ddd: {
         type: Sequelize.INTEGER

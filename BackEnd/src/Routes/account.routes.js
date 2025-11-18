@@ -15,6 +15,14 @@ const accountValidation = [
   handleValidationErrors
 ];
 
+// Validation rules for account update (more flexible)
+const accountUpdateValidation = [
+  body('name').optional().notEmpty().withMessage('Name cannot be empty'),
+  body('email').optional().isEmail().withMessage('Please provide a valid email'),
+  body('cpf').optional().notEmpty().withMessage('CPF cannot be empty'),
+  handleValidationErrors
+];
+
 const hairValidation = [
   body('name').notEmpty().withMessage('Hair type name is required'),
   handleValidationErrors
@@ -141,7 +149,7 @@ router.get('/id', authenticateToken, accountController.getAccountById.bind(accou
  *       401:
  *         description: Unauthorized
  */
-router.put('/id', accountValidation, accountController.updateAccount.bind(accountController));
+router.put('/id', accountUpdateValidation, accountController.updateAccount.bind(accountController));
 
 /**
  * @swagger

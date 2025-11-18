@@ -4,6 +4,7 @@ import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Patient } from '../../core/models/patient.model';
 import { PatientService, CreatePatientRequest } from '../../core/services/patient.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { PatientViewModalComponent } from './patient-view-modal/patient-view-modal.component';
 import { PatientFormModalComponent } from './patient-form-modal/patient-form-modal.component';
 import { PatientDeleteModalComponent } from './patient-delete-modal/patient-delete-modal.component';
@@ -99,6 +100,7 @@ import { PatientDeleteModalComponent } from './patient-delete-modal/patient-dele
               <tr>
                 <th>Nome</th>
                 <th>E-mail</th>
+                <th>Telefone</th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
@@ -114,6 +116,7 @@ import { PatientDeleteModalComponent } from './patient-delete-modal/patient-dele
                   </div>
                 </td>
                 <td>{{ getPatientEmail(patient) || 'N/A' }}</td>
+                <td>{{ getPatientPhone(patient) || 'N/A' }}</td>
                 <td>
                   <span class="status-badge" [class]="getStatusClass(patient)">
                     {{ getStatusText(patient) }}
@@ -134,7 +137,7 @@ import { PatientDeleteModalComponent } from './patient-delete-modal/patient-dele
                 </td>
               </tr>
               <tr *ngIf="filteredPatients.length === 0">
-                <td colspan="4" class="empty-state">
+                <td colspan="5" class="empty-state">
                   <p>Nenhum cliente encontrado</p>
                 </td>
               </tr>
@@ -582,6 +585,7 @@ export class PatientsComponent implements OnInit {
 
   constructor(
     private patientService: PatientService,
+    private notificationService: NotificationService,
     private route: ActivatedRoute,
     private router: Router
   ) {}
@@ -640,6 +644,7 @@ export class PatientsComponent implements OnInit {
         this.patients = [];
         this.filterPatients();
         this.loading = false;
+        this.notificationService.error('Erro ao carregar clientes. Por favor, tente novamente.');
       },
     });
   }
@@ -759,24 +764,30 @@ export class PatientsComponent implements OnInit {
         .updatePatient(this.editingPatient.id, patientData)
         .subscribe({
           next: (response) => {
+            this.notificationService.success('Cliente atualizado com sucesso!');
             this.loadPatients();
             this.closeFormModal();
           },
           error: (error) => {
-            this.error = 'Erro ao atualizar paciente: ' + (error?.error?.message || error?.message || 'Erro desconhecido');
+            const errorMsg = error?.error?.message || error?.message || 'Erro desconhecido';
+            this.error = 'Erro ao atualizar paciente: ' + errorMsg;
             this.formLoading = false;
+            this.notificationService.error(`Erro ao atualizar cliente: ${errorMsg}`);
           },
         });
     } else {
       this.patientService.createPatient(patientData).subscribe({
         next: (response) => {
+          this.notificationService.success('Cliente criado com sucesso!');
           this.error = '';
           this.loadPatients();
           this.closeFormModal();
         },
         error: (error) => {
-          this.error = 'Erro ao criar Cliente: ' + (error?.error?.message || error?.message || 'Erro desconhecido');
+          const errorMsg = error?.error?.message || error?.message || 'Erro desconhecido';
+          this.error = 'Erro ao criar Cliente: ' + errorMsg;
           this.formLoading = false;
+          this.notificationService.error(`Erro ao criar cliente: ${errorMsg}`);
         },
       });
     }
@@ -793,13 +804,16 @@ export class PatientsComponent implements OnInit {
 
     this.patientService.deletePatient(patient.id).subscribe({
       next: () => {
+        this.notificationService.success('Cliente excluído com sucesso!');
         this.loadPatients();
         this.closeDeleteModal();
       },
       error: (error) => {
+        const errorMsg = error?.error?.message || error?.message || 'Erro desconhecido';
         this.error = 'Erro ao excluir cliente';
         console.error('Erro ao excluir cliente:', error);
         this.deleteLoading = false;
+        this.notificationService.error(`Erro ao excluir cliente: ${errorMsg}`);
       },
     });
   }
@@ -812,6 +826,37 @@ export class PatientsComponent implements OnInit {
   getStatusText(patient: Patient): string {
     if (patient.deleted) return 'Excluído';
     return 'Ativo';
+  }
+
+  getPatientPhone(patient: Patient): string | null {
+    // Se já tem phone mapeado, usar
+    if (patient.phone) {
+      return patient.phone;
+    }
+    
+    // Caso contrário, tentar extrair do array Phones
+    if (patient.Phones && patient.Phones.length > 0) {
+      const phoneObj = patient.Phones[0];
+      
+      // Se phoneObj já é uma string, usar diretamente
+      if (typeof phoneObj === 'string') {
+        return phoneObj;
+      }
+      
+      // Se phoneObj é um objeto
+      if (phoneObj && typeof phoneObj === 'object') {
+        const phoneNumber = phoneObj.phone;
+        const ddd = phoneObj.ddd;
+        
+        if (ddd && phoneNumber) {
+          return `(${ddd}) ${phoneNumber}`;
+        } else if (phoneNumber) {
+          return String(phoneNumber);
+        }
+      }
+    }
+    
+    return null;
   }
 
   getPatientEmail(patient: Patient): string {
