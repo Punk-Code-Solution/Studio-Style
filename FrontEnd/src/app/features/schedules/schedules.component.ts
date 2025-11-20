@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { SchedulesService, Schedule, Service, CreateScheduleRequest } from '../../core/services/schedules.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { ScheduleViewModalComponent } from './schedule-view-modal/schedule-view-modal.component';
 import { ScheduleFormModalComponent } from './schedule-form-modal/schedule-form-modal.component';
 import { ScheduleDeleteModalComponent } from './schedule-delete-modal/schedule-delete-modal.component';
@@ -237,6 +238,7 @@ export class SchedulesComponent implements OnInit {
 
   constructor(
     private schedulesService: SchedulesService,
+    private notificationService: NotificationService,
     private route: ActivatedRoute,
     private router: Router,
     private userService: UserService
@@ -321,6 +323,7 @@ export class SchedulesComponent implements OnInit {
         this.schedules = [];
         this.filterSchedules();
         this.loading = false;
+        this.notificationService.error('Erro ao carregar agendamentos. Por favor, tente novamente.');
       }
     });
   }
@@ -465,24 +468,30 @@ export class SchedulesComponent implements OnInit {
       // Update existing schedule
       this.schedulesService.updateSchedule(this.editingSchedule.id, scheduleData).subscribe({
         next: () => {
+          this.notificationService.success('Agendamento atualizado com sucesso!');
           this.loadSchedules();
           this.closeFormModal();
         },
         error: (error) => {
+          const errorMsg = error?.error?.message || error?.message || 'Erro desconhecido';
           this.error = 'Erro ao atualizar agendamento';
           this.formLoading = false;
+          this.notificationService.error(`Erro ao atualizar agendamento: ${errorMsg}`);
         }
       });
     } else {
       // Create new schedule
       this.schedulesService.createSchedule(scheduleData).subscribe({
         next: () => {
+          this.notificationService.success('Agendamento criado com sucesso!');
           this.loadSchedules();
           this.closeFormModal();
         },
         error: (error) => {
+          const errorMsg = error?.error?.message || error?.message || 'Erro desconhecido';
           this.error = 'Erro ao criar agendamento';
           this.formLoading = false;
+          this.notificationService.error(`Erro ao criar agendamento: ${errorMsg}`);
         }
       });
     }
@@ -499,13 +508,16 @@ export class SchedulesComponent implements OnInit {
 
     this.schedulesService.deleteSchedule(schedule.id).subscribe({
       next: () => {
+        this.notificationService.success('Agendamento excluído com sucesso!');
         this.loadSchedules();
         this.closeDeleteModal();
       },
       error: (error) => {
+        const errorMsg = error?.error?.message || error?.message || 'Erro desconhecido';
         this.error = 'Erro ao excluir agendamento';
         console.error('Erro ao excluir agendamento:', error);
         this.deleteLoading = false;
+        this.notificationService.error(`Erro ao excluir agendamento: ${errorMsg}`);
       }
     });
   }

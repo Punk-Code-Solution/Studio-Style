@@ -2,6 +2,7 @@ export interface Patient {
   id: string;
   name: string;
   lastname: string;
+  phone?: string;
   email?: string;
   password?: string;
   cpf: string;
@@ -29,5 +30,14 @@ export interface Patient {
     active?: string;
     account_id_email: string;
     company_id_email?: string;
+  }>;
+  Phones?: Array<{
+    id: string;
+    phone: string | number;
+    ddd?: string | number;
+    active?: string;
+    type?: string;
+    account_id_phone: string;
+    company_id_phone?: string;
   }>;
 }

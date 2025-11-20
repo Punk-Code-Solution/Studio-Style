@@ -14,6 +14,7 @@ export interface ApiResponse<T> {
 export interface CreatePatientRequest {
   name: string;
   lastname: string;
+  phone?: string;
   email?: string; // Modificado para opcional
   password?: string; // Modificado para opcional
   cpf?: string; // Modificado para opcional
@@ -53,25 +54,58 @@ export class PatientService {
   getAllPatients(): Observable<Patient[]> {
     // LÓGICA MODIFICADA (Ponto 4): Adicionado filtro de role
     return this.http.get<ApiResponse<Patient[]>>(`${this.apiUrl}?role=client`).pipe(
-      map(response => response.data || [])
+      map(response => {
+        const patients = response.data || [];
+        return patients.map(patient => this.mapPatient(patient));
+      })
     );
   }
 
   getPatientById(id: string): Observable<Patient> {
     return this.http.get<ApiResponse<Patient>>(`${this.apiUrl}/id?id=${id}`).pipe(
-      map(response => response.data)
+      map(response => this.mapPatient(response.data))
     );
+  }
+
+  private mapPatient(patient: Patient): Patient {
+    // Mapear email da array Emails para propriedade email
+    if (patient.Emails && patient.Emails.length > 0) {
+      patient.email = patient.Emails[0].email;
+    }
+    
+    // Mapear telefone da array Phones para propriedade phone
+    if (patient.Phones && patient.Phones.length > 0) {
+      const phoneObj = patient.Phones[0];
+      
+      // Se phoneObj já é uma string, usar diretamente
+      if (typeof phoneObj === 'string') {
+        patient.phone = phoneObj;
+      } 
+      // Se phoneObj é um objeto com propriedades phone e ddd
+      else if (phoneObj && typeof phoneObj === 'object') {
+        const phoneNumber = phoneObj.phone;
+        const ddd = phoneObj.ddd;
+        
+        if (ddd && phoneNumber) {
+          patient.phone = `(${ddd}) ${phoneNumber}`;
+        } else if (phoneNumber) {
+          patient.phone = String(phoneNumber);
+        }
+      }
+    }
+    
+    return patient;
   }
 
   createPatient(patient: CreatePatientRequest): Observable<Patient> {
     return this.http.post<ApiResponse<Patient>>(this.apiUrl, patient).pipe(
-      map(response => response.data)
+      map(response => this.mapPatient(response.data))
     );
   }
 
   updatePatient(id: string, patient: Partial<CreatePatientRequest>): Observable<Patient> {
     return this.http.put<ApiResponse<Patient>>(`${this.apiUrl}/id`, { id, ...patient }).pipe(
-      map(response => response.data)
+      map(response => this.mapPatient(response.data))
     );
   }
 

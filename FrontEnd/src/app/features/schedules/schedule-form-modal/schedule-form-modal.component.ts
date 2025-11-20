@@ -93,6 +93,21 @@ import { User } from '../../../core/services/user.service';
               </div>
             </div>
 
+            <div class="form-group">
+              <label for="phone_client">
+                <i class="fas fa-phone"></i>
+                Telefone (Opcional)
+              </label>
+              <input
+                type="text"
+                id="phone_client"
+                [(ngModel)]="scheduleData.phone"
+                name="phone"
+                [disabled]="clientMode === 'select' && !!scheduleData.client_id_schedules"
+                placeholder="(99) 99999-9999"
+              >
+            </div>
+
             <div class="form-row">
               <div class="form-group">
                 <label for="date_and_houres">
@@ -508,6 +523,7 @@ export class ScheduleFormModalComponent implements OnInit {
     finished: false,
     provider_id_schedules: '',
     client_id_schedules: '',
+    phone: '',
     services: []
   };
   selectedServices: string[] = [];

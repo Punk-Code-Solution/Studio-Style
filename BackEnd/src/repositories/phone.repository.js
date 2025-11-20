@@ -28,21 +28,25 @@ class phoneRepository{
     }).id
   }
  
-  async addPhone(phone) {
+  async addPhone(phones) {
 
     const {
       phone,
       ddd,
       active,
-      type
-     } = phone;
+      type,
+      account_id_phone,
+      company_id_phone
+     } = phones;
     
     return await Phone.create(
       {
         phone,
         ddd,
         active,
-        type
+        type,
+        account_id_phone,
+        company_id_phone
     });
   }
 
@@ -54,11 +58,13 @@ class phoneRepository{
         phone: phone.phone ? phone.phone : Phone.phone,
         ddd: phone.ddd ? phone.ddd : Phone.ddd,
         active: phone.active ? phone.active : Phone.active,
-        type: phone.type ? phone.type : Phone.type
+        type: phone.type ? phone.type : Phone.type,
+        account_id_phone: phone.account_id_phone ? phone.account_id_phone : Phone.account_id_phone,
+        company_id_phone: phone.company_id_phone ? phone.company_id_phone : Phone.company_id_phone
       },
       {
         where: {
-            id: phone.id,
+            account_id_phone: phone.account_id_phone,
         },
     });
   }

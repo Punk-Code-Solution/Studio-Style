@@ -103,7 +103,24 @@ export class EmployeeService {
     
     // Mapear telefone da array Phones para propriedade phone
     if (emp.Phones && emp.Phones.length > 0) {
-      emp.phone = emp.Phones[0];
+      const phoneObj = emp.Phones[0];
+      
+      // Se phoneObj já é uma string, usar diretamente
+      if (typeof phoneObj === 'string') {
+        emp.phone = phoneObj;
+      } 
+      // Se phoneObj é um objeto com propriedades phone e ddd
+      else if (phoneObj && typeof phoneObj === 'object') {
+        // Como Phones é any[], precisamos fazer type assertion ou verificar propriedades
+        const phoneNumber = (phoneObj as any).phone;
+        const ddd = (phoneObj as any).ddd;
+        
+        if (ddd && phoneNumber) {
+          emp.phone = `(${ddd}) ${phoneNumber}`;
+        } else if (phoneNumber) {
+          emp.phone = String(phoneNumber);
+        }
+      }
     }
     
     // Mapear endereço de Adress para address

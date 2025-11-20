@@ -17,6 +17,22 @@ const { Op } = require('sequelize');
 
 module.exports = class accountRepository{
 
+  // Helper method para includes padrão
+  getDefaultIncludes() {
+    return [
+      { model: TypeAccount },
+      { model: Company },
+      { model: Email },
+      { model: Hair },
+      { model: Schedules },
+      { model: Sale },
+      { model: Purchase },
+      { model: Purchase_Material },
+      { model: Phone },
+      { model: Adress }
+    ];
+  }
+
   async createEmail( emailUser ){
 
     const { account_id_email, name, email, active, company_id_email } = emailUser
@@ -52,18 +68,7 @@ module.exports = class accountRepository{
   //OK
   async findAll(options = {}){
     // Merge custom options with default includes
-    const defaultInclude = [
-      { model: TypeAccount },
-      { model: Company },
-      { model: Email },
-      { model: Hair },
-      { model: Schedules },
-      { model: Sale },
-      { model: Purchase },
-      { model: Purchase_Material },
-      { model: Phone },
-      { model: Adress }
-    ];
+    const defaultInclude = this.getDefaultIncludes();
 
     // If custom include is provided (e.g., for filtering), merge it with defaults
     let includeList = defaultInclude;
@@ -98,16 +103,25 @@ module.exports = class accountRepository{
   // NEW: Simple method to find accounts by TypeAccount roles
   async findByRoles(roles = []) {
     try {
+      // Incluir TypeAccount com filtro + todos os outros relacionamentos padrão
+      const defaultIncludes = this.getDefaultIncludes();
+      const typeAccountInclude = {
+        model: TypeAccount,
+        where: {
+          type: {
+            [Op.in]: roles
+          }
+        },
+        required: true  // INNER JOIN - only accounts with matching roles
+      };
+      
+      // Substituir o TypeAccount padrão pelo filtrado
+      const includes = defaultIncludes.map(inc => 
+        inc.model === TypeAccount ? typeAccountInclude : inc
+      );
+      
       const result = await Account.findAll({
-        include: [{
-          model: TypeAccount,
-          where: {
-            type: {
-              [Op.in]: roles
-            }
-          },
-          required: true  // INNER JOIN - only accounts with matching roles
-        }],
+        include: includes,
         attributes: { include: [] } // Include all account attributes
       });
       return result;
@@ -168,39 +182,49 @@ module.exports = class accountRepository{
   }
 
   async findAccountId(Id){
-
+    // Método antigo que só retornava password - mantido para compatibilidade
     const result = await Account.findOne({
-
       attributes: [ 'password' ],
-      where:{
-
+      where: {
         id: Id,
-
       }
-
     }); 
 
     if(result){
       return result
     }
     return false
+  }
 
+  // Novo método para buscar account completo com todos os relacionamentos
+  async findById(id) {
+    try {
+      const result = await Account.findOne({
+        where: {
+          id: id
+        },
+        include: this.getDefaultIncludes()
+      });
+      
+      return result || false;
+    } catch (error) {
+      console.error('Error in findById:', error);
+      return false;
+    }
   }
 
   async findAccountCpf(cpf){
-
     const result = await Account.findOne({
-
-      where:{
-        cpf : cpf
-      }
+      where: {
+        cpf: cpf
+      },
+      include: this.getDefaultIncludes()
     });
 
     if( result ){      
       return result
     }
     return false
-
   }
 
   async addTypeAccount(typeAccount) {

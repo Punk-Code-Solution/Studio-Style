@@ -1,11 +1,12 @@
 const AccountRepository = require('../repositories/account.repository');
 const EmailRepository = require('../repositories/email.repository');
 const HairRepository = require('../repositories/hair.repository');
+const PhoneRepository = require('../repositories/phone.repository');
 const TypeAccountRepository = require('../repositories/type_account.repository');
 const ResponseHandler = require('../utils/responseHandler');
 const bcrypt = require('bcrypt');
 const { Op } = require('sequelize'); // Adicionado para filtros
-const { TypeAccount } = require('../Database/models'); // Import TypeAccount model
+const { TypeAccount, Email, Phone, Adress } = require('../Database/models'); // Import models
 
 class AccountController {
   constructor() {
@@ -13,6 +14,7 @@ class AccountController {
     this.emailRepository = new EmailRepository();
     this.hairRepository = new HairRepository();
     this.typeAccountRepository = new TypeAccountRepository();
+    this.phoneRepository = new PhoneRepository();
   }
 
   /**
@@ -85,6 +87,8 @@ class AccountController {
   async createAccount(req, res) {
     try {
       const account = req.body;
+
+      console.log("Account: ", account);
       
       // LÓGICA MODIFICADA (Ponto 1): Hash password only if provided
       if (account.password && account.password.trim() !== '') {
@@ -134,10 +138,17 @@ class AccountController {
           }
         }
 
+        if (account.phone) {
+
+          await this.createPhone(result.id, account.phone);
+
+        }
+
         return ResponseHandler.success(res, 201, 'Account created successfully', result);
       } else {
         return ResponseHandler.error(res, 400, 'Failed to create account');
       }
+      
     } catch (error) {
       return ResponseHandler.error(res, 500, 'Failed to create account', error);
     }
@@ -154,6 +165,7 @@ class AccountController {
       if (!role) {
         // No filter, return all accounts
         const result = await this.accountRepository.findAll({});
+        console.log("Result: ", result);
         return ResponseHandler.success(res, 200, 'Accounts retrieved successfully', result);
       }
 
@@ -203,7 +215,7 @@ class AccountController {
   async getAccountByCpf(req, res) {
     try {
       const { cpf } = req.params;
-      const result = await this.accountRepository.findByCpf(cpf);
+      const result = await this.accountRepository.findAccountCpf(cpf);
       
       if (!result) {
         return ResponseHandler.notFound(res, 'Account not found');
@@ -232,12 +244,56 @@ class AccountController {
       if (!id) {
         return ResponseHandler.validationError(res, 'Account ID is required');
       }
+
+      // Verificar se a conta existe
+      const existingAccount = await this.accountRepository.findById(id);
+      if (!existingAccount) {
+        return ResponseHandler.notFound(res, 'Account not found');
+      }
+      
+      // Validação de CPF duplicado (excluindo o próprio registro)
+      if (accountData.cpf && accountData.cpf.trim() !== '') {
+        const existingByCpf = await this.accountRepository.findAccountCpf(accountData.cpf);
+        // Comparar IDs como strings para garantir comparação correta
+        if (existingByCpf && String(existingByCpf.id) !== String(id)) {
+          return ResponseHandler.error(res, 409, 'Este funcionário já existe. Por favor, use um CPF diferente.', { field: 'cpf' });
+        }
+      }
+
+      // Validação de email duplicado (excluindo o próprio registro)
+      if (accountData.email && accountData.email.trim() !== '') {
+        const existingEmail = await Email.findOne({
+          where: { email: accountData.email }
+        });
+        // Comparar IDs como strings para garantir comparação correta
+        if (existingEmail && String(existingEmail.account_id_email) !== String(id)) {
+          return ResponseHandler.error(res, 409, 'Este funcionário já existe. Por favor, use um e-mail diferente.', { field: 'email' });
+        }
+      }
       
       // LÓGICA MODIFICADA (Ponto 1): Hash password only if provided
       if (accountData.password && accountData.password.trim() !== '') {
         accountData.password = await bcrypt.hash(accountData.password, 10);
       } else {
         delete accountData.password; // Não atualiza a senha se vazia
+      }
+
+      // LÓGICA MODIFICADA (Ponto 5): Se role for fornecido, encontrar o typeaccount_id correspondente
+      if (accountData.role && !accountData.typeaccount_id) {
+        try {
+          const typeAccount = await TypeAccount.findOne({
+            where: { type: accountData.role.toLowerCase() }
+          });
+          if (typeAccount) {
+            accountData.typeaccount_id = typeAccount.id;
+          } else {
+            console.warn(`TypeAccount not found for role: ${accountData.role}`);
+            return ResponseHandler.error(res, 400, `Invalid role: ${accountData.role}. TypeAccount not found.`);
+          }
+        } catch (err) {
+          console.error('Error finding TypeAccount:', err.message);
+          return ResponseHandler.error(res, 500, 'Failed to resolve role to TypeAccount', err);
+        }
       }
       
       // Passar ID junto com os dados para o repository
@@ -247,8 +303,145 @@ class AccountController {
       if (!result) {
         return ResponseHandler.notFound(res, 'Account not found');
       }
+
+      // Atualizar email se fornecido
+      if (accountData.email && accountData.email.trim() !== '') {
+        // Buscar emails existentes para esta conta (pegar o primeiro se houver múltiplos)
+        const existingEmails = await Email.findAll({
+          where: { account_id_email: id },
+          limit: 1
+        });
+        const existingEmailForAccount = existingEmails.length > 0 ? existingEmails[0] : null;
+        
+        if (existingEmailForAccount) {
+          // Atualizar email existente
+          await Email.update(
+            {
+              email: accountData.email,
+              name: accountData.name || existingEmailForAccount.name,
+              active: existingEmailForAccount.active || new Date()
+            },
+            {
+              where: { id: existingEmailForAccount.id }
+            }
+          );
+          
+          // Deletar outros emails da conta se houver múltiplos
+          await Email.destroy({
+            where: {
+              account_id_email: id,
+              id: { [Op.ne]: existingEmailForAccount.id }
+            }
+          });
+        } else {
+          // Criar novo email apenas se não existir
+          const emailData = {
+            account_id_email: id,
+            email: accountData.email,
+            name: accountData.name,
+            active: new Date(),
+            company_id_email: accountData.company_id_account || null
+          };
+          
+          const emailResult = await this.emailRepository.createEmail(emailData);
+          if (emailResult && emailResult.error) {
+            return ResponseHandler.error(res, 409, `Duplicate field: ${emailResult.error}`, { field: emailResult.error });
+          }
+        }
+      }
+
+      // Atualizar telefone se fornecido
+      if (accountData.phone && accountData.phone.trim() !== '') {
+        // Buscar telefone existente para esta conta (pegar o primeiro se houver múltiplos)
+        const existingPhones = await Phone.findAll({
+          where: { account_id_phone: id },
+          limit: 1
+        });
+        const existingPhone = existingPhones.length > 0 ? existingPhones[0] : null;
+        
+        // Processar telefone: pode vir formatado como (75) 988110732 ou apenas números
+        let cleanPhone = accountData.phone.replace(/\D/g, '');
+        let ddd = null;
+        let phoneNumber = cleanPhone;
+        
+        // Se tem 10 ou 11 dígitos, extrair DDD (2 primeiros dígitos)
+        if (cleanPhone.length >= 10) {
+          ddd = cleanPhone.substring(0, 2);
+          phoneNumber = cleanPhone.substring(2);
+        }
+        
+        if (existingPhone) {
+          // Atualizar telefone existente
+          await Phone.update(
+            {
+              phone: phoneNumber,
+              ddd: ddd || existingPhone.ddd,
+              active: existingPhone.active || new Date(),
+              type: existingPhone.type || 'whatsapp'
+            },
+            {
+              where: { id: existingPhone.id }
+            }
+          );
+          
+          // Deletar outros telefones da conta se houver múltiplos
+          await Phone.destroy({
+            where: {
+              account_id_phone: id,
+              id: { [Op.ne]: existingPhone.id }
+            }
+          });
+        } else {
+          // Criar novo telefone apenas se não existir
+          const phoneData = {
+            phone: phoneNumber,
+            ddd: ddd,
+            active: new Date(),
+            type: 'whatsapp',
+            account_id_phone: id,
+            company_id_phone: null
+          };
+          
+          await this.phoneRepository.addPhone(phoneData);
+        }
+      }
+
+      // Atualizar endereço se fornecido
+      if (accountData.address || accountData.adress) {
+        const addressData = accountData.address || accountData.adress;
+        
+        // Buscar endereço existente para esta conta
+        const existingAddress = await Adress.findOne({
+          where: { account_id_adress: id }
+        });
+        
+        if (existingAddress) {
+          // Atualizar endereço existente
+          await Adress.update(
+            {
+              city: addressData.city !== undefined ? addressData.city : existingAddress.city,
+              neighborhood: addressData.neighborhood !== undefined ? addressData.neighborhood : existingAddress.neighborhood,
+              road: addressData.road !== undefined ? addressData.road : existingAddress.road
+            },
+            {
+              where: { account_id_adress: id }
+            }
+          );
+        } else {
+          // Criar novo endereço apenas se não existir
+          await Adress.create({
+            city: addressData.city || null,
+            neighborhood: addressData.neighborhood || null,
+            road: addressData.road || null,
+            account_id_adress: id
+          });
+        }
+      }
       
-      return ResponseHandler.success(res, 200, 'Account updated successfully', result);
+      // Buscar o registro atualizado com todos os relacionamentos
+      const updatedAccount = await this.accountRepository.findById(id);
+      
+      return ResponseHandler.success(res, 200, 'Account updated successfully', updatedAccount);
     } catch (error) {
       return ResponseHandler.error(res, 500, 'Failed to update account', error);
     }
@@ -322,6 +515,29 @@ class AccountController {
       console.error('Failed to create email:', error);
       throw error;
     }
+  }
+
+  async createPhone(accountId, phoneData) {
+
+    try {
+
+      const phone = {
+        phone: phoneData,
+        ddd: phoneData.substring(0, 2),
+        active: true,
+        type: null,
+        account_id_phone: accountId,
+        company_id_phone: null
+      }
+
+      this.phoneRepository.addPhone( phone );
+
+    }
+    catch (error) {
+      console.error('Failed to create phone:', error);
+      throw error;
+    }
+
   }
 
   /**

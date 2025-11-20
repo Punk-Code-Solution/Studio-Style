@@ -45,7 +45,7 @@ import { Employee } from '../../../core/services/employee.service';
                     <i class="fas fa-phone"></i>
                     Telefone
                   </label>
-                  <span>{{ employee.phone || 'N/A' }}</span>
+                  <span>{{ getPhone(employee) || 'N/A' }}</span>
                 </div>
 
                 <div class="detail-item">
@@ -373,5 +373,36 @@ export class EmployeeViewModalComponent {
       'client': 'Cliente'
     };
     return roles[role] || role;
+  }
+
+  getPhone(employee: Employee): string | null {
+    // Se já tem phone mapeado, usar
+    if (employee.phone) {
+      return employee.phone;
+    }
+    
+    // Caso contrário, tentar extrair do array Phones
+    if (employee.Phones && employee.Phones.length > 0) {
+      const phoneObj = employee.Phones[0];
+      
+      // Se phoneObj já é uma string, usar diretamente
+      if (typeof phoneObj === 'string') {
+        return phoneObj;
+      }
+      
+      // Se phoneObj é um objeto (Phones é any[], então usamos type assertion)
+      if (phoneObj && typeof phoneObj === 'object') {
+        const phoneNumber = (phoneObj as any).phone;
+        const ddd = (phoneObj as any).ddd;
+        
+        if (ddd && phoneNumber) {
+          return `(${ddd}) ${phoneNumber}`;
+        } else if (phoneNumber) {
+          return String(phoneNumber);
+        }
+      }
+    }
+    
+    return null;
   }
 }
