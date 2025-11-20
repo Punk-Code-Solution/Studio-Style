@@ -7,6 +7,7 @@
     "dev": "nodemon server.js",
     "start": "node server.js",
     "setup": "node setup.js",
+    "seed:prod": "npx sequelize-cli db:seed:all --env production",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
