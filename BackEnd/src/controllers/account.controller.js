@@ -502,7 +502,7 @@ class AccountController {
         account_id_email: account.id,
         email: account.email,
         name: account.name, 
-        active: true, 
+        active: new Date(), 
         company_id_email: account.company_id || null
       };
       
@@ -518,26 +518,32 @@ class AccountController {
   }
 
   async createPhone(accountId, phoneData) {
-
     try {
-
-      const phone = {
-        phone: phoneData,
-        ddd: phoneData.substring(0, 2),
-        active: true,
-        type: null,
-        account_id_phone: accountId,
-        company_id_phone: null
+      // Processar telefone: pode vir formatado como (75) 988110732 ou apenas números
+      let cleanPhone = phoneData.replace(/\D/g, '');
+      let ddd = null;
+      let phoneNumber = cleanPhone;
+      
+      // Se tem 10 ou 11 dígitos, extrair DDD (2 primeiros dígitos)
+      if (cleanPhone.length >= 10) {
+        ddd = parseInt(cleanPhone.substring(0, 2), 10);
+        phoneNumber = cleanPhone.substring(2);
       }
 
-      this.phoneRepository.addPhone( phone );
+      const phone = {
+        phone: phoneNumber,
+        ddd: ddd,
+        active: new Date(),
+        type: 'whatsapp',
+        account_id_phone: accountId,
+        company_id_phone: null
+      };
 
-    }
-    catch (error) {
+      await this.phoneRepository.addPhone(phone);
+    } catch (error) {
       console.error('Failed to create phone:', error);
       throw error;
     }
-
   }
 
   /**

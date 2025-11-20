@@ -45,13 +45,13 @@ module.exports = class accountRepository{
       }
     }
     
-    const result = Email.create({
+    const result = await Email.create({
 
       id: uuidv4(), 
       account_id_email, 
       name, 
       email, 
-      active, 
+      active: active || new Date(), 
       company_id_email
        
     }
@@ -292,9 +292,9 @@ module.exports = class accountRepository{
       lastname,
       password,
       cpf: cpf,
-      start_date: Date.now(),
+      start_date: account.start_date || new Date(),
       birthday,
-      deleted,
+      deleted: deleted !== undefined ? deleted : false,
       avatar,
       typeaccount_id,
       company_id_account,
@@ -313,35 +313,57 @@ module.exports = class accountRepository{
   }
     
   async updateAccount( account ) {
+    try {
+      // Buscar o registro atual do banco
+      const existingAccount = await Account.findOne({
+        where: { id: account.id }
+      });
 
-    const result = await Account.update(
-      {
-          name: account.name ? account.name : Account.name,
-          lastname: account.lastname ? account.lastname : Account.lastname,
-          password: account.password ? bkrypt.hashSync(account.password) : Account.password,
-          cpf: account.cpf ? account.cpf : Account.cpf,
-          type_hair_id: account.type_hair_id ? account.type_hair_id : Account.type_hair_id,
-          birthday: account.birthday ? account.birthday : Account.birthday,
-          deleted: account.deleted ? account.deleted: Account.deleted,
-          avatar: account.avatar ? account.avatar : Account.avatar,
-          typeaccount_id: account.typeaccount_id ? account.typeaccount_id : Account.typeaccount_id,
-          type_hair_id: account.type_hair_id ? account.type_hair_id : Account.type_hair_id,
-          account_id_Adress: account.account_id_Adress ? account.account_id_Adress : Account.account_id_Adress,
-          company_id_account: account.company_id_account ? account.company_id_account : Account.company_id_account
-
-      },
-      {
-        where: {
-          id: account.id,
-        },
+      if (!existingAccount) {
+        return false;
       }
-    );
 
-    if( result ){      
-      return result
+      // Preparar objeto de atualização apenas com campos fornecidos
+      const updateData = {};
+
+      if (account.name !== undefined) updateData.name = account.name;
+      if (account.lastname !== undefined) updateData.lastname = account.lastname;
+      if (account.password !== undefined && account.password !== null && account.password.trim() !== '') {
+        updateData.password = bkrypt.hashSync(account.password, 10);
+      }
+      if (account.cpf !== undefined) updateData.cpf = account.cpf;
+      if (account.type_hair_id !== undefined) updateData.type_hair_id = account.type_hair_id;
+      if (account.birthday !== undefined) updateData.birthday = account.birthday;
+      if (account.deleted !== undefined) updateData.deleted = account.deleted;
+      if (account.avatar !== undefined) updateData.avatar = account.avatar;
+      if (account.typeaccount_id !== undefined) updateData.typeaccount_id = account.typeaccount_id;
+      if (account.company_id_account !== undefined) updateData.company_id_account = account.company_id_account;
+
+      // Atualizar apenas se houver dados para atualizar
+      if (Object.keys(updateData).length === 0) {
+        return existingAccount;
+      }
+
+      const result = await Account.update(
+        updateData,
+        {
+          where: {
+            id: account.id,
+          },
+        }
+      );
+
+      if (result && result[0] > 0) {
+        // Retornar o registro atualizado
+        return await Account.findOne({
+          where: { id: account.id }
+        });
+      }
+      return false;
+    } catch (error) {
+      console.error('Error updating account:', error);
+      throw error;
     }
-    return false
-    
   }
     
   //OK

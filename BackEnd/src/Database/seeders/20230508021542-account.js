@@ -16,10 +16,10 @@ module.exports = {
       await queryInterface.bulkInsert('TypeAccounts', [{
         id: typeAccountAdminId,
         type: 'admin',
-        edit: 'true',
-        creat: 'true',
-        viwer: 'true',
-        delet: 'true',
+        edit: true,
+        creat: true,
+        viwer: true,
+        delet: true,
         createdAt: new Date(),
         updatedAt: new Date()
       }], {});
@@ -35,10 +35,10 @@ module.exports = {
       await queryInterface.bulkInsert('TypeAccounts', [{
         id: typeAccountClientId,
         type: 'client',
-        edit: 'false',
-        creat: 'true',
-        viwer: 'true',
-        delet: 'false',
+        edit: false,
+        creat: true,
+        viwer: true,
+        delet: false,
         createdAt: new Date(),
         updatedAt: new Date()
       }], {});
@@ -54,10 +54,10 @@ module.exports = {
       await queryInterface.bulkInsert('TypeAccounts', [{
         id: typeAccountProviderId,
         type: 'provider',
-        edit: 'false',
-        creat: 'false',
-        viwer: 'true',
-        delet: 'false',
+        edit: false,
+        creat: false,
+        viwer: true,
+        delet: false,
         createdAt: new Date(),
         updatedAt: new Date()
       }], {});
