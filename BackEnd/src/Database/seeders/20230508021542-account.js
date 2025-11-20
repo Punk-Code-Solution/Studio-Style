@@ -105,10 +105,33 @@ module.exports = {
         updatedAt: new Date()
       }], {});
     }
+
+    // Verifica se o phone do admin já existe; se não, cria
+    const existingPhoneId = await queryInterface.rawSelect('Phones', {
+      where: { 
+        account_id_phone: adminAccountId,
+        phone: '00000000000'
+      }
+    }, ['id']);
+
+    if (!existingPhoneId) {
+      await queryInterface.bulkInsert('Phones', [{
+        id: uuidv4(),
+        phone: '00000000000',
+        ddd: 0,
+        active: new Date(),
+        type: 'celular',
+        account_id_phone: adminAccountId,
+        company_id_phone: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }], {});
+    }
   },
 
   async down (queryInterface, Sequelize) {
-    // Remove o email, conta e tipo de conta criados pelo seeder (se existirem)
+    // Remove o phone, email, conta e tipo de conta criados pelo seeder (se existirem)
+    await queryInterface.bulkDelete('Phones', { phone: '00000000000' }, {});
     await queryInterface.bulkDelete('Emails', { email: 'admin@admin.com' }, {});
     await queryInterface.bulkDelete('Accounts', { cpf: '00000000000' }, {});
     await queryInterface.bulkDelete('TypeAccounts', { type: 'admin' }, {});
