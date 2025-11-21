@@ -70,7 +70,7 @@ module.exports = {
 
     if (!adminAccountId) {
       adminAccountId = uuidv4();
-      const passwordHash = await bcrypt.hash('123456', 10);
+      const passwordHash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
       await queryInterface.bulkInsert('Accounts', [{
         id: adminAccountId,
         name: 'Administrador',
