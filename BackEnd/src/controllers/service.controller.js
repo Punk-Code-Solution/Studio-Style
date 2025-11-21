@@ -5,7 +5,7 @@ module.exports = class serviceController{
 
     async findAll(request, response){
         try{
-            // CORREÇÃO: Ler de query string, não do body
+            // CORREÇÃO: Em requisições GET, ler de query, não body
             const limit = request.query.limit ? parseInt(request.query.limit) : 100;
             const base = request.query.base ? parseInt(request.query.base) : 0;
             
@@ -62,7 +62,7 @@ module.exports = class serviceController{
         
     async deleteService(request, response) {
         try{
-            const { id } = request.query; // Delete via query param
+            const { id } = request.query; // CORREÇÃO: Delete via query
             const result = await serviceRespo.deleteService(id);
             return response.status(200).json({"Sucess": "Deleted successfully"});
         }catch(erro){
@@ -72,7 +72,7 @@ module.exports = class serviceController{
 
     async findServiceStatus(request, response){
         try{
-            const status = request.query.status; // Ler de query
+            const status = request.query.status; // CORREÇÃO: Ler de query
             const all = await serviceRespo.findServiceStatus(status);    
             if(!all || !all[0]){
                 return response.status(200).json({"erro": "Not Found"});

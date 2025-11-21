@@ -19,13 +19,13 @@ class schedulesRepository{
           { 
             model: Account, 
             as: 'provider', 
-            // CORREÇÃO: Removidos 'email' e 'role' da lista de exclusão
+            // CORREÇÃO: Removidos 'email' e 'role' que não existem no model Account
             attributes: { exclude: ['password', 'createdAt', 'updatedAt'] }
           },
           { 
             model: Account, 
             as: 'client', 
-            // CORREÇÃO: Removidos 'email' e 'role' da lista de exclusão
+            // CORREÇÃO: Removidos 'email' e 'role' que não existem no model Account
             attributes: { exclude: ['password', 'createdAt', 'updatedAt'] }
           }
         ],
