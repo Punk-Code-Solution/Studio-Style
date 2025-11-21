@@ -4,9 +4,8 @@ const serviceRespo = new serviceRepository();
 module.exports = class serviceController{
 
     async findAll(request, response){
-
         try{
-            // CORREÇÃO: Em requisições GET, os parâmetros vêm em 'query', não em 'body'
+            // CORREÇÃO: Ler de query string, não do body
             const limit = request.query.limit ? parseInt(request.query.limit) : 100;
             const base = request.query.base ? parseInt(request.query.base) : 0;
             
@@ -21,8 +20,8 @@ module.exports = class serviceController{
   
     async findService(request, response) {        
         try{
-            // CORREÇÃO: Usar query params para GET
-            const id = request.query.id || request.query.service; // Suporta ambos
+            // CORREÇÃO: Ler ID da query string
+            const id = request.query.id || request.query.service;
             
             if (!id) {
                  return response.status(400).json({"erro": "ID is required"});
@@ -63,10 +62,8 @@ module.exports = class serviceController{
         
     async deleteService(request, response) {
         try{
-            const { id } = request.query; // Delete geralmente usa query param
+            const { id } = request.query; // Delete via query param
             const result = await serviceRespo.deleteService(id);
-            // O repositório retorna o número de linhas deletadas ou o objeto? 
-            // Assumindo que retorna algo truthy se funcionou
             return response.status(200).json({"Sucess": "Deleted successfully"});
         }catch(erro){
             return response.status(500).json({"erro" : erro});
@@ -75,8 +72,7 @@ module.exports = class serviceController{
 
     async findServiceStatus(request, response){
         try{
-            // GET request usa query
-            const status = request.query.status;
+            const status = request.query.status; // Ler de query
             const all = await serviceRespo.findServiceStatus(status);    
             if(!all || !all[0]){
                 return response.status(200).json({"erro": "Not Found"});
