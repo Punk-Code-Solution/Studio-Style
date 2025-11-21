@@ -117,7 +117,7 @@ module.exports = {
     if (!existingPhoneId) {
       await queryInterface.bulkInsert('Phones', [{
         id: uuidv4(),
-        phone: '00000000000',
+        phone: '73998348081',
         ddd: 0,
         active: new Date(),
         type: 'celular',

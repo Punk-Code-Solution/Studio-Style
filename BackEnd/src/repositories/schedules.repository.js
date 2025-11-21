@@ -14,18 +14,19 @@ class schedulesRepository{
             as: 'Services',
             through: {
               attributes: [] 
-            }
+            },
+            required: false // LEFT JOIN - não falha se não houver serviços
           },
           { 
             model: Account, 
             as: 'provider', 
-            // CORREÇÃO: Removidos 'email' e 'role' que não existem no model Account
+            required: false, // LEFT JOIN - não falha se não houver provider
             attributes: { exclude: ['password', 'createdAt', 'updatedAt'] }
           },
           { 
             model: Account, 
             as: 'client', 
-            // CORREÇÃO: Removidos 'email' e 'role' que não existem no model Account
+            required: false, // LEFT JOIN - não falha se não houver client
             attributes: { exclude: ['password', 'createdAt', 'updatedAt'] }
           }
         ],
@@ -35,7 +36,19 @@ class schedulesRepository{
       return schedules;
     } catch (error) {
       console.error('Erro ao buscar agendamentos:', error);
-      throw error;
+      console.error('Stack trace:', error.stack);
+      // Se houver erro de associação, tenta buscar sem os includes
+      try {
+        console.warn('Tentando buscar agendamentos sem includes devido a erro de associação');
+        return await Schedules.findAll({
+          limit,
+          offset,
+          order: [['date_and_houres', 'ASC']]
+        });
+      } catch (fallbackError) {
+        console.error('Erro ao buscar agendamentos sem includes:', fallbackError);
+        throw fallbackError;
+      }
     }
   }
 
