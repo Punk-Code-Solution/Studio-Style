@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, throwError } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 export interface Service {
@@ -41,11 +41,10 @@ export class ServicesService {
   constructor(private http: HttpClient) {}
 
   getAllServices(): Observable<Service[]> {
-    return this.http.post<{result: Service[] | Service}>(this.apiUrl, {
-      limit: 100,
-      base: 0
-    }).pipe(
+    // Usar GET ao invés de POST para listar serviços
+    return this.http.get<{result: Service[] | Service}>(`${this.apiUrl}?limit=100&base=0`).pipe(
       map(response => {
+        console.log('Services API response:', response);
         const result = response.result;
         let services: Service[] = [];
         
@@ -56,14 +55,35 @@ export class ServicesService {
           services = [result];
         }
         
+        console.log('Services after processing:', services);
+        console.log('Services count:', services.length);
+        
         // Filtrar serviços válidos (que tenham pelo menos service e price)
-        return services.filter(service => 
-          service && 
-          service.service && 
-          service.service.trim() !== '' && 
-          service.price !== null && 
-          service.price !== undefined
-        );
+        // Tornar o filtro menos restritivo para debug
+        const validServices = services.filter(service => {
+          const isValid = service && 
+            service.service && 
+            typeof service.service === 'string' &&
+            service.service.trim() !== '' && 
+            service.price !== null && 
+            service.price !== undefined &&
+            !isNaN(Number(service.price));
+          
+          if (!isValid && service) {
+            console.warn('Service filtered out:', service);
+          }
+          
+          return isValid;
+        });
+        
+        console.log('Valid services count:', validServices.length);
+        console.log('Valid services:', validServices);
+        return validServices;
+      }),
+      catchError(error => {
+        console.error('Error in getAllServices:', error);
+        console.error('Error response:', error.error);
+        return throwError(() => error);
       })
     );
   }

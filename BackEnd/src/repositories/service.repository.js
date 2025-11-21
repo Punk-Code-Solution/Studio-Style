@@ -8,10 +8,12 @@ class serviceRepository{
       const services = await Service.findAll({
         limit: limit,
         offset: base,
-        order: [['createdAt', 'DESC']]
+        // Remover ordenação por createdAt se não existir no modelo
+        // order: [['createdAt', 'DESC']]
       });
       
-      return services;
+      console.log('Services found in repository:', services?.length || 0);
+      return services || [];
     } catch (error) {
       console.error('Erro ao buscar serviços no repositório:', error);
       console.error('Stack trace:', error.stack);

@@ -11,7 +11,7 @@
 
   <a routerLink="/services" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/services')">
     <i class="fas fa-calendar-check"></i>
-    <span>Agendamento</span>
+    <span>Agendamentos</span>
   </a>
 
   <a routerLink="/patients" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/patients')">
@@ -20,13 +20,23 @@
   </a>
 
   <a routerLink="/employees" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/employees')">
-    <i class="fas fa-user-md"></i>
+    <i class="fas fa-handshake"></i>
     <span>Colaboradores</span>
   </a>
 
   <a routerLink="/feedbacks" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/feedbacks')">
     <i class="fas fa-star"></i>
     <span>Feedbacks</span>
+  </a>
+
+  <a routerLink="/services-management" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/services-management') && authService.hasRole('admin')">
+    <i class="fas fa-cogs"></i>
+    <span>Serviços</span>
+  </a>
+
+  <a routerLink="/hair-types" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/hair-types') && authService.hasRole('admin')">
+    <i class="fas fa-cut"></i>
+    <span>Tipos de Cabelo</span>
   </a>
 </nav>
 

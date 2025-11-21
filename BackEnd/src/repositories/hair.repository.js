@@ -47,7 +47,7 @@ class hairRepository{
       letter
      } = hair;
     
-    await Hair.create({
+    const result = await Hair.create({
       
       id: uuidv4(),
       type,
@@ -55,30 +55,31 @@ class hairRepository{
       letter
 
     });
+    
+    return result;
   }
 
   async updateHair( hair ) {
+    const updateData = {};
+    
+    if (hair.type !== undefined) {
+      updateData.type = hair.type;
+    }
+    if (hair.level !== undefined) {
+      updateData.level = hair.level;
+    }
+    if (hair.letter !== undefined) {
+      updateData.letter = hair.letter;
+    }
 
-    const result = await Hair.update({
-      
-      type: hair.type ? hair.type : Hair.type,
-      level: hair.level ? hair.level : Hair.level,
-      letter: hair.letter ? hair.letter : Hair.letter
-
-    },
-    {
-
+    await Hair.update(updateData, {
       where: {
         id: hair.id        
       }
-
     });
 
-    if( result ){      
-      return true
-    }
-    return false
-
+    // Retornar o registro atualizado
+    return await this.findHair(hair.id);
   }
 
   async deleteHair(id) {
