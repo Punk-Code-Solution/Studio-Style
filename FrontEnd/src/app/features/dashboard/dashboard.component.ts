@@ -120,23 +120,51 @@ export class DashboardComponent implements OnInit {
     try {
       this.userService.getUsers().subscribe({
         next: (users) => {
+          if (!users || !Array.isArray(users)) {
+            console.warn('Nenhum usuário retornado ou formato inválido');
+            this.totalClients = 0;
+            this.newClientsThisMonth = 0;
+            return;
+          }
+
           const now = new Date();
           const currentMonth = now.getMonth();
           const currentYear = now.getFullYear();
-          const clients = users.filter(u => u.TypeAccount?.type === 'client');
+          
+          const clients = users.filter(u => u && u.TypeAccount?.type === 'client');
           this.totalClients = clients.length;
+          
           this.newClientsThisMonth = clients.filter(u => {
-            const created = new Date(u.createdAt);
-            return created.getMonth() === currentMonth && created.getFullYear() === currentYear;
+            if (!u || !u.createdAt) {
+              return false;
+            }
+            
+            try {
+              const created = new Date(u.createdAt);
+              // Verifica se a data é válida
+              if (isNaN(created.getTime())) {
+                console.warn('Data de criação inválida para cliente:', u.id, u.createdAt);
+                return false;
+              }
+              
+              return created.getMonth() === currentMonth && created.getFullYear() === currentYear;
+            } catch (e) {
+              console.warn('Erro ao processar data de criação do cliente:', u.id, u.createdAt, e);
+              return false;
+            }
           }).length;
         },
         error: (error) => {
           console.error('Erro ao carregar usuários:', error);
+          this.totalClients = 0;
+          this.newClientsThisMonth = 0;
           this.notificationService.error('Erro ao carregar dados de clientes.');
         }
       });
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
+      this.totalClients = 0;
+      this.newClientsThisMonth = 0;
     }
   }
 
