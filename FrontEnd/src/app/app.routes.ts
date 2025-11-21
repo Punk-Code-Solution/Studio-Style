@@ -120,6 +120,16 @@ const protectedRoutes: Routes = [
         path: 'feedbacks',
         canActivate: [RoleGuard],
         loadComponent: () => import('./features/feedbacks/feedbacks.component').then(m => m.FeedbacksComponent)
+      },
+      {
+        path: 'services-management',
+        canActivate: [RoleGuard],
+        loadComponent: () => import('./features/services/services.component').then(m => m.ServicesComponent)
+      },
+      {
+        path: 'hair-types',
+        canActivate: [RoleGuard],
+        loadComponent: () => import('./features/hair-types/hair-types.component').then(m => m.HairTypesComponent)
       }
     ]
   }

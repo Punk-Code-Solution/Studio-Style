@@ -32,7 +32,7 @@ export class SidebarComponent implements OnInit {
   }
 
   constructor(
-    private authService: AuthService,
+    public authService: AuthService,
     private router: Router
   ) {
     this.currentUser = this.authService.currentUser;

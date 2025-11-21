@@ -11,8 +11,12 @@ module.exports = class serviceController{
             const base = request.query.base || request.body.base ? 
                 parseInt(request.query.base || request.body.base) : 0;
             
-            const result = await serviceRespo.findAll(limit, base)
-            return response.status(200).json({result})
+            console.log('Finding services with limit:', limit, 'base:', base);
+            const result = await serviceRespo.findAll(limit, base);
+            console.log('Services found:', result?.length || 0);
+            console.log('Services data:', JSON.stringify(result, null, 2));
+            
+            return response.status(200).json({result: result || []})
     
         }catch(erro){
             console.error("Erro ao buscar serviços:", erro);

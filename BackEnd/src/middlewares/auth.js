@@ -36,7 +36,12 @@ const authorizeRoles = (allowedRoles) => {
       return next();
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    // Comparação case-insensitive do role
+    const userRole = req.user.role ? String(req.user.role).toLowerCase() : '';
+    const allowedRolesLower = allowedRoles.map(role => String(role).toLowerCase());
+
+    if (!allowedRolesLower.includes(userRole)) {
+      console.log(`Access denied: User role '${req.user.role}' not in allowed roles:`, allowedRoles);
       return ResponseHandler.forbidden(res, 'Insufficient permissions');
     }
 

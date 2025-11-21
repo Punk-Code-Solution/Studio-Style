@@ -54,6 +54,8 @@ export class AuthService {
       employees: ['admin', 'provider'],
       feedbacks: ['ninguem'],
       services: ['admin', 'provider'],
+      'services-management': ['admin'],
+      'hair-types': ['admin'],
 
       // Sub-rotas de pacientes
       'patients/new': ['admin'],

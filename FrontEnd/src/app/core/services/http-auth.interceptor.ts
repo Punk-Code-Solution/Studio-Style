@@ -14,14 +14,18 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: 
         Authorization: `Bearer ${token}`
       }
     });
+    console.log('Request with token to:', req.url);
+  } else {
+    console.warn('No token found for request to:', req.url);
   }
 
   return next(authReq).pipe(
     catchError((err: HttpErrorResponse) => {
       if (err.status === 401 || err.status === 403) {
-        authService.logout();
-        // Optionally, redirect to login via window.location to avoid DI cycles
-        // window.location.href = '/login';
+        console.error('Authentication error:', err.status, err.url);
+        console.error('Error details:', err.error);
+        // Não fazer logout automático para não interromper o fluxo
+        // authService.logout();
       }
       return throwError(() => err);
     })

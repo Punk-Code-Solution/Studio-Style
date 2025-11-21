@@ -28,6 +28,16 @@
     <i class="fas fa-star"></i>
     <span>Feedbacks</span>
   </a>
+
+  <a routerLink="/services-management" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/services-management') && authService.hasRole('admin')">
+    <i class="fas fa-cogs"></i>
+    <span>Serviços</span>
+  </a>
+
+  <a routerLink="/hair-types" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/hair-types') && authService.hasRole('admin')">
+    <i class="fas fa-cut"></i>
+    <span>Tipos de Cabelo</span>
+  </a>
 </nav>
 
 <div class="sidebar-footer">

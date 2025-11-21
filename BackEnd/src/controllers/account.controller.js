@@ -48,10 +48,18 @@ class AccountController {
    */
   async updateHair(req, res) {
     try {
-      const { id } = req.params;
-      const hairData = req.body;
+      // ID pode vir de params ou body (compatibilidade)
+      const id = req.params.id || req.body.id;
+      const hairData = { ...req.body };
       
-      const result = await this.hairRepository.updateHair(id, hairData);
+      if (!id) {
+        return ResponseHandler.validationError(res, 'Hair type ID is required');
+      }
+      
+      // Garantir que o ID está no objeto hairData
+      hairData.id = id;
+      
+      const result = await this.hairRepository.updateHair(hairData);
       
       if (!result) {
         return ResponseHandler.notFound(res, 'Hair type not found');
@@ -68,7 +76,13 @@ class AccountController {
    */
   async deleteHair(req, res) {
     try {
-      const { id } = req.params;
+      // ID pode vir de params ou query (compatibilidade)
+      const id = req.params.id || req.query.id;
+      
+      if (!id) {
+        return ResponseHandler.validationError(res, 'Hair type ID is required');
+      }
+      
       const result = await this.hairRepository.deleteHair(id);
       
       if (!result) {

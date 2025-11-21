@@ -24,7 +24,9 @@ const accountUpdateValidation = [
 ];
 
 const hairValidation = [
-  body('name').notEmpty().withMessage('Hair type name is required'),
+  body('type').notEmpty().withMessage('Hair type is required'),
+  body('level').optional().isInt().withMessage('Level must be an integer'),
+  body('letter').optional().isLength({ max: 1 }).withMessage('Letter must be a single character'),
   handleValidationErrors
 ];
 
@@ -267,7 +269,7 @@ router.get('/hair', authenticateToken, accountController.getAllHair.bind(account
  *       401:
  *         description: Unauthorized
  */
-router.post('/hair', authorizeRoles(['admin']), hairValidation, accountController.createHair.bind(accountController));
+router.post('/hair', authenticateToken, authorizeRoles(['admin']), hairValidation, accountController.createHair.bind(accountController));
 
 /**
  * @swagger
@@ -300,7 +302,7 @@ router.post('/hair', authorizeRoles(['admin']), hairValidation, accountControlle
  *       401:
  *         description: Unauthorized
  */
-router.put('/hair/id', authorizeRoles(['admin']), hairValidation, accountController.updateHair.bind(accountController));
+router.put('/hair/id', authenticateToken, authorizeRoles(['admin']), hairValidation, accountController.updateHair.bind(accountController));
 
 /**
  * @swagger
@@ -324,7 +326,7 @@ router.put('/hair/id', authorizeRoles(['admin']), hairValidation, accountControl
  *       401:
  *         description: Unauthorized
  */
-router.delete('/hair/id', authorizeRoles(['admin']), accountController.deleteHair.bind(accountController));
+router.delete('/hair/id', authenticateToken, authorizeRoles(['admin']), accountController.deleteHair.bind(accountController));
 
 // Type accounts routes
 /**
