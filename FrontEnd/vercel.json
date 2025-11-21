@@ -2,6 +2,16 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist/estudio_style/browser",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://studio-style.vercel.app/api/$1"
+    },
+    {
+      "source": "/((?!.*\\.).*)",
+      "destination": "/index.html"
+    }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
@@ -17,6 +27,24 @@
         {
           "key": "Access-Control-Allow-Headers",
           "value": "X-Requested-With, Authorization, Accept, Content-Type"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/((?!.*\\.).*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
         }
       ]
     }
