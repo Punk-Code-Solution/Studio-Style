@@ -8,6 +8,8 @@ class serviceRepository{
       const services = await Service.findAll({
         limit: limit,
         offset: base,
+        // Não incluir associações para evitar problemas com colunas que não existem
+        include: [],
         // Remover ordenação por createdAt se não existir no modelo
         // order: [['createdAt', 'DESC']]
       });
