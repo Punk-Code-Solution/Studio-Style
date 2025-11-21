@@ -79,7 +79,7 @@ rota.get("/", async (request, response) => { await servicecontroller.findAll( re
  *       404:
  *         description: Serviço não encontrado
  */
-rota.get("/service/one", async (request, response) => { await servicecontroller.findService( request, response ); });
+rota.get("/one", async (request, response) => { await servicecontroller.findService( request, response ); });
 
 /**
  * @swagger
@@ -114,6 +114,6 @@ rota.delete("/", async (request, response) => { await servicecontroller.deleteSe
  *       200:
  *         description: Status dos serviços
  */
-rota.get("/service/status", async (request, response) =>{ await servicecontroller.findServiceStatus( request, response ); })
+rota.get("/status", async (request, response) =>{ await servicecontroller.findServiceStatus( request, response ); })
 
 module.exports = rota
