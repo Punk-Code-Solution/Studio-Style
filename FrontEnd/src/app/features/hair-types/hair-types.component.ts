@@ -454,7 +454,7 @@ export class HairTypesComponent implements OnInit {
 
     if (this.selectedHairType?.id) {
       // Update
-      this.hairTypeService.updateHairType({ id: this.selectedHairType.id, ...request }).subscribe({
+      this.hairTypeService.updateHairType({ id: this.selectedHairType.id, type: request.type, level: request.level ?? undefined, letter: request.letter ?? undefined }).subscribe({
         next: (result) => {
           console.log('Hair type updated:', result);
           this.notificationService.success('Tipo de cabelo atualizado com sucesso!');
@@ -471,7 +471,7 @@ export class HairTypesComponent implements OnInit {
       });
     } else {
       // Create
-      this.hairTypeService.createHairType(request).subscribe({
+      this.hairTypeService.createHairType({ type: request.type, level: request.level ?? undefined, letter: request.letter ?? undefined }).subscribe({
         next: (result) => {
           console.log('Hair type created:', result);
           this.notificationService.success('Tipo de cabelo criado com sucesso!');
