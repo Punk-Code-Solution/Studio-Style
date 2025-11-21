@@ -5,16 +5,25 @@ module.exports = class serviceController{
 
     async findAll(request, response){
         try{
-            // CORREÇÃO: Em requisições GET, ler de query, não body
-            const limit = request.query.limit ? parseInt(request.query.limit) : 100;
-            const base = request.query.base ? parseInt(request.query.base) : 0;
+            // Aceita tanto GET (query) quanto POST (body) para compatibilidade
+            const limit = request.query.limit || request.body.limit ? 
+                parseInt(request.query.limit || request.body.limit) : 100;
+            const base = request.query.base || request.body.base ? 
+                parseInt(request.query.base || request.body.base) : 0;
             
             const result = await serviceRespo.findAll(limit, base)
-            return response.status(201).json({result})
+            return response.status(200).json({result})
     
         }catch(erro){
             console.error("Erro ao buscar serviços:", erro);
-            return response.status(500).json({"erro" : erro.message || erro})
+            // Log detalhado do erro para debug em produção
+            const errorMessage = erro.message || (typeof erro === 'string' ? erro : JSON.stringify(erro));
+            console.error("Stack trace:", erro.stack);
+            return response.status(500).json({
+                success: false,
+                message: "Failed to retrieve services",
+                error: errorMessage
+            })
         }
     }
   

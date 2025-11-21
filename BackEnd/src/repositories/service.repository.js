@@ -4,14 +4,19 @@ const { v4: uuidv4 } = require('uuid');
 class serviceRepository{
 
   async findAll(limit = 10, base = 0){
-
-    return await Service.findAll({
-
-      limit: limit,
-      offset: base
-
-    });
-    
+    try {
+      const services = await Service.findAll({
+        limit: limit,
+        offset: base,
+        order: [['createdAt', 'DESC']]
+      });
+      
+      return services;
+    } catch (error) {
+      console.error('Erro ao buscar serviços no repositório:', error);
+      console.error('Stack trace:', error.stack);
+      throw error;
+    }
   }
 
   async findService(id) {
@@ -49,19 +54,21 @@ class serviceRepository{
   }
     
   async updateService(service) {
+    // Atualizar apenas os campos permitidos do modelo Service
+    const updateData = {};
+    
+    if (service.service !== undefined) {
+      updateData.service = service.service;
+    }
+    if (service.additionalComments !== undefined) {
+      updateData.additionalComments = service.additionalComments;
+    }
+    if (service.price !== undefined) {
+      updateData.price = service.price;
+    }
 
     await Service.update(
-      {
-
-        name_client: service.name_client ? service.name_client : Service.name_client,
-        name_provider: service.name_provider ? service.name_provider : Service.name_provider,
-        client_id: service.client_id ? service.client_id : Service.client_id,
-        value: service.value ? service.value : Service.value,
-        service: service.service ? service.service : Service.service,
-        id_account_service_provider: service.id_account_service_provider ? service.id_account_service_provider : Service.id_account_service_provider,
-        date_service: service.date_service ? service.date_service : Service.date_service
-
-      },
+      updateData,
       {
         where: {
             id: service.id,
@@ -73,7 +80,7 @@ class serviceRepository{
   
     return await Service.findOne({
       where:{
-        id : id
+        id: service.id
         }
     });
   }
