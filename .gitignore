@@ -130,3 +130,7 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+BackEnd/src/Database/config*
+BackEnd/src/Database/migrations*
+BackEnd/src/Database/seeders*

@@ -40,3 +40,7 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+BackEnd/src/Database/config*
+BackEnd/src/Database/migrations*
+BackEnd/src/Database/seeders*
