@@ -1,21 +1,17 @@
-const { Schedule_Service } = require("../Database/models");
+const { Schedule_Service, Service, Schedules } = require("../Database/models");
 const { v4: uuidv4 } = require('uuid');
 
 class schedules_serviceRepository{
 
   async findAll(limit = 10, base = 0){
-
     return await Schedule_Service.findAll({
-
         limit: limit,
         offset: base,
         include: [
-            { model: Service },
-            { model: Schedules }
+            { model: Service, as: 'service' },
+            { model: Schedules, as: 'schedule' }
         ]
-
     });
-    
   }
 
   async findSchedule_Service(id) {
@@ -32,66 +28,59 @@ class schedules_serviceRepository{
     }
 
     try {
-      // Primeiro, remover todas as relações existentes para este agendamento
+      // Primeiro, remover todas as relações existentes para este agendamento (limpeza antes de atualizar)
       await Schedule_Service.destroy({
         where: { schedules_id }
       });
-      // Criar array de objetos para bulkCreate (mantendo duplicatas)
-      const scheduleServicesData = services.map(service => ({
+
+      // Criar array de objetos para bulkCreate
+      const scheduleServicesData = services.map(serviceId => ({
         id: uuidv4(),
-        schedules_id,
-        service_id: service
+        schedules_id: schedules_id,
+        service_id: serviceId
       }));
 
       // Adiciona todos os relacionamentos de uma só vez
-      const result = await Schedule_Service.bulkCreate(scheduleServicesData, { 
-        returning: true
-      });
+      const result = await Schedule_Service.bulkCreate(scheduleServicesData);
       return result;
     } catch (error) {
+      console.error("Erro ao adicionar serviços ao agendamento:", error);
       return false;
     }
   }
     
-  async updateSchedule_Service(Schedule_Service) {
-
-    await Schedule_Service.update(
-      {
-
-        name_client: Schedule_Service.name_client ? Schedule_Service.name_client : Schedule_Service.name_client,
-        name_provider: Schedule_Service.name_provider ? Schedule_Service.name_provider : Schedule_Service.name_provider,
-        client_id: Schedule_Service.client_id ? Schedule_Service.client_id : Schedule_Service.client_id,
-        value: Schedule_Service.value ? Schedule_Service.value : Schedule_Service.value,
-        Schedule_Service: Schedule_Service.Schedule_Service ? Schedule_Service.Schedule_Service : Schedule_Service.Schedule_Service,
-        id_account_Schedule_Service_provider: Schedule_Service.id_account_Schedule_Service_provider ? Schedule_Service.id_account_Schedule_Service_provider : Schedule_Service.id_account_Schedule_Service_provider,
-        date_Schedule_Service: Schedule_Service.date_Schedule_Service ? Schedule_Service.date_Schedule_Service : Schedule_Service.date_Schedule_Service
-
-      },
-      {
-        where: {
-            id: Schedule_Service.id,
-        },
-        
-      }
-
-    );
-  
-    return await Schedule_Service.findOne({
-      where:{
-        id : id
-        }
-    });
+  async updateSchedule_Service(data) {
+      // Esse método geralmente não é usado para Tabelas Pivô (nós deletamos e recriamos), 
+      // mas mantendo estrutura básica se necessário no futuro.
+      return false; 
   }
     
-  async deleteSchedule_Service(id) {
+  /**
+   * Deleta serviços.
+   * Se deleteBySchedule = true, o 'id' passado é interpretado como 'schedules_id'
+   * e deleta TODOS os serviços daquele agendamento.
+   */
+  async deleteSchedule_Service(id, serviceId = null, deleteBySchedule = false) {
+    try {
+        let whereClause = {};
 
-    await Schedule_Service.destroy({
-      where: {
-        id: id,
-      },
-    });
+        if (deleteBySchedule) {
+            // Deleta todas as conexões de um agendamento específico
+            whereClause = { schedules_id: id };
+        } else {
+            // Deleta uma conexão específica pelo ID da tabela pivô
+            whereClause = { id: id };
+        }
 
+        await Schedule_Service.destroy({
+            where: whereClause
+        });
+        return true;
+    } catch (error) {
+        console.error("Erro ao deletar schedule_service:", error);
+        return false;
+    }
   }
 }
 
-module.exports = schedules_serviceRepository
+module.exports = schedules_serviceRepository;
