@@ -67,20 +67,39 @@ export class DashboardComponent implements OnInit {
     try {
       this.schedulesService.getAllSchedules().subscribe({
         next: (schedules) => {
+          if (!schedules || !Array.isArray(schedules)) {
+            console.warn('Nenhum agendamento retornado ou formato inválido');
+            this.appointments = [];
+            this.totalAppointmentsThisMonth = 0;
+            this.completedAppointmentsThisMonth = 0;
+            return;
+          }
+
           // Agendamentos de hoje (para listagem do dia)
           const now = new Date();
           const todayStr = new Date(now).toISOString().split('T')[0];
           this.appointments = schedules.filter(schedule => {
-            const scheduleDateStr = new Date(schedule.date_and_houres).toISOString().split('T')[0];
-            return scheduleDateStr === todayStr;
+            if (!schedule || !schedule.date_and_houres) return false;
+            try {
+              const scheduleDateStr = new Date(schedule.date_and_houres).toISOString().split('T')[0];
+              return scheduleDateStr === todayStr;
+            } catch (e) {
+              console.warn('Erro ao processar data do agendamento:', schedule.id, e);
+              return false;
+            }
           });
 
           // Total de agendamentos do mês atual (para o card "Serviços este mês")
           const currentMonth = now.getMonth();
           const currentYear = now.getFullYear();
           const monthSchedules = schedules.filter(schedule => {
-            const d = new Date(schedule.date_and_houres);
-            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+            if (!schedule || !schedule.date_and_houres) return false;
+            try {
+              const d = new Date(schedule.date_and_houres);
+              return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+            } catch (e) {
+              return false;
+            }
           });
           this.totalAppointmentsThisMonth = monthSchedules.length;
           this.completedAppointmentsThisMonth = monthSchedules.filter(s => !!s.finished).length;
@@ -122,7 +141,13 @@ export class DashboardComponent implements OnInit {
   }
 
   formatDate(date: string): string {
-    return new Date(date).toLocaleDateString('pt-BR');
+    if (!date) return 'Data inválida';
+    try {
+      return new Date(date).toLocaleDateString('pt-BR');
+    } catch (e) {
+      console.warn('Erro ao formatar data:', date, e);
+      return 'Data inválida';
+    }
   }
 
   async updateStatus(appointment: Schedule, event: Event) {
@@ -208,22 +233,39 @@ export class DashboardComponent implements OnInit {
 
   getProviderName(schedule: Schedule): string {
     if (schedule.provider) {
-      return `${schedule.provider.name} ${schedule.provider.lastname}`;
+      const name = schedule.provider.name || '';
+      const lastname = schedule.provider.lastname || '';
+      const fullName = `${name} ${lastname}`.trim();
+      return fullName || 'N/A';
     }
     return 'N/A';
   }
 
   getServicesList(schedule: Schedule): string {
-    if (schedule.Services && schedule.Services.length > 0) {
-      return schedule.Services.map(s => s.service).join(', ');
+    if (schedule.Services && Array.isArray(schedule.Services) && schedule.Services.length > 0) {
+      return schedule.Services
+        .filter(s => s && s.service)
+        .map(s => s.service)
+        .join(', ');
     }
     return 'Nenhum serviço';
   }
 
   formatTime(dateTime: string): string {
-    return new Date(dateTime).toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateTime) return '--:--';
+    try {
+      const date = new Date(dateTime);
+      if (isNaN(date.getTime())) {
+        console.warn('Data inválida:', dateTime);
+        return '--:--';
+      }
+      return date.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      console.warn('Erro ao formatar hora:', dateTime, e);
+      return '--:--';
+    }
   }
 }
