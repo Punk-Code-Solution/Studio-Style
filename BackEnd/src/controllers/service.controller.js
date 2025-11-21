@@ -6,15 +6,35 @@ module.exports = class serviceController{
     async findAll(request, response){
         try{
             // Aceita tanto GET (query) quanto POST (body) para compatibilidade
-            const limit = request.query.limit || request.body.limit ? 
-                parseInt(request.query.limit || request.body.limit) : 100;
-            const base = request.query.base || request.body.base ? 
-                parseInt(request.query.base || request.body.base) : 0;
+            const limitValue = request.query.limit || request.body.limit;
+            const baseValue = request.query.base || request.body.base;
+            
+            const limit = limitValue ? parseInt(limitValue, 10) : 100;
+            const base = baseValue ? parseInt(baseValue, 10) : 0;
+            
+            // Validar que limit e base são números válidos
+            if (isNaN(limit) || limit < 1) {
+                return response.status(400).json({
+                    success: false,
+                    message: "Invalid limit parameter. Must be a positive integer."
+                });
+            }
+            
+            if (isNaN(base) || base < 0) {
+                return response.status(400).json({
+                    success: false,
+                    message: "Invalid base parameter. Must be a non-negative integer."
+                });
+            }
             
             console.log('Finding services with limit:', limit, 'base:', base);
             const result = await serviceRespo.findAll(limit, base);
             console.log('Services found:', result?.length || 0);
-            console.log('Services data:', JSON.stringify(result, null, 2));
+            
+            // Não logar o resultado completo em produção para evitar problemas
+            if (result && result.length > 0) {
+                console.log('First service sample:', JSON.stringify(result[0], null, 2));
+            }
             
             return response.status(200).json({result: result || []})
     
@@ -23,10 +43,20 @@ module.exports = class serviceController{
             // Log detalhado do erro para debug em produção
             const errorMessage = erro.message || (typeof erro === 'string' ? erro : JSON.stringify(erro));
             console.error("Stack trace:", erro.stack);
+            
+            // Verificar se é um erro de conexão com o banco de dados
+            if (erro.name === 'SequelizeConnectionError' || erro.name === 'SequelizeDatabaseError') {
+                return response.status(503).json({
+                    success: false,
+                    message: "Database connection error. Please try again later.",
+                    error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+                });
+            }
+            
             return response.status(500).json({
                 success: false,
                 message: "Failed to retrieve services",
-                error: errorMessage
+                error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
             })
         }
     }
