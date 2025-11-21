@@ -101,8 +101,6 @@ class AccountController {
   async createAccount(req, res) {
     try {
       const account = req.body;
-
-      console.log("Account: ", account);
       
       // LÓGICA MODIFICADA (Ponto 1): Hash password only if provided
       if (account.password && account.password.trim() !== '') {
@@ -179,7 +177,6 @@ class AccountController {
       if (!role) {
         // No filter, return all accounts
         const result = await this.accountRepository.findAll({});
-        console.log("Result: ", result);
         return ResponseHandler.success(res, 200, 'Accounts retrieved successfully', result);
       }
 

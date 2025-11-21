@@ -14,7 +14,6 @@ class serviceRepository{
         // order: [['createdAt', 'DESC']]
       });
       
-      console.log('Services found in repository:', services?.length || 0);
       return services || [];
     } catch (error) {
       console.error('Erro ao buscar serviços no repositório:', error);

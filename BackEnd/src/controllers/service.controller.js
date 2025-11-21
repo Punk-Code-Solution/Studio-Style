@@ -27,9 +27,7 @@ module.exports = class serviceController{
                 });
             }
             
-            console.log('Finding services with limit:', limit, 'base:', base);
             const result = await serviceRespo.findAll(limit, base);
-            console.log('Services found:', result?.length || 0);
             
             // Não logar o resultado completo em produção para evitar problemas
             if (result && result.length > 0) {

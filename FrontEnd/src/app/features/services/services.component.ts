@@ -354,7 +354,6 @@ export class ServicesComponent implements OnInit {
     this.isLoading = true;
     this.servicesService.getAllServices().subscribe({
       next: (services) => {
-        console.log('Services loaded:', services);
         this.services = services || [];
         this.filterServices();
         this.isLoading = false;

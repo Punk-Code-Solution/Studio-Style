@@ -14,7 +14,6 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: 
         Authorization: `Bearer ${token}`
       }
     });
-    console.log('Request with token to:', req.url);
   } else {
     console.warn('No token found for request to:', req.url);
   }

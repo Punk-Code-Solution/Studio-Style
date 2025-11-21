@@ -44,7 +44,6 @@ export class ServicesService {
     // Usar GET ao invés de POST para listar serviços
     return this.http.get<{result: Service[] | Service}>(`${this.apiUrl}?limit=100&base=0`).pipe(
       map(response => {
-        console.log('Services API response:', response);
         const result = response.result;
         let services: Service[] = [];
         
@@ -54,10 +53,7 @@ export class ServicesService {
         } else if (result) {
           services = [result];
         }
-        
-        console.log('Services after processing:', services);
-        console.log('Services count:', services.length);
-        
+
         // Filtrar serviços válidos (que tenham pelo menos service e price)
         // Tornar o filtro menos restritivo para debug
         const validServices = services.filter(service => {
@@ -75,9 +71,6 @@ export class ServicesService {
           
           return isValid;
         });
-        
-        console.log('Valid services count:', validServices.length);
-        console.log('Valid services:', validServices);
         return validServices;
       }),
       catchError(error => {

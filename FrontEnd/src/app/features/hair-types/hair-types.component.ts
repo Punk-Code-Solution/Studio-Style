@@ -354,7 +354,6 @@ export class HairTypesComponent implements OnInit {
     this.isLoading = true;
     this.hairTypeService.getAllHairTypes().subscribe({
       next: (hairTypes) => {
-        console.log('Hair types loaded:', hairTypes);
         this.hairTypes = hairTypes || [];
         this.filterHairTypes();
         this.isLoading = false;
@@ -456,7 +455,6 @@ export class HairTypesComponent implements OnInit {
       // Update
       this.hairTypeService.updateHairType({ id: this.selectedHairType.id, type: request.type, level: request.level ?? undefined, letter: request.letter ?? undefined }).subscribe({
         next: (result) => {
-          console.log('Hair type updated:', result);
           this.notificationService.success('Tipo de cabelo atualizado com sucesso!');
           this.closeModal();
           this.loadHairTypes();
@@ -473,7 +471,6 @@ export class HairTypesComponent implements OnInit {
       // Create
       this.hairTypeService.createHairType({ type: request.type, level: request.level ?? undefined, letter: request.letter ?? undefined }).subscribe({
         next: (result) => {
-          console.log('Hair type created:', result);
           this.notificationService.success('Tipo de cabelo criado com sucesso!');
           this.closeModal();
           this.loadHairTypes();
