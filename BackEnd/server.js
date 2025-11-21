@@ -159,7 +159,7 @@ app.use('/api/product', authenticateToken, productRoutes);
 app.use('/api/purchase', authenticateToken, purchaseRoutes);
 app.use('/api/service', authenticateToken, serviceRoutes);
 app.use('/api/schedules', authenticateToken, schedulesRoutes)
-app.use('/api/whatsapp', authenticateToken, whatsappRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
