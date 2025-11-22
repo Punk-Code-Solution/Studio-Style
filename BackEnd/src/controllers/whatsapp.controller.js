@@ -163,9 +163,12 @@ class WhatsAppController {
     const session = this.getUserSession(phone);
     const cleanText = text.toLowerCase().trim();
 
+    // Se não há sessão ativa, trata como primeira interação
+    const isFirstInteraction = !session || !session.step;
+
     // Comandos principais
     if (cleanText === 'menu' || cleanText === 'inicio' || cleanText === 'comecar') {
-      await this.sendMainMenu(phone, clientName);
+      await this.sendMainMenu(phone, clientName, isFirstInteraction);
       this.setUserSession(phone, { step: 'main_menu', clientId, clientName });
     }
     else if (cleanText === 'agendar' || cleanText === 'marcar') {
@@ -178,8 +181,14 @@ class WhatsAppController {
       await this.cancelProcess(phone);
     }
     else {
-      // Processa baseado no estado da sessao
-      await this.processSessionStep(phone, text, session);
+      // Se é primeira interação, mostra boas-vindas e menu
+      if (isFirstInteraction) {
+        await this.sendMainMenu(phone, clientName, true);
+        this.setUserSession(phone, { step: 'main_menu', clientId, clientName });
+      } else {
+        // Processa baseado no estado da sessao
+        await this.processSessionStep(phone, text, session);
+      }
     }
   }
 
@@ -191,7 +200,7 @@ class WhatsAppController {
       // Busca o nome do cliente quando a sessão não existe
       const clientAccount = await this.getOrCreateClient(phone, null);
       const clientName = clientAccount ? clientAccount.name : '';
-      await this.sendMainMenu(phone, clientName);
+      await this.sendMainMenu(phone, clientName, true);
       return;
     }
 
@@ -209,7 +218,7 @@ class WhatsAppController {
         await this.handleBookingConfirmation(phone, text, session);
         break;
       default:
-        await this.sendMainMenu(phone, session?.clientName || '');
+        await this.sendMainMenu(phone, session?.clientName || '', false);
     }
   }
 
@@ -461,17 +470,36 @@ class WhatsAppController {
   }
 
   /**
+   * Envia mensagem de boas-vindas inicial
+   */
+  async sendWelcomeMessage(phone, clientName = '') {
+    const greeting = clientName ? `Olá ${clientName}!` : 'Olá!';
+    
+    const welcomeMessage = `${greeting}\n\n` +
+      'Bem-vindo ao Studio & Style! ✨\n\n' +
+      'Estou aqui para ajudá-lo com seus agendamentos.\n\n' +
+      'Aguarde um momento enquanto carrego o menu...';
+    
+    await this.sendMessageSafely(phone, welcomeMessage);
+    
+    // Pequeno delay para melhorar a experiência do usuário
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+
+  /**
    * Envia menu principal
    */
-  async sendMainMenu(phone, clientName = '') {
-    const greeting = clientName ? `Olá ${clientName}!` : 'Olá!';
+  async sendMainMenu(phone, clientName = '', showWelcome = false) {
+    // Se showWelcome for true, envia a mensagem de boas-vindas primeiro
+    if (showWelcome) {
+      await this.sendWelcomeMessage(phone, clientName);
+    }
 
-    const message = `${greeting}\n\n` +
-      'Bem-vindo ao Studio & Style! ✨\n\n' +
+    const message = '📋 *MENU PRINCIPAL*\n\n' +
       'Escolha uma opção:\n\n' +
-      '1. AGENDAR um serviço\n' +
-      '2. MEUS AGENDAMENTOS\n' +
-      '3. CANCELAR\n\n' +
+      '1️⃣ AGENDAR um serviço\n' +
+      '2️⃣ MEUS AGENDAMENTOS\n' +
+      '3️⃣ CANCELAR\n\n' +
       'Digite o *número* ou a *palavra* da opção desejada.';
 
     await this.sendMessageSafely(phone, message);
