@@ -26,6 +26,27 @@ class WhatsAppController {
   }
 
   /**
+   * Método auxiliar para enviar mensagens com tratamento de erros
+   */
+  async sendMessageSafely(phone, message) {
+    const result = await this.whatsappService.sendTextMessage(phone, message);
+    
+    if (!result.success) {
+      if (result.recoverable) {
+        // Erro conhecido e recuperável (ex: número não permitido)
+        // Não lança exceção, apenas loga o aviso
+        console.warn(`Não foi possível enviar mensagem para ${phone}: ${result.error}`);
+        return false;
+      } else {
+        // Erro crítico - lança exceção para ser tratado no catch
+        throw new Error(result.error || 'Erro ao enviar mensagem');
+      }
+    }
+    
+    return true;
+  }
+
+  /**
    * Verifica webhook do WhatsApp
    */
   verifyWebhook(req, res) {
@@ -56,11 +77,13 @@ class WhatsAppController {
       const { from, text, contact } = messageData;
 
       // Processa a mensagem baseada no estado da sessao do usuario
+      // Erros recuperáveis (como número não permitido) não quebram o webhook
       await this.processMessage(from, text, contact);
 
       res.status(200).json({ status: 'ok' });
     } catch (error) {
-      console.error('Erro no webhook:', error);
+      // Apenas erros críticos chegam aqui
+      console.error('Erro crítico no webhook:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -128,7 +151,7 @@ class WhatsAppController {
     const clientAccount = await this.getOrCreateClient(phone, contact.name);
 
     if (!clientAccount) {
-      await this.whatsappService.sendTextMessage(phone,
+      await this.sendMessageSafely(phone,
         '❌ Desculpe, não consegui identificar seu cadastro. Tente novamente mais tarde.');
       return;
     }
@@ -198,7 +221,7 @@ class WhatsAppController {
     const services = await this.serviceRepo.findAll();
 
     if (!services || services.length === 0) {
-        await this.whatsappService.sendTextMessage(phone,
+        await this.sendMessageSafely(phone,
         '❌ Desculpe, não há serviços disponíveis para agendamento no momento.');
       return;
     }
@@ -212,7 +235,7 @@ class WhatsAppController {
       ).join('\n') +
       '\n\nDigite o número do serviço desejado.';
 
-    await this.whatsappService.sendTextMessage(phone, message);
+    await this.sendMessageSafely(phone, message);
     this.setUserSession(phone, {
       step: 'select_service',
       services: validServices,
@@ -229,7 +252,7 @@ class WhatsAppController {
     const selectedService = session.services[serviceIndex];
 
     if (!selectedService) {
-      await this.whatsappService.sendTextMessage(phone,
+      await this.sendMessageSafely(phone,
         'Opção inválida. Digite o número do serviço desejado.');
       return;
     }
@@ -244,7 +267,7 @@ class WhatsAppController {
       ).join('\n') +
       '\n\nDigite o número da data desejada.';
 
-    await this.whatsappService.sendTextMessage(phone, message);
+    await this.sendMessageSafely(phone, message);
     this.setUserSession(phone, {
       ...session,
       step: 'select_date',
@@ -261,7 +284,7 @@ class WhatsAppController {
     const selectedDate = session.availableDates[dateIndex];
 
     if (!selectedDate) {
-      await this.whatsappService.sendTextMessage(phone,
+      await this.sendMessageSafely(phone,
         'Data inválida. Digite o número da data desejada.');
       return;
     }
@@ -272,7 +295,7 @@ class WhatsAppController {
     const availableTimes = await this.getAvailableTimes(selectedDate, duration);
 
     if (availableTimes.length === 0) {
-      await this.whatsappService.sendTextMessage(phone,
+      await this.sendMessageSafely(phone,
         'Não há horários disponíveis para esta data. Escolha outra data.');
       return;
     }
@@ -284,7 +307,7 @@ class WhatsAppController {
       ).join('\n') +
       '\n\nDigite o número do horário desejado.';
 
-    await this.whatsappService.sendTextMessage(phone, message);
+    await this.sendMessageSafely(phone, message);
     this.setUserSession(phone, {
       ...session,
       step: 'select_time',
@@ -302,7 +325,7 @@ class WhatsAppController {
     const selectedTime = session.availableTimes[timeIndex];
 
     if (!selectedTime) {
-      await this.whatsappService.sendTextMessage(phone,
+      await this.sendMessageSafely(phone,
         'Horário inválido. Digite o número do horário desejado.');
       return;
     }
@@ -313,7 +336,7 @@ class WhatsAppController {
     const isAvailable = await this.checkAvailability(appointmentDateTime, session.duration);
 
     if (!isAvailable) {
-      await this.whatsappService.sendTextMessage(phone,
+      await this.sendMessageSafely(phone,
         'Este horário não está mais disponível. Escolha outro horário.');
       return;
     }
@@ -326,7 +349,7 @@ class WhatsAppController {
       `Duração Aprox.: ${session.duration} minutos\n\n` +
       `Digite "CONFIRMAR" para confirmar ou "CANCELAR" para cancelar.`;
 
-    await this.whatsappService.sendTextMessage(phone, message);
+    await this.sendMessageSafely(phone, message);
     this.setUserSession(phone, {
       ...session,
       step: 'confirm_booking',
@@ -358,20 +381,20 @@ class WhatsAppController {
           `Obrigado por escolher nosso salão! ✨\n\n` +
           `Digite "MENU" para voltar ao início.`;
 
-        await this.whatsappService.sendTextMessage(phone, message);
+        await this.sendMessageSafely(phone, message);
         
         // Limpa a sessao
         this.clearUserSession(phone);
         
       } catch (error) {
         console.error('Erro ao criar agendamento:', error);
-        await this.whatsappService.sendTextMessage(phone, 
+        await this.sendMessageSafely(phone, 
           '❌ Erro ao confirmar agendamento. Tente novamente mais tarde.');
       }
     } else if (cleanText === 'cancelar') {
       await this.cancelProcess(phone);
     } else {
-      await this.whatsappService.sendTextMessage(phone,
+      await this.sendMessageSafely(phone,
         'Digite "CONFIRMAR" para confirmar ou "CANCELAR" para cancelar.');
     }
   }
@@ -400,7 +423,7 @@ class WhatsAppController {
       });
 
       if (!schedules || schedules.length === 0) {
-        await this.whatsappService.sendTextMessage(phone,
+        await this.sendMessageSafely(phone,
           `Olá ${clientName}, você não possui agendamentos futuros.`);
         return;
       }
@@ -417,11 +440,11 @@ class WhatsAppController {
       });
 
       message += `Digite "MENU" para voltar ao início.`;
-      await this.whatsappService.sendTextMessage(phone, message);
+      await this.sendMessageSafely(phone, message);
 
     } catch (error) {
       console.error('Erro ao buscar agendamentos:', error);
-      await this.whatsappService.sendTextMessage(phone,
+      await this.sendMessageSafely(phone,
         'Erro ao buscar seus agendamentos. Tente novamente mais tarde.');
     }
   }
@@ -433,7 +456,7 @@ class WhatsAppController {
     const session = this.getUserSession(phone);
     const clientName = session ? session.clientName : '';
     this.clearUserSession(phone);
-    await this.whatsappService.sendTextMessage(phone,
+    await this.sendMessageSafely(phone,
       'Processo cancelado. Digite "MENU" para ver as opções disponíveis.');
   }
 
@@ -451,7 +474,7 @@ class WhatsAppController {
       '3. CANCELAR\n\n' +
       'Digite o *número* ou a *palavra* da opção desejada.';
 
-    await this.whatsappService.sendTextMessage(phone, message);
+    await this.sendMessageSafely(phone, message);
   }
 
   /**

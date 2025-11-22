@@ -36,10 +36,39 @@ class WhatsAppService {
           }
         }
       );
-      return response.data;
+      return { success: true, data: response.data };
     } catch (error) {
+      const errorData = error.response?.data?.error || {};
+      const errorCode = errorData.code;
+      const errorMessage = errorData.message || error.message;
+      
+      // Erros conhecidos que não devem quebrar o webhook
+      const knownErrors = [
+        131030, // Recipient phone number not in allowed list
+        131026, // Message undeliverable
+        131047, // Re-engagement message
+        131048, // Unsupported message type
+      ];
+      
+      if (errorCode && knownErrors.includes(errorCode)) {
+        console.warn(`Erro conhecido do WhatsApp (${errorCode}): ${errorMessage}`);
+        console.warn(`Número: ${to}`);
+        return { 
+          success: false, 
+          error: errorMessage,
+          code: errorCode,
+          recoverable: true // Indica que é um erro conhecido e não crítico
+        };
+      }
+      
+      // Erros desconhecidos ou críticos
       console.error('Erro ao enviar mensagem:', error.response?.data || error.message);
-      throw error;
+      return { 
+        success: false, 
+        error: errorMessage,
+        code: errorCode,
+        recoverable: false
+      };
     }
   }
 
