@@ -165,7 +165,10 @@ class WhatsAppController {
    */
   async processSessionStep(phone, text, session) {
     if (!session || !session.step) {
-      await this.sendMainMenu(phone, session.clientName);
+      // Busca o nome do cliente quando a sessão não existe
+      const clientAccount = await this.getOrCreateClient(phone, null);
+      const clientName = clientAccount ? clientAccount.name : '';
+      await this.sendMainMenu(phone, clientName);
       return;
     }
 
@@ -183,7 +186,7 @@ class WhatsAppController {
         await this.handleBookingConfirmation(phone, text, session);
         break;
       default:
-        await this.sendMainMenu(phone, session.clientName);
+        await this.sendMainMenu(phone, session?.clientName || '');
     }
   }
 

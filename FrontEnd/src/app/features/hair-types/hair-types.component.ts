@@ -447,13 +447,13 @@ export class HairTypesComponent implements OnInit {
     this.isSubmitting = true;
     const request = {
       type: hairTypeData.type,
-      level: hairTypeData.level || null,
-      letter: hairTypeData.letter || null
+      level: hairTypeData.level ?? undefined,
+      letter: hairTypeData.letter ?? undefined
     };
 
     if (this.selectedHairType?.id) {
       // Update
-      this.hairTypeService.updateHairType({ id: this.selectedHairType.id, type: request.type, level: request.level ?? undefined, letter: request.letter ?? undefined }).subscribe({
+      this.hairTypeService.updateHairType({ id: this.selectedHairType.id, ...request }).subscribe({
         next: (result) => {
           this.notificationService.success('Tipo de cabelo atualizado com sucesso!');
           this.closeModal();
@@ -469,7 +469,7 @@ export class HairTypesComponent implements OnInit {
       });
     } else {
       // Create
-      this.hairTypeService.createHairType({ type: request.type, level: request.level ?? undefined, letter: request.letter ?? undefined }).subscribe({
+      this.hairTypeService.createHairType(request).subscribe({
         next: (result) => {
           this.notificationService.success('Tipo de cabelo criado com sucesso!');
           this.closeModal();
