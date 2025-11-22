@@ -33,9 +33,15 @@ class WhatsAppController {
     
     if (!result.success) {
       if (result.recoverable) {
-        // Erro conhecido e recuperável (ex: número não permitido)
-        // Não lança exceção, apenas loga o aviso
-        console.warn(`Não foi possível enviar mensagem para ${phone}: ${result.error}`);
+        // Erro conhecido e recuperável (ex: número não permitido, token expirado)
+        if (result.isAuthError) {
+          // Erro de autenticação - loga como erro mas não quebra o webhook
+          console.error(`❌ ERRO DE AUTENTICAÇÃO: Não foi possível enviar mensagem para ${phone}`);
+          console.error(`❌ Token do WhatsApp expirado ou inválido. Verifique a variável WHATSAPP_ACCESS_TOKEN.`);
+        } else {
+          // Outros erros recuperáveis
+          console.warn(`Não foi possível enviar mensagem para ${phone}: ${result.error}`);
+        }
         return false;
       } else {
         // Erro crítico - lança exceção para ser tratado no catch
