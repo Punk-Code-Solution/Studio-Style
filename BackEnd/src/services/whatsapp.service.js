@@ -50,6 +50,11 @@ class WhatsAppService {
         131048, // Unsupported message type
       ];
       
+      // Erros de autenticação/token (não quebram o webhook, mas são problemas de configuração)
+      const authErrors = [
+        190, // OAuthException - Token expirado ou inválido
+      ];
+      
       if (errorCode && knownErrors.includes(errorCode)) {
         console.warn(`Erro conhecido do WhatsApp (${errorCode}): ${errorMessage}`);
         console.warn(`Número: ${to}`);
@@ -58,6 +63,19 @@ class WhatsAppService {
           error: errorMessage,
           code: errorCode,
           recoverable: true // Indica que é um erro conhecido e não crítico
+        };
+      }
+      
+      if (errorCode && authErrors.includes(errorCode)) {
+        console.error(`⚠️ ERRO DE AUTENTICAÇÃO DO WHATSAPP (${errorCode}): ${errorMessage}`);
+        console.error(`⚠️ O token de acesso expirou ou é inválido. Atualize a variável WHATSAPP_ACCESS_TOKEN no ambiente.`);
+        console.error(`⚠️ Número tentado: ${to}`);
+        return { 
+          success: false, 
+          error: errorMessage,
+          code: errorCode,
+          recoverable: true, // Não quebra o webhook, mas precisa ser corrigido
+          isAuthError: true // Flag especial para erros de autenticação
         };
       }
       
