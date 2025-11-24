@@ -13,10 +13,29 @@ class purchaseRepository{
 
   }
 
-  async findAll(){
+  // Se o seu controller chama findAll(limit, base), ajuste:
+  async findAll(limit = 10, base = 0){
+    return await Purchase_sale.findAll({
+      limit: limit,
+      offset: base
+    });
+  }
 
-    return await Purchase_sale.findAll();
-
+  // Adicionar este método que falta
+  async findPurchaseAccount(cpf) {
+    // Lógica para buscar compras baseado no CPF da conta
+    // Requer associação com Account e busca pelo CPF da conta
+    // Exemplo simplificado (ajuste conforme seu modelo):
+    const { Account } = require("../Database/models");
+    /* Nota: Você precisará buscar primeiro a conta pelo CPF ou fazer um include.
+       Assumindo que você tem acesso ao modelo Account aqui.
+    */
+    return await Purchase_sale.findAll({
+        include: [{
+            model: Account,
+            where: { cpf: cpf }
+        }]
+    });
   }
 
   async findPurchase(id){
