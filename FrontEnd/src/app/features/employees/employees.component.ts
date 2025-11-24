@@ -153,7 +153,7 @@ interface Filters {
                 <td>{{ getRoleLabel(employee.TypeAccount.type) }}</td>
                 <td>
                   <span class="status-badge" [class]="getStatusClass(employee)">
-                    {{ getStatusLabel(employee.deleted) }}
+                    {{ getStatusLabel(employee) }}
                   </span>
                 </td>
                 <td>
@@ -696,13 +696,20 @@ export class EmployeesComponent implements OnInit {
     }
 
     // Status filter
-    const activeStatuses = Object.entries(this.filters.status)
-      .filter(([_, isActive]) => isActive)
-      .map(([status, _]) => status as Employee['TypeAccount']['type']);
+    filtered = filtered.filter(employee => {
+      const status = employee.status || (employee.deleted ? 'inactive' : 'active');
 
-    if (activeStatuses.length > 0) {
-      filtered = filtered.filter(employee => activeStatuses.includes(employee.TypeAccount.type));
-    }
+      if (status === 'on_leave') {
+        return this.filters.status.on_leave;
+      }
+
+      if (status === 'inactive') {
+        return this.filters.status.inactive;
+      }
+
+      // Default to active
+      return this.filters.status.active;
+    });
 
     // Role filter
     const activeRoles = Object.entries(this.filters.roles)
@@ -742,14 +749,27 @@ export class EmployeesComponent implements OnInit {
     return roleObj ? roleObj.label : role;
   }
 
-  getStatusLabel(status: Employee['deleted']): string {
-    if (status === null) {return 'Ativo'}
-    else {return 'Inativo';}
+  getStatusLabel(employee: Employee): string {
+    const status = employee.status || (employee.deleted ? 'inactive' : 'active');
+
+    switch (status) {
+      case 'inactive':
+        return 'Inativo';
+      case 'on_leave':
+        return 'Em licença';
+      default:
+        return 'Ativo';
+    }
   }
 
   getStatusClass(employee: Employee): string {
-    if (employee.deleted === null) {return 'active';}
-    else{ return "inactive";}
+    const status = employee.status || (employee.deleted ? 'inactive' : 'active');
+
+    if (status === 'on_leave') {
+      return 'on-leave';
+    }
+
+    return status === 'inactive' ? 'inactive' : 'active';
   }
 
   getEmployeePhone(employee: Employee): string | null {
@@ -918,7 +938,7 @@ export class EmployeesComponent implements OnInit {
           } else if (error.error?.message) {
             errorMsg = error.error.message;
           }
-          
+          console.error('Erro ao criar funcionário:', error);
           this.notificationService.error(errorMsg);
           this.isSubmitting = false;
         }

@@ -24,18 +24,6 @@ CREATE TABLE public."Hairs"(
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
 
--- Create Company Table
-CREATE TABLE public."Companies"(
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(100),
-  cnpj VARCHAR(18),
-  start_date DATE,
-  active DATE,
-  avatar TEXT,
-  "createdAt" TIMESTAMP DEFAULT NOW(),
-  "updatedAt" TIMESTAMP DEFAULT NOW()
-);
-
 -- Create Account Table
 CREATE TABLE public."Accounts"(
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -49,7 +37,6 @@ CREATE TABLE public."Accounts"(
   avatar VARCHAR(255),
   "typeaccount_id" UUID REFERENCES public."TypeAccounts" (id),
   "type_hair_id" UUID REFERENCES public."Hairs" (id),
-  "company_id_account" UUID REFERENCES public."Companies" (id),
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -63,7 +50,6 @@ CREATE TABLE public."Purchases"(
   date_purchase DATE,
   product_description TEXT,
   "account_id_purchase" UUID REFERENCES public."Accounts" (id),
-  "company_id_purchase" UUID REFERENCES public."Companies" (id),
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -104,7 +90,6 @@ CREATE TABLE public."Phones"(
   active DATE,
   type VARCHAR(100),
   "account_id_phone" UUID REFERENCES public."Accounts" (id),
-  "company_id_phone" UUID REFERENCES public."Companies" (id),
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -116,7 +101,6 @@ CREATE TABLE public."Emails"(
   active DATE,
   email VARCHAR(100),
   "account_id_email" UUID REFERENCES public."Accounts" (id),
-  "company_id_email" UUID REFERENCES public."Companies" (id),
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -220,14 +204,8 @@ CREATE TABLE public."HairAccounts"(
 ALTER TABLE public."Emails" ADD CONSTRAINT "Emails_fk_Account" FOREIGN KEY ("account_id_email")
   REFERENCES public."Accounts" (id) ON DELETE SET NULL ON UPDATE CASCADE;
 
-ALTER TABLE public."Emails" ADD CONSTRAINT "Emails_fk_Company" FOREIGN KEY ("company_id_email")
-  REFERENCES public."Companies" (id) ON DELETE SET NULL ON UPDATE CASCADE;
-
 ALTER TABLE public."Phones" ADD CONSTRAINT "Phones_fk_Account" FOREIGN KEY ("account_id_phone")
   REFERENCES public."Accounts" (id) ON DELETE SET NULL ON UPDATE CASCADE;
-
-ALTER TABLE public."Phones" ADD CONSTRAINT "Phones_fk_Company" FOREIGN KEY ("company_id_phone")
-  REFERENCES public."Companies" (id) ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE public."Accounts" ADD CONSTRAINT "TypeAccount_fk" FOREIGN KEY ("typeaccount_id")
   REFERENCES public."TypeAccounts" (id) ON DELETE SET NULL ON UPDATE CASCADE;
@@ -267,9 +245,6 @@ ALTER TABLE public."Sales" ADD CONSTRAINT "Sales_fk_Account_Seller" FOREIGN KEY 
 
 ALTER TABLE public."Purchases" ADD CONSTRAINT "Purchases_fk_Account" FOREIGN KEY ("account_id_purchase")
   REFERENCES public."Accounts" (id) ON DELETE NO ACTION ON UPDATE CASCADE;
-
-ALTER TABLE public."Purchases" ADD CONSTRAINT "Purchases_fk_Company" FOREIGN KEY ("company_id_purchase")
-  REFERENCES public."Companies" (id) ON DELETE NO ACTION ON UPDATE CASCADE;
 
 ALTER TABLE public."Products" ADD CONSTRAINT "Products_fk_Purchase" FOREIGN KEY ("purchase_id_product")
   REFERENCES public."Purchases" (id) ON DELETE NO ACTION ON UPDATE CASCADE;

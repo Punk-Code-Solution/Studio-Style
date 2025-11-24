@@ -29,14 +29,6 @@ module.exports = {
           key: 'id'
         }
       },
-      company_id_adress: {
-        type: Sequelize.UUID,
-        defaultValue: Sequelize.UUIDV4,
-        references: {
-          model: 'Companies',
-          key: 'id'
-        }
-      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE

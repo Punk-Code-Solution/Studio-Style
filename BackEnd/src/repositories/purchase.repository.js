@@ -37,7 +37,6 @@ class purchaseRepository{
       amount_product,
       value_product,
       id_account,
-      id_company_purchase,
       date_purchase,
       product_description
      } = purchase
@@ -48,7 +47,6 @@ class purchaseRepository{
       amount_product,
       value_product,
       id_account,
-      id_company_purchase,
       date_purchase,
       product_description
 
@@ -63,7 +61,6 @@ class purchaseRepository{
         amount_product: purchase.amount_product ? purchase.amount_product : Purchase_sale.amount_product,
         value_product: purchase.value_product ? purchase.value_product : Purchase_sale.value_product,
         id_account: purchase.id_account ? purchase.id_account : Purchase_sale.id_account,
-        id_company_purchase: purchase.id_company_purchase ? purchase.id_company_purchase : Purchase_sale.id_company_purchase,
         date_purchase: purchase.date_purchase ? purchase.date_purchase : Purchase_sale.date_purchase,
         product_description: purchase.product_description ? purchase.product_description : Purchase_sale.product_description
       },

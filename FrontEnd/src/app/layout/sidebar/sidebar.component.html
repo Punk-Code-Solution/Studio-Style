@@ -9,6 +9,16 @@
     <span>Dashboard</span>
   </a>
 
+  <a routerLink="/financial" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/financial')">
+    <i class="fas fa-chart-line"></i>
+    <span>Dashboard Financeiro</span>
+  </a>
+
+  <a routerLink="/financial/ledger" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/financial')">
+    <i class="fas fa-book"></i>
+    <span>Entradas e Saídas</span>
+  </a>
+
   <a routerLink="/services" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/services')">
     <i class="fas fa-calendar-check"></i>
     <span>Agendamentos</span>
@@ -17,6 +27,11 @@
   <a routerLink="/patients" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/patients')">
     <i class="fas fa-users"></i>
     <span>Clientes</span>
+  </a> 
+
+  <a routerLink="/financial/settings" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/financial') && authService.hasRole('admin')">
+    <i class="fas fa-cog"></i>
+    <span>Configurações Financeiras</span>
   </a>
 
   <a routerLink="/employees" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/employees')">

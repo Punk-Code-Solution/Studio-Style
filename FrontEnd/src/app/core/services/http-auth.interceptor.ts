@@ -7,6 +7,10 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: 
   const authService = inject(AuthService);
   const token = authService.getToken();
 
+  // Lista de endpoints públicos que não precisam de token
+  const publicEndpoints = ['/api/auth/login', '/api/auth/register'];
+  const isPublicEndpoint = publicEndpoints.some(endpoint => req.url.includes(endpoint));
+
   let authReq = req;
   if (token) {
     authReq = req.clone({
@@ -14,7 +18,8 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: 
         Authorization: `Bearer ${token}`
       }
     });
-  } else {
+  } else if (!isPublicEndpoint) {
+    // Só loga warning se não for um endpoint público
     console.warn('No token found for request to:', req.url);
   }
 

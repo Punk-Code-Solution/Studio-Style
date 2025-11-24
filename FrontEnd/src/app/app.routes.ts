@@ -91,6 +91,21 @@ const protectedRoutes: Routes = [
         pathMatch: 'full'
       },
       {
+        path: 'financial',
+        canActivate: [RoleGuard],
+        loadComponent: () => import('./features/financial/financial-dashboard/financial-dashboard.component').then(m => m.FinancialDashboardComponent)
+      },
+      {
+        path: 'financial/settings',
+        canActivate: [RoleGuard],
+        loadComponent: () => import('./features/financial/financial-settings/financial-settings.component').then(m => m.FinancialSettingsComponent)
+      },
+      {
+        path: 'financial/ledger',
+        canActivate: [RoleGuard],
+        loadComponent: () => import('./features/financial/financial-ledger/financial-ledger.component').then(m => m.FinancialLedgerComponent)
+      },
+      {
         path: 'dashboard',
         canActivate: [RoleGuard],
         loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)

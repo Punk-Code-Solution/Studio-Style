@@ -350,8 +350,7 @@ class AccountController {
             account_id_email: id,
             email: accountData.email,
             name: accountData.name,
-            active: new Date(),
-            company_id_email: accountData.company_id_account || null
+            active: new Date()
           };
           
           const emailResult = await this.emailRepository.createEmail(emailData);
@@ -409,8 +408,7 @@ class AccountController {
             ddd: ddd,
             active: new Date(),
             type: 'whatsapp',
-            account_id_phone: id,
-            company_id_phone: null
+            account_id_phone: id
           };
           
           await this.phoneRepository.addPhone(phoneData);
@@ -513,8 +511,7 @@ class AccountController {
         account_id_email: account.id,
         email: account.email,
         name: account.name, 
-        active: new Date(), 
-        company_id_email: account.company_id || null
+        active: new Date()
       };
       
       const result = await this.emailRepository.createEmail(emailData);
@@ -546,8 +543,7 @@ class AccountController {
         ddd: ddd,
         active: new Date(),
         type: 'whatsapp',
-        account_id_phone: accountId,
-        company_id_phone: null
+        account_id_phone: accountId
       };
 
       await this.phoneRepository.addPhone(phone);

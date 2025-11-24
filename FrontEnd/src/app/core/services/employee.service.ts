@@ -29,7 +29,6 @@ export interface Email {
   email: string;
   active: string;
   account_id_email: string;
-  company_id_email?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -45,12 +44,10 @@ export interface Employee {
     deleted?: string;
     avatar?: string;
     typeaccount_id: string;
-    company_id_account?: string;
     type_hair_id?: string;
     createdAt: string;
     updatedAt: string;
     TypeAccount: TypeAccount;
-    Company?: any;
     Emails: Email[];
     Hair?: any;
     Schedules: any[];
@@ -133,8 +130,23 @@ export class EmployeeService {
       emp.role = emp.TypeAccount.type as any;
     }
     
-    // Mapear status a partir de deleted
-    emp.status = emp.deleted ? 'inactive' : 'active';
+    // Normalizar flag deleted (pode vir como boolean, string ou null)
+    const rawDeleted = (emp as any).deleted;
+    const isDeleted =
+      rawDeleted === true ||
+      rawDeleted === 1 ||
+      rawDeleted === '1' ||
+      rawDeleted === 'true' ||
+      (typeof rawDeleted === 'string' &&
+        rawDeleted.length > 0 &&
+        rawDeleted !== 'false' &&
+        rawDeleted !== '0');
+
+    // Mantenha deleted como boolean padronizado para facilitar o consumo
+    emp.deleted = isDeleted ? 'true' : 'false';
+    
+    // Mapear status a partir de deleted (permite extender para outros estados futuramente)
+    emp.status = isDeleted ? 'inactive' : 'active';
     
     return emp;
   }

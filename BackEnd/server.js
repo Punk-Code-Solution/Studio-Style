@@ -8,12 +8,12 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const authRoutes = require('./src/Routes/auth.routes.js');
 const accountRoutes = require('./src/Routes/account.routes.js');
-const companyRoutes = require('./src/Routes/company.routes.js');
 const productRoutes = require('./src/Routes/product.routes.js');
 const purchaseRoutes = require('./src/Routes/purchase_sale.routes.js');
 const serviceRoutes = require('./src/Routes/service.routes.js');
 const schedulesRoutes = require('./src/Routes/schedules.routes.js');
 const whatsappRoutes = require('./src/Routes/whatsapp.routes.js');
+const financialRoutes = require('./src/Routes/financial.routes.js');
 
 // Import database connection
 let db;
@@ -154,12 +154,12 @@ app.get('/', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/account', accountRoutes);
-app.use('/api/company', authenticateToken, companyRoutes);
 app.use('/api/product', authenticateToken, productRoutes);
 app.use('/api/purchase', authenticateToken, purchaseRoutes);
 app.use('/api/service', authenticateToken, serviceRoutes);
 app.use('/api/schedules', authenticateToken, schedulesRoutes)
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/financial', authenticateToken, financialRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
