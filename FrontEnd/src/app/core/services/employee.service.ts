@@ -29,6 +29,7 @@ export interface Email {
   email: string;
   active: string;
   account_id_email: string;
+  company_id_email?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,10 +45,12 @@ export interface Employee {
     deleted?: string;
     avatar?: string;
     typeaccount_id: string;
+    company_id_account?: string;
     type_hair_id?: string;
     createdAt: string;
     updatedAt: string;
     TypeAccount: TypeAccount;
+    Company?: any;
     Emails: Email[];
     Hair?: any;
     Schedules: any[];

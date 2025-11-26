@@ -49,7 +49,17 @@ module.exports = (sequelize, DataTypes) => {
     active: DataTypes.BOOLEAN,
     finished: DataTypes.BOOLEAN,
     provider_id_schedules: DataTypes.UUID,
-    client_id_schedules: DataTypes.UUID
+    client_id_schedules: DataTypes.UUID,
+    payment_method: {
+      type: DataTypes.ENUM('CASH', 'CARD', 'PIX', 'OTHER'),
+      allowNull: true,
+      defaultValue: null
+    },
+    apply_gateway_fee: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false
+    }
   }, {
     sequelize,
     modelName: 'Schedules',

@@ -6,6 +6,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { HairTypeFormModalComponent } from './hair-type-form-modal/hair-type-form-modal.component';
 import { HairTypeDeleteModalComponent } from './hair-type-delete-modal/hair-type-delete-modal.component';
+import { TableUtilsService, TableSort } from '../../core/services/table-utils.service';
 
 @Component({
   selector: 'app-hair-types',
@@ -54,9 +55,18 @@ import { HairTypeDeleteModalComponent } from './hair-type-delete-modal/hair-type
           <table>
             <thead>
               <tr>
-                <th>Tipo</th>
-                <th>Nível</th>
-                <th>Letra</th>
+                <th (click)="onSort('type')" class="sortable">
+                  Tipo
+                  <i class="fas" [ngClass]="getSortIcon('type')"></i>
+                </th>
+                <th (click)="onSort('level')" class="sortable">
+                  Nível
+                  <i class="fas" [ngClass]="getSortIcon('level')"></i>
+                </th>
+                <th (click)="onSort('letter')" class="sortable">
+                  Letra
+                  <i class="fas" [ngClass]="getSortIcon('letter')"></i>
+                </th>
                 <th *ngIf="isAdmin">Ações</th>
               </tr>
             </thead>
@@ -76,7 +86,7 @@ import { HairTypeDeleteModalComponent } from './hair-type-delete-modal/hair-type
                   </div>
                 </td>
               </tr>
-              <tr *ngIf="filteredHairTypes.length === 0">
+              <tr *ngIf="paginatedHairTypes.length === 0">
                 <td [attr.colspan]="isAdmin ? 4 : 3" class="empty-state">
                   <p>Nenhum tipo de cabelo encontrado</p>
                 </td>
@@ -87,22 +97,36 @@ import { HairTypeDeleteModalComponent } from './hair-type-delete-modal/hair-type
       </div>
 
       <!-- Pagination -->
-      <div class="pagination" *ngIf="!isLoading && filteredHairTypes.length > 0">
-        <button 
-          class="page-btn" 
-          [disabled]="currentPage === 1" 
-          (click)="changePage(currentPage - 1)"
-        >
-          <i class="fas fa-chevron-left"></i>
-        </button>
-        <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
-        <button 
-          class="page-btn" 
-          [disabled]="currentPage === totalPages" 
-          (click)="changePage(currentPage + 1)"
-        >
-          <i class="fas fa-chevron-right"></i>
-        </button>
+      <div class="pagination" *ngIf="!isLoading && sortedHairTypes.length > 0">
+        <div class="pagination-controls">
+          <label for="pageSize">Itens por página:</label>
+          <select id="pageSize" [(ngModel)]="itemsPerPage" (change)="onPageSizeChange()">
+            <option [value]="10">10</option>
+            <option [value]="25">25</option>
+            <option [value]="50">50</option>
+            <option [value]="200">200</option>
+          </select>
+          <span class="page-info">
+            Mostrando {{ (currentPage - 1) * itemsPerPage + 1 }} - {{ Math.min(currentPage * itemsPerPage, sortedHairTypes.length) }} de {{ sortedHairTypes.length }}
+          </span>
+        </div>
+        <div class="pagination-buttons">
+          <button 
+            class="page-btn" 
+            [disabled]="currentPage === 1" 
+            (click)="changePage(currentPage - 1)"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
+          <button 
+            class="page-btn" 
+            [disabled]="currentPage === totalPages" 
+            (click)="changePage(currentPage + 1)"
+          >
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Hair Type Form Modal -->
@@ -232,6 +256,32 @@ import { HairTypeDeleteModalComponent } from './hair-type-delete-modal/hair-type
       font-size: 0.875rem;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      
+      &.sortable {
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+        padding-right: 2rem;
+        transition: background-color 0.2s;
+        
+        &:hover {
+          background-color: #e8e8e8;
+        }
+        
+        i {
+          position: absolute;
+          right: 0.5rem;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #666;
+          font-size: 0.875rem;
+          transition: color 0.2s;
+        }
+        
+        &:hover i {
+          color: #1976d2;
+        }
+      }
     }
 
     .hair-types-table td {
@@ -270,10 +320,49 @@ import { HairTypeDeleteModalComponent } from './hair-type-delete-modal/hair-type
 
     .pagination {
       display: flex;
-      justify-content: center;
-      align-items: center;
+      flex-direction: column;
       gap: 1rem;
       margin-top: 2rem;
+      
+      .pagination-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background-color: #f5f5f5;
+        border-radius: 8px;
+        
+        label {
+          color: #333;
+          font-weight: 500;
+        }
+        
+        select {
+          padding: 0.25rem 0.5rem;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          background-color: white;
+          cursor: pointer;
+          
+          &:focus {
+            outline: none;
+            border-color: #1976d2;
+          }
+        }
+        
+        .page-info {
+          color: #666;
+          font-size: 0.875rem;
+        }
+      }
+      
+      .pagination-buttons {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+      }
     }
 
     .page-btn {
@@ -327,9 +416,12 @@ import { HairTypeDeleteModalComponent } from './hair-type-delete-modal/hair-type
 export class HairTypesComponent implements OnInit {
   hairTypes: HairType[] = [];
   filteredHairTypes: HairType[] = [];
+  sortedHairTypes: HairType[] = [];
+  paginatedHairTypes: HairType[] = [];
   searchTerm = '';
   currentPage = 1;
   itemsPerPage = 10;
+  pageSizeOptions = [10, 25, 50, 200];
   totalPages = 1;
   isLoading = false;
   isModalOpen = false;
@@ -338,11 +430,14 @@ export class HairTypesComponent implements OnInit {
   isDeleteModalOpen = false;
   isDeleteLoading = false;
   isAdmin = false;
+  sortConfig: TableSort = { column: '', direction: '' };
+  Math = Math;
 
   constructor(
     private hairTypeService: HairTypeService,
     public authService: AuthService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private tableUtils: TableUtilsService
   ) {}
 
   ngOnInit() {
@@ -368,12 +463,6 @@ export class HairTypesComponent implements OnInit {
     });
   }
 
-  get paginatedHairTypes(): HairType[] {
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    const end = start + this.itemsPerPage;
-    return this.filteredHairTypes.slice(start, end);
-  }
-
   filterHairTypes() {
     let filtered = [...this.hairTypes];
 
@@ -386,13 +475,38 @@ export class HairTypesComponent implements OnInit {
       );
     }
 
-    this.filteredHairTypes = filtered;
-    this.totalPages = Math.max(1, Math.ceil(filtered.length / this.itemsPerPage));
-    this.currentPage = Math.min(this.currentPage, this.totalPages || 1);
+    // Aplicar ordenação
+    this.sortedHairTypes = this.tableUtils.sortData(filtered, this.sortConfig.column, this.sortConfig.direction);
+    this.filteredHairTypes = this.sortedHairTypes; // Mantém para compatibilidade
+    
+    // Recalcular paginação
+    this.totalPages = this.tableUtils.calculateTotalPages(this.sortedHairTypes.length, this.itemsPerPage);
+    this.currentPage = Math.max(1, Math.min(this.currentPage, this.totalPages));
+    
+    // Aplicar paginação
+    this.paginatedHairTypes = this.tableUtils.paginateData(this.sortedHairTypes, this.currentPage, this.itemsPerPage);
+  }
+
+  onSort(column: string): void {
+    this.sortConfig = this.tableUtils.toggleSort(this.sortConfig, column);
+    this.filterHairTypes();
+  }
+
+  getSortIcon(column: string): string {
+    if (this.sortConfig.column !== column) {
+      return 'fa-sort';
+    }
+    return this.sortConfig.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down';
+  }
+
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.filterHairTypes();
   }
 
   changePage(page: number) {
     this.currentPage = page;
+    this.filterHairTypes();
   }
 
   openCreateModal(): void {

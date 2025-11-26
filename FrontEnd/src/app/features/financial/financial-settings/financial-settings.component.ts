@@ -101,27 +101,6 @@ import { AuthService } from '../../../core/services/auth.service';
             <small class="help-text">Ex: 2.99 = 2.99%</small>
           </div>
 
-          <!-- Comissão Padrão -->
-          <div class="form-group">
-            <label for="default_commission_rate">
-              <i class="fas fa-user-tie"></i>
-              Comissão Padrão do Profissional (%) *
-            </label>
-            <input
-              type="number"
-              id="default_commission_rate"
-              [(ngModel)]="commissionRatePercent"
-              name="default_commission_rate"
-              required
-              min="0"
-              max="100"
-              step="0.01"
-              class="form-control"
-              (blur)="updateCommissionRate()"
-            >
-            <small class="help-text">Ex: 50.00 = 50%</small>
-          </div>
-
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" (click)="cancel()">
               <i class="fas fa-times"></i>

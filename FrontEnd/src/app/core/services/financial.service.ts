@@ -115,6 +115,12 @@ export interface ScheduleFinancialData {
   };
 }
 
+export interface CommissionSummaryEntry {
+  professionalId: string;
+  professionalName: string;
+  totalCommission: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -162,7 +168,7 @@ export class FinancialService {
     category?: string;
     limit?: number;
     offset?: number;
-  }): Observable<{ success: boolean; data: FinancialLedgerEntry[] }> {
+  }): Observable<{ success: boolean; data: FinancialLedgerEntry[]; meta?: { total: number; virtualCount: number; realCount: number } }> {
     const params = new URLSearchParams();
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -171,7 +177,7 @@ export class FinancialService {
         }
       });
     }
-    return this.http.get<{ success: boolean; data: FinancialLedgerEntry[] }>(
+    return this.http.get<{ success: boolean; data: FinancialLedgerEntry[]; meta?: { total: number; virtualCount: number; realCount: number } }>(
       `${this.apiUrl}/ledger?${params.toString()}`
     );
   }
@@ -188,6 +194,21 @@ export class FinancialService {
     if (endDate) params.append('endDate', endDate);
     return this.http.get<{ success: boolean; data: FinancialTotals }>(
       `${this.apiUrl}/totals?${params.toString()}`
+    );
+  }
+
+  /**
+   * Resumo de comissões por colaborador
+   */
+  getCommissionSummary(
+    startDate?: string,
+    endDate?: string
+  ): Observable<{ success: boolean; data: CommissionSummaryEntry[] }> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    return this.http.get<{ success: boolean; data: CommissionSummaryEntry[] }>(
+      `${this.apiUrl}/commissions?${params.toString()}`
     );
   }
 

@@ -8,6 +8,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { EmployeeFormModalComponent } from './employee-form-modal/employee-form-modal.component';
 import { EmployeeViewModalComponent } from './employee-view-modal/employee-view-modal.component';
 import { EmployeeDeleteModalComponent } from './employee-delete-modal/employee-delete-modal.component';
+import { TableUtilsService, TableSort } from '../../core/services/table-utils.service';
 
 type EmployeeRole = Employee['TypeAccount']['type'];
 
@@ -130,16 +131,25 @@ interface Filters {
           <table>
             <thead>
               <tr>
-                <th>Nome</th>
-                <th>E-mail</th>
+                <th (click)="onSort('name')" class="sortable">
+                  Nome
+                  <i class="fas" [ngClass]="getSortIcon('name')"></i>
+                </th>
+                <th (click)="onSort('email')" class="sortable">
+                  E-mail
+                  <i class="fas" [ngClass]="getSortIcon('email')"></i>
+                </th>
                 <th>Telefone</th>
-                <th>Cargo</th>
+                <th (click)="onSort('TypeAccount.type')" class="sortable">
+                  Cargo
+                  <i class="fas" [ngClass]="getSortIcon('TypeAccount.type')"></i>
+                </th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let employee of employees">
+              <tr *ngFor="let employee of paginatedEmployees">
                 <td>
                   <div class="user-info">
                     <div class="employee-details">
@@ -170,7 +180,7 @@ interface Filters {
                   </div>
                 </td>
               </tr>
-              <tr *ngIf="employees.length === 0">
+              <tr *ngIf="paginatedEmployees.length === 0">
                 <td colspan="6" class="empty-state">
                   <p>Nenhum funcionário encontrado</p>
                 </td>
@@ -181,22 +191,36 @@ interface Filters {
       </div>
 
       <!-- Pagination -->
-      <div class="pagination" *ngIf="!isLoading && filteredEmployees.length > 0">
-        <button 
-          class="page-btn" 
-          [disabled]="currentPage === 1" 
-          (click)="changePage(currentPage - 1)"
-        >
-          <i class="fas fa-chevron-left"></i>
-        </button>
-        <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
-        <button 
-          class="page-btn" 
-          [disabled]="currentPage === totalPages" 
-          (click)="changePage(currentPage + 1)"
-        >
-          <i class="fas fa-chevron-right"></i>
-        </button>
+      <div class="pagination" *ngIf="!isLoading && sortedEmployees.length > 0">
+        <div class="pagination-controls">
+          <label for="pageSize">Itens por página:</label>
+          <select id="pageSize" [(ngModel)]="itemsPerPage" (change)="onPageSizeChange()">
+            <option [value]="10">10</option>
+            <option [value]="25">25</option>
+            <option [value]="50">50</option>
+            <option [value]="200">200</option>
+          </select>
+          <span class="page-info">
+            Mostrando {{ (currentPage - 1) * itemsPerPage + 1 }} - {{ Math.min(currentPage * itemsPerPage, sortedEmployees.length) }} de {{ sortedEmployees.length }}
+          </span>
+        </div>
+        <div class="pagination-buttons">
+          <button 
+            class="page-btn" 
+            [disabled]="currentPage === 1" 
+            (click)="changePage(currentPage - 1)"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
+          <button 
+            class="page-btn" 
+            [disabled]="currentPage === totalPages" 
+            (click)="changePage(currentPage + 1)"
+          >
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Employee Form Modal -->
@@ -616,13 +640,18 @@ interface Filters {
 export class EmployeesComponent implements OnInit {
   employees: Employee[] = [];
   filteredEmployees: Employee[] = [];
+  sortedEmployees: Employee[] = [];
+  paginatedEmployees: Employee[] = [];
   searchTerm = '';
   isFilterOpen = false;
   currentPage = 1;
   itemsPerPage = 10;
+  pageSizeOptions = [10, 25, 50, 200];
   totalPages = 1;
   isLoading = false;
   errorMessage: string | null = null;
+  sortConfig: TableSort = { column: '', direction: '' };
+  Math = Math;
   isModalOpen = false;
   isSubmitting = false;
   selectedEmployee: Employee | null = null;
@@ -652,7 +681,8 @@ export class EmployeesComponent implements OnInit {
   constructor(
     private employeeService: EmployeeService,
     public authService: AuthService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private tableUtils: TableUtilsService
   ) {}
 
   ngOnInit() {
@@ -674,12 +704,6 @@ export class EmployeesComponent implements OnInit {
         this.isLoading = false;
       }
     });
-  }
-
-  get paginatedEmployees(): Employee[] {
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    const end = start + this.itemsPerPage;
-    return this.filteredEmployees.slice(start, end);
   }
 
   filterEmployees() {
@@ -720,9 +744,33 @@ export class EmployeesComponent implements OnInit {
       filtered = filtered.filter(employee => activeRoles.includes(employee.TypeAccount.type));
     }
 
-    this.filteredEmployees = filtered;
-    this.totalPages = Math.max(1, Math.ceil(filtered.length / this.itemsPerPage));
-    this.currentPage = Math.min(this.currentPage, this.totalPages || 1);
+    // Aplicar ordenação
+    this.sortedEmployees = this.tableUtils.sortData(filtered, this.sortConfig.column, this.sortConfig.direction);
+    this.filteredEmployees = this.sortedEmployees; // Mantém para compatibilidade
+    
+    // Recalcular paginação
+    this.totalPages = this.tableUtils.calculateTotalPages(this.sortedEmployees.length, this.itemsPerPage);
+    this.currentPage = Math.max(1, Math.min(this.currentPage, this.totalPages));
+    
+    // Aplicar paginação
+    this.paginatedEmployees = this.tableUtils.paginateData(this.sortedEmployees, this.currentPage, this.itemsPerPage);
+  }
+
+  onSort(column: string): void {
+    this.sortConfig = this.tableUtils.toggleSort(this.sortConfig, column);
+    this.filterEmployees();
+  }
+
+  getSortIcon(column: string): string {
+    if (this.sortConfig.column !== column) {
+      return 'fa-sort';
+    }
+    return this.sortConfig.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down';
+  }
+
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.filterEmployees();
   }
 
   toggleFilter() {
@@ -737,11 +785,13 @@ export class EmployeesComponent implements OnInit {
     Object.keys(this.filters.roles).forEach(role => {
       this.filters.roles[role as EmployeeRole] = true;
     });
+    this.currentPage = 1;
     this.filterEmployees();
   }
 
   changePage(page: number) {
     this.currentPage = page;
+    this.filterEmployees();
   }
 
   getRoleLabel(role: EmployeeRole): string {
@@ -938,7 +988,7 @@ export class EmployeesComponent implements OnInit {
           } else if (error.error?.message) {
             errorMsg = error.error.message;
           }
-          console.error('Erro ao criar funcionário:', error);
+          
           this.notificationService.error(errorMsg);
           this.isSubmitting = false;
         }

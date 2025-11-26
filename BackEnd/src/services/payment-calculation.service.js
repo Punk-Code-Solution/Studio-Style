@@ -7,7 +7,7 @@
  * Utiliza Strategy Pattern para permitir fácil extensão de novos regimes.
  */
 
-const { CompanySettings, CommissionRule } = require('../Database/models');
+const { CompanySettings, CommissionRule, Service } = require('../Database/models');
 
 class PaymentCalculationService {
   constructor() {
@@ -61,7 +61,7 @@ class PaymentCalculationService {
    * Calcula divisão usando configurações
    */
   async _calculateWithSettings(companySettings, grossAmount, serviceId, professionalId, productCost) {
-    // 2. Buscar regra de comissão (prioridade: específica > geral)
+    // 2. Buscar taxa de comissão (prioridade: serviço > regras específicas > geral)
     const commissionRate = await this._getCommissionRate(
       serviceId,
       professionalId,
@@ -143,9 +143,17 @@ class PaymentCalculationService {
   }
 
   /**
-   * Busca a taxa de comissão aplicável (prioridade: específica > geral)
+   * Busca a taxa de comissão aplicável (prioridade: serviço > regras específicas > geral)
    */
   async _getCommissionRate(serviceId, professionalId, defaultRate) {
+    // Prioridade 0: Comissão definida diretamente no cadastro do serviço
+    if (serviceId) {
+      const service = await Service.findByPk(serviceId);
+      if (service && service.commission_rate !== null && service.commission_rate !== undefined) {
+        return service.commission_rate;
+      }
+    }
+
     // Prioridade 1: Regra específica para serviço + profissional
     if (serviceId && professionalId) {
       const specificRule = await CommissionRule.findOne({
@@ -182,7 +190,7 @@ class PaymentCalculationService {
       if (professionalRule) return professionalRule.commission_rate;
     }
 
-    // Prioridade 4: Regra geral
+    // Prioridade 4: Regra geral (mantida apenas como fallback oculto)
     const generalRule = await CommissionRule.findOne({
       where: {
         rule_type: 'GENERAL',

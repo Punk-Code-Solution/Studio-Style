@@ -1,4 +1,4 @@
-const { FinancialLedger, Expense, CompanySettings, CommissionRule } = require('../Database/models');
+const { FinancialLedger, Expense, CompanySettings, CommissionRule, Schedules, Service } = require('../Database/models');
 const { Op } = require('sequelize');
 
 class FinancialRepository {
@@ -29,6 +29,7 @@ class FinancialRepository {
 
   /**
    * Busca entradas do livro razão com filtros
+   * Inclui informações do schedule relacionado
    */
   async findLedgerEntries(filters) {
     const where = {};
@@ -49,6 +50,20 @@ class FinancialRepository {
 
     return await FinancialLedger.findAll({
       where,
+      include: [{
+        model: Schedules,
+        as: 'schedule',
+        required: false, // LEFT JOIN - inclui entradas mesmo sem schedule
+        include: [{
+          model: Service,
+          as: 'Services',
+          through: {
+            attributes: []
+          },
+          attributes: ['id', 'service', 'price', 'commission_rate'],
+          required: false
+        }]
+      }],
       order: [['transaction_date', 'DESC']],
       limit: filters.limit || 100,
       offset: filters.offset || 0

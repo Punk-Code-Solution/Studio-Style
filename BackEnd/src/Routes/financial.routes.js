@@ -85,6 +85,16 @@ router.get('/totals', authorizeRoles(['admin', 'provider']),
 
 /**
  * @swagger
+ * /financial/commissions:
+ *   get:
+ *     summary: Resumo de comissões pagas por colaborador
+ *     tags: [Financial]
+ */
+router.get('/commissions', authorizeRoles(['admin', 'provider']),
+  (req, res) => FinancialController.getCommissionSummary(req, res));
+
+/**
+ * @swagger
  * /financial/settings:
  *   get:
  *     summary: Busca configurações financeiras globais

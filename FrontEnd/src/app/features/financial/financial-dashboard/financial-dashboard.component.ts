@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } fr
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
-import { FinancialService, FinancialTotals, FinancialLedgerEntry, ScheduleFinancialData } from '../../../core/services/financial.service';
+import { FinancialService, FinancialTotals, FinancialLedgerEntry, ScheduleFinancialData, CommissionSummaryEntry } from '../../../core/services/financial.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AuthService } from '../../../core/services/auth.service';
 
@@ -22,6 +22,8 @@ Chart.register(...registerables);
         <div class="date-filter">
           <input
             type="date"
+            id="startDate"
+            name="startDate"
             [(ngModel)]="startDate"
             (change)="loadData()"
             class="date-input"
@@ -29,6 +31,8 @@ Chart.register(...registerables);
           <span>até</span>
           <input
             type="date"
+            id="endDate"
+            name="endDate"
             [(ngModel)]="endDate"
             (change)="loadData()"
             class="date-input"
@@ -81,6 +85,14 @@ Chart.register(...registerables);
         <div class="chart-card">
           <h3>DRE Simplificado</h3>
           <canvas #dreChart></canvas>
+        </div>
+
+        <div class="chart-card">
+          <h3>
+            <i class="fas fa-user-tie"></i>
+            Comissões por Colaborador
+          </h3>
+          <canvas #commissionChart></canvas>
         </div>
 
         <div class="chart-card pie-chart-card">
@@ -381,6 +393,7 @@ Chart.register(...registerables);
 export class FinancialDashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('incomeExpenseChart', { static: false }) incomeExpenseCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('dreChart', { static: false }) dreCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('commissionChart', { static: false }) commissionCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('schedulePieChart', { static: false }) schedulePieCanvas!: ElementRef<HTMLCanvasElement>;
   totals: FinancialTotals = {
     totalIncome: 0,
@@ -397,12 +410,14 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy, AfterView
   };
 
   scheduleData: ScheduleFinancialData | null = null;
+  commissionSummary: CommissionSummaryEntry[] = [];
   startDate = '';
   endDate = '';
   loading = false;
   incomeExpenseChart: Chart | null = null;
   dreChart: Chart | null = null;
   schedulePieChart: Chart | null = null;
+  commissionChart: Chart | null = null;
 
   constructor(
     private financialService: FinancialService,
@@ -438,6 +453,9 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy, AfterView
     if (this.schedulePieChart) {
       this.schedulePieChart.destroy();
     }
+    if (this.commissionChart) {
+      this.commissionChart.destroy();
+    }
   }
 
   async loadData() {
@@ -454,12 +472,17 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy, AfterView
       }
 
       // Carregar entradas detalhadas para calcular custos operacionais
+      // Isso agora inclui entradas virtuais de schedules finalizados
       const entriesResponse = await this.financialService.getLedgerEntries({
         startDate: this.startDate,
         endDate: this.endDate
       }).toPromise();
 
       if (entriesResponse?.success) {
+        console.log('[Financial Dashboard] Entradas recebidas para cálculo de custos:', entriesResponse.data.length);
+        if (entriesResponse.meta) {
+          console.log('[Financial Dashboard] Meta:', entriesResponse.meta);
+        }
         this.calculateOperationalCosts(entriesResponse.data);
       }
 
@@ -471,6 +494,24 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy, AfterView
 
       if (scheduleResponse?.success) {
         this.scheduleData = scheduleResponse.data;
+        console.log('[Financial Dashboard] Dados de schedules recebidos:', this.scheduleData);
+      } else {
+        console.warn('[Financial Dashboard] Resposta de schedules sem sucesso:', scheduleResponse);
+        this.scheduleData = null;
+      }
+
+      // Carregar resumo de comissões
+      const commissionResponse = await this.financialService.getCommissionSummary(
+        this.startDate,
+        this.endDate
+      ).toPromise();
+
+      if (commissionResponse?.success) {
+        this.commissionSummary = commissionResponse.data || [];
+        console.log('[Financial Dashboard] Dados de comissões recebidos:', this.commissionSummary);
+      } else {
+        console.warn('[Financial Dashboard] Resposta de comissões sem sucesso:', commissionResponse);
+        this.commissionSummary = [];
       }
 
       // Atualizar gráficos
@@ -493,24 +534,27 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy, AfterView
       operationalExpenses: 0
     };
 
+    // Os valores no livro razão vêm em centavos, convertemos para reais
     entries.forEach(entry => {
       if (entry.transaction_type === 'EXPENSE') {
+        const value = (entry.amount || 0) / 100;
+
         switch (entry.category) {
           case 'GATEWAY_FEE':
-            this.operationalCosts.gatewayFee += entry.amount;
+            this.operationalCosts.gatewayFee += value;
             break;
           case 'PRODUCT_COST':
-            this.operationalCosts.productCost += entry.amount;
+            this.operationalCosts.productCost += value;
             break;
           case 'COMMISSION_PAYMENT':
-            this.operationalCosts.commissions += entry.amount;
+            this.operationalCosts.commissions += value;
             break;
           case 'TAX_PAYMENT':
-            this.operationalCosts.taxes += entry.amount;
+            this.operationalCosts.taxes += value;
             break;
           case 'FIXED_EXPENSE':
           case 'VARIABLE_EXPENSE':
-            this.operationalCosts.operationalExpenses += entry.amount;
+            this.operationalCosts.operationalExpenses += value;
             break;
         }
       }
@@ -520,6 +564,7 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy, AfterView
   updateCharts() {
     this.updateIncomeExpenseChart();
     this.updateDREChart();
+    this.updateCommissionChart();
     this.updateSchedulePieChart();
   }
 
@@ -578,21 +623,102 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy, AfterView
     });
   }
 
-  updateSchedulePieChart() {
-    if (!this.schedulePieCanvas?.nativeElement) return;
-
-    if (this.schedulePieChart) {
-      this.schedulePieChart.destroy();
-    }
-
-    // Se não há dados, não renderiza o gráfico
-    if (!this.scheduleData || 
-        (this.scheduleData.received.total === 0 && this.scheduleData.expected.total === 0)) {
+  updateCommissionChart() {
+    if (!this.commissionCanvas?.nativeElement) {
+      console.warn('[Financial Dashboard] Canvas do gráfico de comissões não encontrado');
       return;
     }
 
-    const received = this.scheduleData.received.total;
-    const expected = this.scheduleData.expected.total;
+    if (this.commissionChart) {
+      this.commissionChart.destroy();
+      this.commissionChart = null;
+    }
+
+    if (!this.commissionSummary || this.commissionSummary.length === 0) {
+      console.warn('[Financial Dashboard] Não há dados de comissões para renderizar');
+      return;
+    }
+
+    console.log('[Financial Dashboard] Atualizando gráfico de comissões com', this.commissionSummary.length, 'colaboradores');
+
+    const labels = this.commissionSummary.map(item => item.professionalName || 'Colaborador');
+    // totalCommission vem em centavos do backend, convertemos para reais
+    const data = this.commissionSummary.map(item => {
+      const value = (item.totalCommission || 0) / 100;
+      console.log(`[Financial Dashboard] ${item.professionalName}: R$ ${value.toFixed(2)}`);
+      return value;
+    });
+
+    this.commissionChart = new Chart(this.commissionCanvas.nativeElement, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Comissões Pagas (R$)',
+          data,
+          backgroundColor: '#2196f3'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const raw = (context as any).parsed;
+                const value = typeof raw === 'number' ? raw : 0;
+                return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              autoSkip: false,
+              maxRotation: 45,
+              minRotation: 0
+            }
+          },
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  }
+
+  updateSchedulePieChart() {
+    if (!this.schedulePieCanvas?.nativeElement) {
+      console.warn('[Financial Dashboard] Canvas do gráfico de schedules não encontrado');
+      return;
+    }
+
+    if (this.schedulePieChart) {
+      this.schedulePieChart.destroy();
+      this.schedulePieChart = null;
+    }
+
+    // Se não há dados, não renderiza o gráfico
+    if (!this.scheduleData) {
+      console.warn('[Financial Dashboard] Não há dados de schedules para renderizar');
+      return;
+    }
+
+    const received = this.scheduleData.received?.total || 0;
+    const expected = this.scheduleData.expected?.total || 0;
+
+    console.log('[Financial Dashboard] Atualizando gráfico de schedules:', { received, expected });
+
+    // Se ambos os valores são zero, não renderiza
+    if (received === 0 && expected === 0) {
+      console.warn('[Financial Dashboard] Valores de recebido e esperado são zero');
+      return;
+    }
 
     this.schedulePieChart = new Chart(this.schedulePieCanvas.nativeElement, {
       type: 'pie',

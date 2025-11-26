@@ -9,12 +9,12 @@
     <span>Dashboard</span>
   </a>
 
-  <a routerLink="/financial" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/financial')">
+  <a routerLink="/financial" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item" *ngIf="canAccessRoute('/financial')">
     <i class="fas fa-chart-line"></i>
     <span>Dashboard Financeiro</span>
   </a>
 
-  <a routerLink="/financial/ledger" routerLinkActive="active" class="nav-item" *ngIf="canAccessRoute('/financial')">
+  <a routerLink="/financial/ledger" routerLinkActive="active" [routerLinkActiveOptions]="{exact: false}" class="nav-item" *ngIf="canAccessRoute('/financial')">
     <i class="fas fa-book"></i>
     <span>Entradas e Saídas</span>
   </a>

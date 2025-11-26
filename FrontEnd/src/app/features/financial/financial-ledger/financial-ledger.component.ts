@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { FinancialService, FinancialLedgerEntry } from '../../../core/services/financial.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { TableUtilsService, TableSort } from '../../../core/services/table-utils.service';
 
 @Component({
   selector: 'app-financial-ledger',
@@ -63,13 +64,25 @@ import { AuthService } from '../../../core/services/auth.service';
       <!-- Tabela de Entradas/Saídas -->
       <div class="table-container">
         <table class="ledger-table">
-          <thead>
+            <thead>
             <tr>
-              <th>Data</th>
-              <th>Tipo</th>
-              <th>Categoria</th>
+              <th (click)="onSort('transaction_date')" class="sortable">
+                Data
+                <i class="fas" [ngClass]="getSortIcon('transaction_date')"></i>
+              </th>
+              <th (click)="onSort('transaction_type')" class="sortable">
+                Tipo
+                <i class="fas" [ngClass]="getSortIcon('transaction_type')"></i>
+              </th>
+              <th (click)="onSort('category')" class="sortable">
+                Categoria
+                <i class="fas" [ngClass]="getSortIcon('category')"></i>
+              </th>
               <th>Descrição</th>
-              <th>Valor</th>
+              <th (click)="onSort('amount')" class="sortable">
+                Valor
+                <i class="fas" [ngClass]="getSortIcon('amount')"></i>
+              </th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -80,12 +93,12 @@ import { AuthService } from '../../../core/services/auth.service';
                 Carregando...
               </td>
             </tr>
-            <tr *ngIf="!loading && entries.length === 0">
+            <tr *ngIf="!loading && paginatedEntries.length === 0">
               <td colspan="6" class="empty-row">
                 Nenhuma entrada encontrada
               </td>
             </tr>
-            <tr *ngFor="let entry of entries" [class.income]="entry.transaction_type === 'INCOME'" [class.expense]="entry.transaction_type === 'EXPENSE'">
+            <tr *ngFor="let entry of paginatedEntries" [class.income]="entry.transaction_type === 'INCOME'" [class.expense]="entry.transaction_type === 'EXPENSE'">
               <td>{{ entry.transaction_date | date:'dd/MM/yyyy' }}</td>
               <td>
                 <span class="badge" [class.badge-income]="entry.transaction_type === 'INCOME'" [class.badge-expense]="entry.transaction_type === 'EXPENSE'">
@@ -108,6 +121,31 @@ import { AuthService } from '../../../core/services/auth.service';
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination" *ngIf="!loading && sortedEntries.length > 0">
+        <div class="pagination-controls">
+          <label for="pageSize">Itens por página:</label>
+          <select id="pageSize" [(ngModel)]="itemsPerPage" (change)="onPageSizeChange()">
+            <option [value]="10">10</option>
+            <option [value]="25">25</option>
+            <option [value]="50">50</option>
+            <option [value]="200">200</option>
+          </select>
+          <span class="page-info">
+            Mostrando {{ (currentPage - 1) * itemsPerPage + 1 }} - {{ Math.min(currentPage * itemsPerPage, sortedEntries.length) }} de {{ sortedEntries.length }}
+          </span>
+        </div>
+        <div class="pagination-buttons">
+          <button class="page-btn" [disabled]="currentPage === 1" (click)="changePage(currentPage - 1)">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
+          <button class="page-btn" [disabled]="currentPage === totalPages" (click)="changePage(currentPage + 1)">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Resumo -->
@@ -268,6 +306,32 @@ import { AuthService } from '../../../core/services/auth.service';
       text-align: left;
       font-weight: 600;
       border-bottom: 2px solid #ddd;
+      
+      &.sortable {
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+        padding-right: 2rem;
+        transition: background-color 0.2s;
+        
+        &:hover {
+          background-color: #e8e8e8;
+        }
+        
+        i {
+          position: absolute;
+          right: 0.5rem;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #666;
+          font-size: 0.875rem;
+          transition: color 0.2s;
+        }
+        
+        &:hover i {
+          color: #1976d2;
+        }
+      }
     }
 
     .ledger-table td {
@@ -520,15 +584,89 @@ import { AuthService } from '../../../core/services/auth.service';
       border-radius: 4px;
       margin: 1rem 0;
     }
+
+    .pagination {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 2rem;
+      
+      .pagination-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background-color: #f5f5f5;
+        border-radius: 8px;
+        
+        label {
+          color: #333;
+          font-weight: 500;
+        }
+        
+        select {
+          padding: 0.25rem 0.5rem;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          background-color: white;
+          cursor: pointer;
+          
+          &:focus {
+            outline: none;
+            border-color: #1976d2;
+          }
+        }
+        
+        .page-info {
+          color: #666;
+          font-size: 0.875rem;
+        }
+      }
+      
+      .pagination-buttons {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+      }
+      
+      .page-btn {
+        padding: 0.5rem;
+        background: transparent;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+        
+        &:hover:not(:disabled) {
+          background: #f5f5f5;
+          transform: translateY(-1px);
+        }
+        
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      }
+    }
   `]
 })
 export class FinancialLedgerComponent implements OnInit {
   entries: FinancialLedgerEntry[] = [];
+  sortedEntries: FinancialLedgerEntry[] = [];
+  paginatedEntries: FinancialLedgerEntry[] = [];
   loading = false;
   showModal = false;
   showDeleteModal = false;
   editingEntry: FinancialLedgerEntry | null = null;
   entryToDelete: FinancialLedgerEntry | null = null;
+  currentPage = 1;
+  itemsPerPage = 10;
+  pageSizeOptions = [10, 25, 50, 200];
+  totalPages = 1;
+  sortConfig: TableSort = { column: '', direction: '' };
+  Math = Math;
   saving = false;
   deleting = false;
 
@@ -554,7 +692,8 @@ export class FinancialLedgerComponent implements OnInit {
   constructor(
     private financialService: FinancialService,
     private notificationService: NotificationService,
-    private authService: AuthService
+    private authService: AuthService,
+    private tableUtils: TableUtilsService
   ) {
     // Define datas padrão (últimos 30 dias)
     const end = new Date();
@@ -581,6 +720,7 @@ export class FinancialLedgerComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           this.entries = response.data;
+          this.applySortAndPagination();
           this.calculateTotals();
         }
         this.loading = false;
@@ -591,6 +731,40 @@ export class FinancialLedgerComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  applySortAndPagination() {
+    // Aplicar ordenação
+    this.sortedEntries = this.tableUtils.sortData(this.entries, this.sortConfig.column, this.sortConfig.direction);
+    
+    // Recalcular paginação
+    this.totalPages = this.tableUtils.calculateTotalPages(this.sortedEntries.length, this.itemsPerPage);
+    this.currentPage = Math.max(1, Math.min(this.currentPage, this.totalPages));
+    
+    // Aplicar paginação
+    this.paginatedEntries = this.tableUtils.paginateData(this.sortedEntries, this.currentPage, this.itemsPerPage);
+  }
+
+  onSort(column: string): void {
+    this.sortConfig = this.tableUtils.toggleSort(this.sortConfig, column);
+    this.applySortAndPagination();
+  }
+
+  getSortIcon(column: string): string {
+    if (this.sortConfig.column !== column) {
+      return 'fa-sort';
+    }
+    return this.sortConfig.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down';
+  }
+
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.applySortAndPagination();
+  }
+
+  changePage(page: number): void {
+    this.currentPage = page;
+    this.applySortAndPagination();
   }
 
   calculateTotals() {

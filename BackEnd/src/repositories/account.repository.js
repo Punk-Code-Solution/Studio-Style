@@ -256,6 +256,7 @@ module.exports = class accountRepository{
       deleted,
       avatar,
       typeaccount_id,
+      company_id_account,
       type_hair_id
 
     } = account;
@@ -288,10 +289,11 @@ module.exports = class accountRepository{
       deleted: deleted !== undefined ? deleted : false,
       avatar,
       typeaccount_id,
+      company_id_account,
       type_hair_id
       
     }, {
-      association: [ Account.typeaccount_id, Account.type_hair_id ]
+      association: [ Account.typeaccount_id, Account.company_id_account, Account.type_hair_id ]
     })
 
     if(result){
@@ -327,6 +329,8 @@ module.exports = class accountRepository{
       if (account.deleted !== undefined) updateData.deleted = account.deleted;
       if (account.avatar !== undefined) updateData.avatar = account.avatar;
       if (account.typeaccount_id !== undefined) updateData.typeaccount_id = account.typeaccount_id;
+      if (account.company_id_account !== undefined) updateData.company_id_account = account.company_id_account;
+
       // Atualizar apenas se houver dados para atualizar
       if (Object.keys(updateData).length === 0) {
         return existingAccount;

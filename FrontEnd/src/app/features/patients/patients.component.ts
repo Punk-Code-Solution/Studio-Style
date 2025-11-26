@@ -8,6 +8,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { PatientViewModalComponent } from './patient-view-modal/patient-view-modal.component';
 import { PatientFormModalComponent } from './patient-form-modal/patient-form-modal.component';
 import { PatientDeleteModalComponent } from './patient-delete-modal/patient-delete-modal.component';
+import { TableUtilsService, TableSort } from '../../core/services/table-utils.service';
 
 @Component({
   selector: 'app-patients',
@@ -136,7 +137,7 @@ import { PatientDeleteModalComponent } from './patient-delete-modal/patient-dele
                   </div>
                 </td>
               </tr>
-              <tr *ngIf="filteredPatients.length === 0">
+              <tr *ngIf="paginatedPatients.length === 0">
                 <td colspan="5" class="empty-state">
                   <p>Nenhum cliente encontrado</p>
                 </td>
@@ -146,24 +147,36 @@ import { PatientDeleteModalComponent } from './patient-delete-modal/patient-dele
         </div>
       </div>
 
-      <div class="pagination">
-        <button
-          class="page-btn"
-          [disabled]="currentPage === 1"
-          (click)="changePage(currentPage - 1)"
-        >
-          <i class="fas fa-chevron-left"></i>
-        </button>
-        <span class="page-info"
-          >Página {{ currentPage }} de {{ totalPages }}</span
-        >
-        <button
-          class="page-btn"
-          [disabled]="currentPage === totalPages"
-          (click)="changePage(currentPage + 1)"
-        >
-          <i class="fas fa-chevron-right"></i>
-        </button>
+      <div class="pagination" *ngIf="sortedPatients.length > 0">
+        <div class="pagination-controls">
+          <label for="pageSize">Itens por página:</label>
+          <select id="pageSize" [(ngModel)]="itemsPerPage" (change)="onPageSizeChange()">
+            <option [value]="10">10</option>
+            <option [value]="25">25</option>
+            <option [value]="50">50</option>
+            <option [value]="200">200</option>
+          </select>
+          <span class="page-info">
+            Mostrando {{ (currentPage - 1) * itemsPerPage + 1 }} - {{ Math.min(currentPage * itemsPerPage, sortedPatients.length) }} de {{ sortedPatients.length }}
+          </span>
+        </div>
+        <div class="pagination-buttons">
+          <button
+            class="page-btn"
+            [disabled]="currentPage === 1"
+            (click)="changePage(currentPage - 1)"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
+          <button
+            class="page-btn"
+            [disabled]="currentPage === totalPages"
+            (click)="changePage(currentPage + 1)"
+          >
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -558,13 +571,18 @@ import { PatientDeleteModalComponent } from './patient-delete-modal/patient-dele
 export class PatientsComponent implements OnInit {
   patients: Patient[] = [];
   filteredPatients: Patient[] = [];
+  sortedPatients: Patient[] = [];
+  paginatedPatients: Patient[] = [];
   searchTerm = '';
   isFilterOpen = false;
   currentPage = 1;
   itemsPerPage = 10;
+  pageSizeOptions = [10, 25, 50, 200];
   totalPages = 1;
   loading = false;
   error = '';
+  sortConfig: TableSort = { column: '', direction: '' };
+  Math = Math;
 
   // Modal states
   showViewModal = false;
@@ -587,7 +605,8 @@ export class PatientsComponent implements OnInit {
     private patientService: PatientService,
     private notificationService: NotificationService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private tableUtils: TableUtilsService
   ) {}
 
   ngOnInit(): void {
@@ -683,17 +702,33 @@ export class PatientsComponent implements OnInit {
       });
     }
 
+    // Aplicar ordenação
+    this.sortedPatients = this.tableUtils.sortData(filtered, this.sortConfig.column, this.sortConfig.direction);
+    this.filteredPatients = this.sortedPatients; // Mantém para compatibilidade
+    
     // Recalcular paginação
-    this.totalPages = Math.max(
-      1,
-      Math.ceil(filtered.length / this.itemsPerPage)
-    );
+    this.totalPages = this.tableUtils.calculateTotalPages(this.sortedPatients.length, this.itemsPerPage);
     this.currentPage = Math.max(1, Math.min(this.currentPage, this.totalPages));
 
     // Aplicar paginação
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    const end = start + this.itemsPerPage;
-    this.filteredPatients = [...filtered.slice(start, end)];
+    this.paginatedPatients = this.tableUtils.paginateData(this.sortedPatients, this.currentPage, this.itemsPerPage);
+  }
+
+  onSort(column: string): void {
+    this.sortConfig = this.tableUtils.toggleSort(this.sortConfig, column);
+    this.filterPatients();
+  }
+
+  getSortIcon(column: string): string {
+    if (this.sortConfig.column !== column) {
+      return 'fa-sort';
+    }
+    return this.sortConfig.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down';
+  }
+
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.filterPatients();
   }
 
   toggleFilter(): void {
