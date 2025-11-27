@@ -14,7 +14,7 @@ export interface ApiResponse<T> {
 
 export interface TypeAccount {
   id: string;
-  type: 'admin' | 'provider' | 'client' | 'ninguem';
+  type: 'admin' | 'provider' | 'client';
   edit: boolean;
   creat: boolean;
   viwer: boolean;
@@ -61,7 +61,7 @@ export interface Employee {
     Adress?: any;
     // Propriedades adicionais para compatibilidade com o template
     email?: string;
-    role?: 'enfermeiro' | 'recepcionista' | 'administrativo' | 'admin' | 'provider';
+    role?: 'admin' | 'provider';
     phone?: string;
     address?: string;
     status?: 'active' | 'inactive' | 'on_leave';

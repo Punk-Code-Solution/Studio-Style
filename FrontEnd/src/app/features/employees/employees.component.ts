@@ -673,8 +673,7 @@ export class EmployeesComponent implements OnInit {
     roles: {
       admin: true,
       provider: true,
-      client: false,
-      ninguem: false
+      client: false
     }
   };
 

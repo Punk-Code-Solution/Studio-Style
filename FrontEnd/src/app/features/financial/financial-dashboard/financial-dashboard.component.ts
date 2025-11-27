@@ -417,7 +417,7 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy, AfterView
   incomeExpenseChart: Chart | null = null;
   dreChart: Chart | null = null;
   schedulePieChart: Chart | null = null;
-  commissionChart: Chart | null = null;
+  commissionChart: Chart<'bar', number[], string> | null = null;
 
   constructor(
     private financialService: FinancialService,
@@ -649,45 +649,18 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy, AfterView
       return value;
     });
 
-    this.commissionChart = new Chart(this.commissionCanvas.nativeElement, {
+    console.log('[Financial Dashboard] Dados do gráfico de comissões:', { labels, data: data[0].toFixed(2) });
+    this.commissionChart = new Chart<"bar", number[], string>(this.commissionCanvas.nativeElement, {
       type: 'bar',
       data: {
         labels,
-        datasets: [{
-          label: 'Comissões Pagas (R$)',
-          data,
-          backgroundColor: '#2196f3'
+        datasets: [{  
+          label: 'Comissões (R$)',
+          data: data.map(item => Number(item.toFixed(2))),
+          backgroundColor: '#2196f3',
+          borderColor: '#2196f3',
+          borderWidth: 1
         }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false
-          },
-          tooltip: {
-            callbacks: {
-              label: (context) => {
-                const raw = (context as any).parsed;
-                const value = typeof raw === 'number' ? raw : 0;
-                return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            ticks: {
-              autoSkip: false,
-              maxRotation: 45,
-              minRotation: 0
-            }
-          },
-          y: {
-            beginAtZero: true
-          }
-        }
       }
     });
   }

@@ -188,8 +188,7 @@ export class DashboardComponent implements OnInit {
       let finished = false;
 
       switch (newStatus) {
-        case 'scheduled':
-        case 'confirmed':
+        case 'active':
           active = true;
           finished = false;
           break;
@@ -239,18 +238,21 @@ export class DashboardComponent implements OnInit {
 
     const roles: { [key: string]: string } = {
       'admin': 'Administrador',
-      'doctor': 'Médico',
-      'nurse': 'Enfermeiro',
-      'receptionist': 'Recepcionista',
-      'medico': 'Médico'
+      'provider': 'Prestador de Serviço',
+      'client': 'Cliente'
     };
     return roles[role] || role;
   }
 
   getStatusValue(schedule: Schedule): string {
-    if (schedule.finished) return 'completed';
-    if (!schedule.active) return 'cancelled';
-    return 'scheduled';
+    console.log(schedule);
+    if (schedule.finished) {
+      if (schedule.active) {
+        return 'completed';
+      }
+      return 'cancelled';
+    }
+    return 'active';
   }
 
   getStatusLabel(schedule: Schedule): string {
