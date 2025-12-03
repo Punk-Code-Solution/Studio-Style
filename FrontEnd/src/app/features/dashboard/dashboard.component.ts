@@ -245,7 +245,6 @@ export class DashboardComponent implements OnInit {
   }
 
   getStatusValue(schedule: Schedule): string {
-    console.log(schedule);
     if (schedule.finished) {
       if (schedule.active) {
         return 'completed';
