@@ -7,6 +7,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { ScheduleViewModalComponent } from './schedule-view-modal/schedule-view-modal.component';
 import { ScheduleFormModalComponent } from './schedule-form-modal/schedule-form-modal.component';
 import { ScheduleDeleteModalComponent } from './schedule-delete-modal/schedule-delete-modal.component';
+import { TableUtilsService, TableSort, SortDirection } from '../../core/services/table-utils.service';
 import { User, UserService } from '../../core/services/user.service';
 
 @Component({
@@ -94,21 +95,33 @@ import { User, UserService } from '../../core/services/user.service';
           <table>
             <thead>
               <tr>
-                <th>Prestador</th>
-                <th>Cliente</th>
-                <th>Data/Hora</th>
+                <th (click)="onSort('provider.name')" class="sortable">
+                  Prestador
+                  <i class="fas" [ngClass]="getSortIcon('provider.name')"></i>
+                </th>
+                <th (click)="onSort('name_client')" class="sortable">
+                  Cliente
+                  <i class="fas" [ngClass]="getSortIcon('name_client')"></i>
+                </th>
+                <th (click)="onSort('date_and_houres')" class="sortable">
+                  Data/Hora
+                  <i class="fas" [ngClass]="getSortIcon('date_and_houres')"></i>
+                </th>
                 <th>Serviços</th>
-                <th>Status</th>
+                <th (click)="onSort('finished')" class="sortable">
+                  Status
+                  <i class="fas" [ngClass]="getSortIcon('finished')"></i>
+                </th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngIf="filteredSchedules.length === 0">
+              <tr *ngIf="paginatedSchedules.length === 0">
                 <td colspan="6" class="empty-state">
                   <p>Nenhum agendamento encontrado</p>
                 </td>
               </tr>
-              <tr *ngFor="let schedule of filteredSchedules">
+              <tr *ngFor="let schedule of paginatedSchedules">
                 <td>
                   <div class="user-info">
                     <div class="doctor-details">
@@ -159,14 +172,28 @@ import { User, UserService } from '../../core/services/user.service';
         </div>
       </div>
 
-      <div class="pagination">
-        <button class="page-btn" [disabled]="currentPage === 1" (click)="changePage(currentPage - 1)">
-          <i class="fas fa-chevron-left"></i>
-        </button>
-        <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
-        <button class="page-btn" [disabled]="currentPage === totalPages" (click)="changePage(currentPage + 1)">
-          <i class="fas fa-chevron-right"></i>
-        </button>
+      <div class="pagination" *ngIf="sortedSchedules.length > 0">
+        <div class="pagination-controls">
+          <label for="pageSize">Itens por página:</label>
+          <select id="pageSize" [(ngModel)]="itemsPerPage" (change)="onPageSizeChange()">
+            <option [value]="10">10</option>
+            <option [value]="25">25</option>
+            <option [value]="50">50</option>
+            <option [value]="200">200</option>
+          </select>
+          <span class="page-info">
+            Mostrando {{ (currentPage - 1) * itemsPerPage + 1 }} - {{ Math.min(currentPage * itemsPerPage, sortedSchedules.length) }} de {{ sortedSchedules.length }}
+          </span>
+        </div>
+        <div class="pagination-buttons">
+          <button class="page-btn" [disabled]="currentPage === 1" (click)="changePage(currentPage - 1)">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
+          <button class="page-btn" [disabled]="currentPage === totalPages" (click)="changePage(currentPage + 1)">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -201,13 +228,17 @@ import { User, UserService } from '../../core/services/user.service';
 export class SchedulesComponent implements OnInit {
   schedules: Schedule[] = [];
   filteredSchedules: Schedule[] = [];
+  sortedSchedules: Schedule[] = [];
+  paginatedSchedules: Schedule[] = [];
   searchTerm = '';
   isFilterOpen = false;
   currentPage = 1;
   itemsPerPage = 10;
+  pageSizeOptions = [10, 25, 50, 200];
   totalPages = 1;
   loading = false;
   error = '';
+  sortConfig: TableSort = { column: '', direction: '' };
 
   // Modal states
   showViewModal = false;
@@ -241,7 +272,8 @@ export class SchedulesComponent implements OnInit {
     private notificationService: NotificationService,
     private route: ActivatedRoute,
     private router: Router,
-    private userService: UserService
+    private userService: UserService,
+    private tableUtils: TableUtilsService
   ) {}
 
   ngOnInit(): void {
@@ -383,16 +415,36 @@ export class SchedulesComponent implements OnInit {
       });
     }
 
+    // Aplicar ordenação
+    this.sortedSchedules = this.tableUtils.sortData(filtered, this.sortConfig.column, this.sortConfig.direction);
+    
     // Recalcular paginação
-    this.totalPages = Math.max(1, Math.ceil(filtered.length / this.itemsPerPage));
+    this.totalPages = this.tableUtils.calculateTotalPages(this.sortedSchedules.length, this.itemsPerPage);
     this.currentPage = Math.max(1, Math.min(this.currentPage, this.totalPages));
     
     // Aplicar paginação
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    const end = start + this.itemsPerPage;
-    // Criar novo array para garantir detecção de mudanças do Angular
-    this.filteredSchedules = [...filtered.slice(start, end)];
+    this.paginatedSchedules = this.tableUtils.paginateData(this.sortedSchedules, this.currentPage, this.itemsPerPage);
+    this.filteredSchedules = this.sortedSchedules; // Mantém para compatibilidade
   }
+
+  onSort(column: string): void {
+    this.sortConfig = this.tableUtils.toggleSort(this.sortConfig, column);
+    this.filterSchedules();
+  }
+
+  getSortIcon(column: string): string {
+    if (this.sortConfig.column !== column) {
+      return 'fa-sort';
+    }
+    return this.sortConfig.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down';
+  }
+
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.filterSchedules();
+  }
+
+  Math = Math; // Expor Math para o template
 
   toggleFilter(): void {
     this.isFilterOpen = !this.isFilterOpen;
@@ -513,11 +565,21 @@ export class SchedulesComponent implements OnInit {
         this.closeDeleteModal();
       },
       error: (error) => {
-        const errorMsg = error?.error?.message || error?.message || 'Erro desconhecido';
-        this.error = 'Erro ao excluir agendamento';
-        console.error('Erro ao excluir agendamento:', error);
+        // Não recarregar a tabela em caso de erro
         this.deleteLoading = false;
-        this.notificationService.error(`Erro ao excluir agendamento: ${errorMsg}`);
+        
+        // Tratar erro específico de registros relacionados (409) - usar warning ao invés de error
+        if (error?.status === 409) {
+          const errorMsg = error?.error?.message || 'Este agendamento possui registros associados e não pode ser excluído.';
+          this.notificationService.warning(errorMsg, 'Atenção');
+        } else {
+          // Tratar outros erros
+          const errorMsg = error?.error?.message || error?.message || 'Não foi possível excluir o agendamento. Por favor, tente novamente.';
+          this.error = 'Erro ao excluir agendamento';
+          console.error('Erro ao excluir agendamento:', error);
+          this.notificationService.error(errorMsg);
+        }
+        // Garantir que o modal permaneça aberto para o usuário ver a mensagem
       }
     });
   }

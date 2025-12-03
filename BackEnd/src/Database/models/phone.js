@@ -11,8 +11,7 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       
-      this.belongsTo( models.Account, { foreignKey: { name: "account_id_phone" }, constraints: false } ),
-  	  this.belongsTo( models.Company, { foreignKey: { name: "company_id_phone" }, constraints: false } );
+      this.belongsTo( models.Account, { foreignKey: { name: "account_id_phone" }, constraints: false } )
       
     }
   }
@@ -26,8 +25,7 @@ module.exports = (sequelize, DataTypes) => {
     ddd: DataTypes.INTEGER,
     active: DataTypes.DATE,
     type: DataTypes.STRING,
-    account_id_phone: DataTypes.UUID,
-    company_id_phone: DataTypes.UUID
+    account_id_phone: DataTypes.UUID
   }, {
     sequelize,
     modelName: 'Phone',

@@ -12,7 +12,7 @@ import { Patient } from '../../../core/models/patient.model';
         <div class="modal-header">
           <h3>
             <i class="fas fa-eye"></i>
-            Detalhes do Paciente
+            Detalhes do Cliente
           </h3>
           <button class="close-btn" (click)="closeModal()">
             <i class="fas fa-times"></i>

@@ -1,4 +1,4 @@
-const { Email, Company, Account } = require('../Database/models');
+const { Email, Account } = require('../Database/models');
 const { v4: uuidv4 } = require('uuid');
 
 module.exports = class emailRepository{
@@ -41,7 +41,7 @@ module.exports = class emailRepository{
  
   async createEmail( emailUser ){
 
-    const { account_id_email, name, email, active, company_id_email } = emailUser
+    const { account_id_email, name, email, active } = emailUser
     // Prevent duplicate email entries
     if (email) {
       const existing = await Email.findOne({ where: { email } });
@@ -56,12 +56,11 @@ module.exports = class emailRepository{
       account_id_email, 
       name, 
       email, 
-      active, 
-      company_id_email
+      active
        
     }
     ,{
-      association: [ Account.account_id_email, Company.company_id_email ]
+      association: [ Account.account_id_email]
     });
 
     if( result ){

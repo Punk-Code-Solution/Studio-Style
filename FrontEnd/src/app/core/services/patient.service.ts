@@ -22,7 +22,6 @@ export interface CreatePatientRequest {
   deleted?: boolean;
   avatar?: string;
   typeaccount_id: string;
-  company_id_account?: string;
   type_hair_id?: string;
 }
 

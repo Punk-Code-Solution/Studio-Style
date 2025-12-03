@@ -13,7 +13,6 @@ module.exports = (sequelize, DataTypes) => {
       
       this.belongsTo( models.TypeAccount, { foreignKey: { name: "typeaccount_id" }, constraints: false } ),
       this.belongsTo( models.Hair, { foreignKey: { name: "type_hair_id" }, constraints: false } ),
-      this.belongsTo( models.Company, { foreignKey: { name: "company_id_account" }, constraints: false } ),
       this.hasOne( models.Adress, { foreignKey: "account_id_adress",constraints: false, onDelete: 'CASCADE' } ),
       this.hasMany( models.Email, { foreignKey: "account_id_email", constraints: false, onDelete: 'CASCADE' } ),
       this.hasMany( models.Phone, { foreignKey: "account_id_phone", constraints: false, onDelete: 'CASCADE' } ),
@@ -40,7 +39,6 @@ module.exports = (sequelize, DataTypes) => {
     deleted: DataTypes.BOOLEAN,
     avatar: DataTypes.STRING,
     typeaccount_id: DataTypes.UUID,
-    company_id_account: DataTypes.UUID,
     type_hair_id: DataTypes.UUID
   }, {
     sequelize,

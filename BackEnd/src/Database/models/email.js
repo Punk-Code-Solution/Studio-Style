@@ -11,8 +11,7 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       
-      this.belongsTo( models.Account , { foreignKey: { name: "account_id_email" }, constraints: false }),
-      this.belongsTo( models.Company , { foreignKey: { name: "company_id_email" }, constraints: false });
+      this.belongsTo( models.Account , { foreignKey: { name: "account_id_email" }, constraints: false })
 
     }
   }
@@ -25,8 +24,7 @@ module.exports = (sequelize, DataTypes) => {
     name: DataTypes.STRING,
     email: DataTypes.STRING,
     active: DataTypes.DATE,
-    account_id_email: DataTypes.UUID,
-    company_id_email: DataTypes.UUID
+    account_id_email: DataTypes.UUID
   }, {
     sequelize,
     modelName: 'Email',

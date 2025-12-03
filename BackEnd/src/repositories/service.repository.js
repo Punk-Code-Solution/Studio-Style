@@ -36,7 +36,8 @@ class serviceRepository{
 
       service,
       additionalComments,
-      price
+      price,
+      commission_rate
 
     } = services
 
@@ -45,7 +46,8 @@ class serviceRepository{
         id: uuidv4(),
         service,
         additionalComments,
-        price
+        price,
+        commission_rate
 
       });
 
@@ -68,6 +70,9 @@ class serviceRepository{
     }
     if (service.price !== undefined) {
       updateData.price = service.price;
+    }
+    if (service.commission_rate !== undefined) {
+      updateData.commission_rate = service.commission_rate;
     }
 
     await Service.update(

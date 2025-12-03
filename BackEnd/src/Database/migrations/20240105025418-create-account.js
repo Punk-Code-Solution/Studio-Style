@@ -41,14 +41,6 @@ module.exports = {
           key: 'id'
         }
       },
-      company_id_account: {
-        type: Sequelize.UUID,
-        defaultValue: Sequelize.UUIDV4,
-        references: {
-          model: 'Companies',
-          key: 'id'
-        }
-      },
       type_hair_id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,

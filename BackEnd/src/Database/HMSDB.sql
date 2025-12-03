@@ -24,18 +24,6 @@ CREATE TABLE public."Hairs"(
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
 
--- Create Company Table
-CREATE TABLE public."Companies"(
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(100),
-  cnpj VARCHAR(18),
-  start_date DATE,
-  active DATE,
-  avatar TEXT,
-  "createdAt" TIMESTAMP DEFAULT NOW(),
-  "updatedAt" TIMESTAMP DEFAULT NOW()
-);
-
 -- Create Account Table
 CREATE TABLE public."Accounts"(
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -49,7 +37,6 @@ CREATE TABLE public."Accounts"(
   avatar VARCHAR(255),
   "typeaccount_id" UUID REFERENCES public."TypeAccounts" (id),
   "type_hair_id" UUID REFERENCES public."Hairs" (id),
-  "company_id_account" UUID REFERENCES public."Companies" (id),
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -63,7 +50,6 @@ CREATE TABLE public."Purchases"(
   date_purchase DATE,
   product_description TEXT,
   "account_id_purchase" UUID REFERENCES public."Accounts" (id),
-  "company_id_purchase" UUID REFERENCES public."Companies" (id),
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -74,10 +60,10 @@ CREATE TABLE public."Products"(
   liters FLOAT,
   weight FLOAT,
   name VARCHAR(100),
-  priceTotal FLOAT,
+  "priceTotal" FLOAT,
   amount INTEGER,
   description TEXT,
-  tipeProduct VARCHAR(100),
+  "tipeProduct" VARCHAR(100),
   brand VARCHAR(100),
   date_validity DATE,
   "purchase_id_product" UUID REFERENCES public."Purchases" (id),
@@ -91,6 +77,7 @@ CREATE TABLE public."Adresses"(
   city VARCHAR(100),
   neighborhood VARCHAR(100),
   road VARCHAR(100),
+  cep INTEGER,
   "account_id_adress" UUID REFERENCES public."Accounts" (id),
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
@@ -100,11 +87,10 @@ CREATE TABLE public."Adresses"(
 CREATE TABLE public."Phones"(
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   phone VARCHAR(15),
-  ddd VARCHAR(3),
+  ddd INTEGER,
   active DATE,
   type VARCHAR(100),
   "account_id_phone" UUID REFERENCES public."Accounts" (id),
-  "company_id_phone" UUID REFERENCES public."Companies" (id),
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -116,7 +102,6 @@ CREATE TABLE public."Emails"(
   active DATE,
   email VARCHAR(100),
   "account_id_email" UUID REFERENCES public."Accounts" (id),
-  "company_id_email" UUID REFERENCES public."Companies" (id),
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -130,6 +115,8 @@ CREATE TABLE public."Schedules"(
   finished BOOLEAN,
   "provider_id_schedules" UUID REFERENCES public."Accounts" (id),
   "client_id_schedules" UUID REFERENCES public."Accounts" (id),
+  payment_method VARCHAR(20) CHECK (payment_method IN ('CASH', 'CARD', 'PIX', 'OTHER')),
+  apply_gateway_fee BOOLEAN DEFAULT false,
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -138,11 +125,9 @@ CREATE TABLE public."Schedules"(
 CREATE TABLE public."Services"(
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   service VARCHAR(255),
-  date_service TIMESTAMP,
-  additionalComments TEXT,
-  "client_id_service" UUID REFERENCES public."Accounts" (id),
-  "provider_id_service" UUID REFERENCES public."Accounts" (id),
-  "schedule_id" UUID REFERENCES public."Schedules" (id) ON DELETE SET NULL,
+  "additionalComments" VARCHAR(255),
+  price FLOAT,
+  commission_rate FLOAT,
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -150,11 +135,11 @@ CREATE TABLE public."Services"(
 -- Create Payment Table
 CREATE TABLE public."Payments"(
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  valueTotal FLOAT,
-  discountValue FLOAT,
-  tipePayment VARCHAR(200),
+  "valueTotal" FLOAT,
+  "discountValue" FLOAT,
+  "tipePayment" VARCHAR(200),
   date DATE,
-  "service_id_payment" UUID REFERENCES public."Services" (id),
+  "service_id_payment" UUID REFERENCES public."Schedules" (id),
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -163,7 +148,7 @@ CREATE TABLE public."Payments"(
 CREATE TABLE public."Actions"(
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(200),
-  additionalComments TEXT,
+  "additionalComments" TEXT,
   "service_id_action" UUID REFERENCES public."Services" (id),
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
@@ -192,7 +177,7 @@ CREATE TABLE public."Purchase_Materials"(
   amount INTEGER,
   value FLOAT,
   date DATE,
-  product_description TEXT,
+  product_description VARCHAR(255),
   "account_id_purchase_material" UUID REFERENCES public."Accounts" (id),
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
@@ -207,11 +192,72 @@ CREATE TABLE public."SaleProducts"(
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
 
--- Create HairAccount Table (Junction Table)
-CREATE TABLE public."HairAccounts"(
+-- Create Schedule_Service Table (Junction Table)
+CREATE TABLE public."Schedule_Services"(
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "hairId" UUID REFERENCES public."Hairs" (id),
-  "accountId" UUID REFERENCES public."Accounts" (id),
+  "schedules_id" UUID REFERENCES public."Schedules" (id) ON DELETE CASCADE ON UPDATE CASCADE,
+  "service_id" UUID REFERENCES public."Services" (id) ON DELETE CASCADE ON UPDATE CASCADE,
+  "createdAt" TIMESTAMP DEFAULT NOW(),
+  "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+
+-- Create CompanySettings Table
+CREATE TABLE public."CompanySettings"(
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tax_regime VARCHAR(20) CHECK (tax_regime IN ('MEI', 'SIMPLES_NACIONAL', 'LUCRO_PRESUMIDO', 'LUCRO_REAL')) DEFAULT 'MEI',
+  is_partner_salon BOOLEAN DEFAULT false,
+  tax_rate DECIMAL(5, 4) DEFAULT 0.0000,
+  payment_gateway_fee DECIMAL(5, 4) DEFAULT 0.0299,
+  default_commission_rate DECIMAL(5, 4) DEFAULT 0.5000,
+  "createdAt" TIMESTAMP DEFAULT NOW(),
+  "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+
+-- Create CommissionRules Table
+CREATE TABLE public."CommissionRules"(
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rule_type VARCHAR(20) CHECK (rule_type IN ('GENERAL', 'SERVICE', 'PROFESSIONAL')) DEFAULT 'GENERAL',
+  service_id UUID REFERENCES public."Services" (id) ON DELETE CASCADE ON UPDATE CASCADE,
+  professional_id UUID REFERENCES public."Accounts" (id) ON DELETE CASCADE ON UPDATE CASCADE,
+  commission_rate DECIMAL(5, 4) NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  "createdAt" TIMESTAMP DEFAULT NOW(),
+  "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+
+-- Create Expenses Table
+CREATE TABLE public."Expenses"(
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  expense_type VARCHAR(20) CHECK (expense_type IN ('FIXED', 'VARIABLE')) NOT NULL,
+  category VARCHAR(255) NOT NULL,
+  description TEXT,
+  amount DECIMAL(15, 2) NOT NULL,
+  due_date DATE,
+  payment_date DATE,
+  is_paid BOOLEAN DEFAULT false,
+  is_recurring BOOLEAN DEFAULT false,
+  recurring_period VARCHAR(20) CHECK (recurring_period IN ('MONTHLY', 'WEEKLY', 'YEARLY')),
+  product_id UUID REFERENCES public."Products" (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  schedule_id UUID REFERENCES public."Schedules" (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  created_by UUID REFERENCES public."Accounts" (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  "createdAt" TIMESTAMP DEFAULT NOW(),
+  "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+
+-- Create FinancialLedger Table
+CREATE TABLE public."FinancialLedger"(
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  transaction_type VARCHAR(20) CHECK (transaction_type IN ('INCOME', 'EXPENSE')) NOT NULL,
+  category VARCHAR(50) CHECK (category IN ('SERVICE_PAYMENT', 'COMMISSION_PAYMENT', 'TAX_PAYMENT', 'GATEWAY_FEE', 'PRODUCT_COST', 'FIXED_EXPENSE', 'VARIABLE_EXPENSE', 'OTHER')) NOT NULL,
+  amount DECIMAL(15, 2) NOT NULL,
+  description TEXT,
+  reference_id UUID,
+  reference_type VARCHAR(255),
+  schedule_id UUID REFERENCES public."Schedules" (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  expense_id UUID REFERENCES public."Expenses" (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  transaction_date TIMESTAMP DEFAULT NOW(),
+  metadata JSONB,
+  created_by UUID REFERENCES public."Accounts" (id) ON DELETE SET NULL ON UPDATE CASCADE,
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -220,14 +266,8 @@ CREATE TABLE public."HairAccounts"(
 ALTER TABLE public."Emails" ADD CONSTRAINT "Emails_fk_Account" FOREIGN KEY ("account_id_email")
   REFERENCES public."Accounts" (id) ON DELETE SET NULL ON UPDATE CASCADE;
 
-ALTER TABLE public."Emails" ADD CONSTRAINT "Emails_fk_Company" FOREIGN KEY ("company_id_email")
-  REFERENCES public."Companies" (id) ON DELETE SET NULL ON UPDATE CASCADE;
-
 ALTER TABLE public."Phones" ADD CONSTRAINT "Phones_fk_Account" FOREIGN KEY ("account_id_phone")
   REFERENCES public."Accounts" (id) ON DELETE SET NULL ON UPDATE CASCADE;
-
-ALTER TABLE public."Phones" ADD CONSTRAINT "Phones_fk_Company" FOREIGN KEY ("company_id_phone")
-  REFERENCES public."Companies" (id) ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE public."Accounts" ADD CONSTRAINT "TypeAccount_fk" FOREIGN KEY ("typeaccount_id")
   REFERENCES public."TypeAccounts" (id) ON DELETE SET NULL ON UPDATE CASCADE;
@@ -244,15 +284,6 @@ ALTER TABLE public."Purchase_Materials" ADD CONSTRAINT "Purchase_Materials_fk_Ac
 ALTER TABLE public."Adresses" ADD CONSTRAINT "Adresses_fk_Account" FOREIGN KEY ("account_id_adress")
   REFERENCES public."Accounts" (id) ON DELETE SET NULL ON UPDATE CASCADE;
 
-ALTER TABLE public."Services" ADD CONSTRAINT "Services_fk_Account_Client" FOREIGN KEY ("client_id_service")
-  REFERENCES public."Accounts" (id) ON DELETE NO ACTION ON UPDATE NO ACTION;
-
-ALTER TABLE public."Services" ADD CONSTRAINT "Services_fk_Account_Provider" FOREIGN KEY ("provider_id_service")
-  REFERENCES public."Accounts" (id) ON DELETE NO ACTION ON UPDATE NO ACTION;
-
-ALTER TABLE public."Services" ADD CONSTRAINT "Services_fk_Schedules" FOREIGN KEY ("schedule_id")
-  REFERENCES public."Schedules" (id) ON DELETE SET NULL ON UPDATE CASCADE;
-
 ALTER TABLE public."Schedules" ADD CONSTRAINT "Schedules_fk_Account_Client" FOREIGN KEY ("client_id_schedules")
   REFERENCES public."Accounts" (id) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
@@ -268,21 +299,30 @@ ALTER TABLE public."Sales" ADD CONSTRAINT "Sales_fk_Account_Seller" FOREIGN KEY 
 ALTER TABLE public."Purchases" ADD CONSTRAINT "Purchases_fk_Account" FOREIGN KEY ("account_id_purchase")
   REFERENCES public."Accounts" (id) ON DELETE NO ACTION ON UPDATE CASCADE;
 
-ALTER TABLE public."Purchases" ADD CONSTRAINT "Purchases_fk_Company" FOREIGN KEY ("company_id_purchase")
-  REFERENCES public."Companies" (id) ON DELETE NO ACTION ON UPDATE CASCADE;
-
 ALTER TABLE public."Products" ADD CONSTRAINT "Products_fk_Purchase" FOREIGN KEY ("purchase_id_product")
   REFERENCES public."Purchases" (id) ON DELETE NO ACTION ON UPDATE CASCADE;
 
-ALTER TABLE public."Payments" ADD CONSTRAINT "Payments_fk_Service" FOREIGN KEY ("service_id_payment")
-  REFERENCES public."Services" (id) ON DELETE NO ACTION ON UPDATE CASCADE;
+ALTER TABLE public."Payments" ADD CONSTRAINT "Payments_fk_Schedule" FOREIGN KEY ("service_id_payment")
+  REFERENCES public."Schedules" (id) ON DELETE NO ACTION ON UPDATE CASCADE;
+
+-- Add Unique Constraints
+CREATE UNIQUE INDEX accounts_cpf_unique ON public."Accounts" ("cpf");
+CREATE UNIQUE INDEX emails_email_unique ON public."Emails" ("email");
 
 -- Create Indexes for better performance
-CREATE INDEX idx_services_schedule_id ON public."Services" ("schedule_id");
-CREATE INDEX idx_services_client_id ON public."Services" ("client_id_service");
-CREATE INDEX idx_services_provider_id ON public."Services" ("provider_id_service");
+CREATE INDEX idx_services_schedule_service ON public."Schedule_Services" ("schedules_id");
+CREATE INDEX idx_services_service_id ON public."Schedule_Services" ("service_id");
 CREATE INDEX idx_schedules_client_id ON public."Schedules" ("client_id_schedules");
 CREATE INDEX idx_schedules_provider_id ON public."Schedules" ("provider_id_schedules");
 CREATE INDEX idx_schedules_date ON public."Schedules" ("date_and_houres");
 CREATE INDEX idx_accounts_cpf ON public."Accounts" ("cpf");
-CREATE INDEX idx_companies_cnpj ON public."Companies" ("cnpj");
+CREATE INDEX idx_commission_rules_service_id ON public."CommissionRules" ("service_id");
+CREATE INDEX idx_commission_rules_professional_id ON public."CommissionRules" ("professional_id");
+CREATE INDEX idx_commission_rules_type_active ON public."CommissionRules" ("rule_type", "is_active");
+CREATE INDEX idx_financial_ledger_transaction_date ON public."FinancialLedger" ("transaction_date");
+CREATE INDEX idx_financial_ledger_type_category ON public."FinancialLedger" ("transaction_type", "category");
+CREATE INDEX idx_financial_ledger_schedule_id ON public."FinancialLedger" ("schedule_id");
+CREATE INDEX idx_financial_ledger_expense_id ON public."FinancialLedger" ("expense_id");
+CREATE INDEX idx_expenses_due_date ON public."Expenses" ("due_date");
+CREATE INDEX idx_expenses_type_paid ON public."Expenses" ("expense_type", "is_paid");
+CREATE INDEX idx_expenses_schedule_id ON public."Expenses" ("schedule_id");

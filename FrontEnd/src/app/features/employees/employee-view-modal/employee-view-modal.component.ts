@@ -279,6 +279,11 @@ import { Employee } from '../../../core/services/employee.service';
         background-color: rgba($error-color, 0.1);
         color: $error-color;
       }
+
+      &.on-leave {
+        background-color: rgba(#ff9800, 0.1);
+        color: #ff9800;
+      }
     }
 
     .modal-footer {
@@ -354,12 +359,16 @@ export class EmployeeViewModalComponent {
   }
 
   getStatusClass(employee: Employee): string {
-    if (employee.deleted) return 'inactive';
+    const status = employee.status || (employee.deleted ? 'inactive' : 'active');
+    if (status === 'on_leave') return 'on-leave';
+    if (status === 'inactive') return 'inactive';
     return 'active';
   }
 
   getStatusText(employee: Employee): string {
-    if (employee.deleted) return 'Inativo';
+    const status = employee.status || (employee.deleted ? 'inactive' : 'active');
+    if (status === 'inactive') return 'Inativo';
+    if (status === 'on_leave') return 'Em licença';
     return 'Ativo';
   }
 

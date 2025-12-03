@@ -8,6 +8,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { EmployeeFormModalComponent } from './employee-form-modal/employee-form-modal.component';
 import { EmployeeViewModalComponent } from './employee-view-modal/employee-view-modal.component';
 import { EmployeeDeleteModalComponent } from './employee-delete-modal/employee-delete-modal.component';
+import { TableUtilsService, TableSort } from '../../core/services/table-utils.service';
 
 type EmployeeRole = Employee['TypeAccount']['type'];
 
@@ -130,16 +131,25 @@ interface Filters {
           <table>
             <thead>
               <tr>
-                <th>Nome</th>
-                <th>E-mail</th>
+                <th (click)="onSort('name')" class="sortable">
+                  Nome
+                  <i class="fas" [ngClass]="getSortIcon('name')"></i>
+                </th>
+                <th (click)="onSort('email')" class="sortable">
+                  E-mail
+                  <i class="fas" [ngClass]="getSortIcon('email')"></i>
+                </th>
                 <th>Telefone</th>
-                <th>Cargo</th>
+                <th (click)="onSort('TypeAccount.type')" class="sortable">
+                  Cargo
+                  <i class="fas" [ngClass]="getSortIcon('TypeAccount.type')"></i>
+                </th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let employee of employees">
+              <tr *ngFor="let employee of paginatedEmployees">
                 <td>
                   <div class="user-info">
                     <div class="employee-details">
@@ -153,7 +163,7 @@ interface Filters {
                 <td>{{ getRoleLabel(employee.TypeAccount.type) }}</td>
                 <td>
                   <span class="status-badge" [class]="getStatusClass(employee)">
-                    {{ getStatusLabel(employee.deleted) }}
+                    {{ getStatusLabel(employee) }}
                   </span>
                 </td>
                 <td>
@@ -170,7 +180,7 @@ interface Filters {
                   </div>
                 </td>
               </tr>
-              <tr *ngIf="employees.length === 0">
+              <tr *ngIf="paginatedEmployees.length === 0">
                 <td colspan="6" class="empty-state">
                   <p>Nenhum funcionário encontrado</p>
                 </td>
@@ -181,22 +191,36 @@ interface Filters {
       </div>
 
       <!-- Pagination -->
-      <div class="pagination" *ngIf="!isLoading && filteredEmployees.length > 0">
-        <button 
-          class="page-btn" 
-          [disabled]="currentPage === 1" 
-          (click)="changePage(currentPage - 1)"
-        >
-          <i class="fas fa-chevron-left"></i>
-        </button>
-        <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
-        <button 
-          class="page-btn" 
-          [disabled]="currentPage === totalPages" 
-          (click)="changePage(currentPage + 1)"
-        >
-          <i class="fas fa-chevron-right"></i>
-        </button>
+      <div class="pagination" *ngIf="!isLoading && sortedEmployees.length > 0">
+        <div class="pagination-controls">
+          <label for="pageSize">Itens por página:</label>
+          <select id="pageSize" [(ngModel)]="itemsPerPage" (change)="onPageSizeChange()">
+            <option [value]="10">10</option>
+            <option [value]="25">25</option>
+            <option [value]="50">50</option>
+            <option [value]="200">200</option>
+          </select>
+          <span class="page-info">
+            Mostrando {{ (currentPage - 1) * itemsPerPage + 1 }} - {{ Math.min(currentPage * itemsPerPage, sortedEmployees.length) }} de {{ sortedEmployees.length }}
+          </span>
+        </div>
+        <div class="pagination-buttons">
+          <button 
+            class="page-btn" 
+            [disabled]="currentPage === 1" 
+            (click)="changePage(currentPage - 1)"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
+          <button 
+            class="page-btn" 
+            [disabled]="currentPage === totalPages" 
+            (click)="changePage(currentPage + 1)"
+          >
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Employee Form Modal -->
@@ -226,403 +250,23 @@ interface Filters {
       ></app-employee-delete-modal>
     </div>
   `,
-  styles: [`
-    .page-container {
-      padding: 2rem;
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
-    }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 2rem;
-    }
-
-    h2 {
-      color: #1976d2;
-      margin: 0;
-    }
-
-    .search {
-      position: relative;
-      width: 300px;
-    }
-
-    .search i {
-      position: absolute;
-      left: 1rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #666;
-    }
-
-    .search input {
-      width: 100%;
-      padding: 0.5rem 1rem 0.5rem 2.5rem;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 1rem;
-    }
-
-    .search input:focus {
-      outline: none;
-      border-color: #1976d2;
-    }
-
-    .header-right {
-      display: flex;
-      gap: 1rem;
-    }
-
-    .filter-btn, .add-btn {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 4px;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .filter-btn {
-      background: #f5f5f5;
-      color: #333;
-    }
-
-    .add-btn {
-      background: #1976d2;
-      color: white;
-    }
-
-    .filter-btn:hover, .add-btn:hover {
-      opacity: 0.9;
-    }
-
-    .filter-panel {
-      background: white;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
-      display: none;
-    }
-
-    .filter-panel.show {
-      display: block;
-    }
-
-    .filter-group {
-      margin-bottom: 1.5rem;
-    }
-
-    .filter-group label {
-      display: block;
-      color: #333;
-      font-weight: 500;
-      margin-bottom: 0.5rem;
-    }
-
-    .filter-options {
-      display: flex;
-      gap: 2rem;
-    }
-
-    .checkbox {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-    }
-
-    .checkbox input {
-      width: 16px;
-      height: 16px;
-    }
-
-    .filter-actions {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 1.5rem;
-    }
-
-    .clear-btn {
-      padding: 0.5rem 1rem;
-      background: transparent;
-      color: #333;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    .clear-btn:hover {
-      background: #f5f5f5;
-    }
-
-    .employees-grid {
-      background-color: white;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .employees-table {
-      overflow-x: auto;
-    }
-
-    .employees-table::-webkit-scrollbar {
-      height: 8px;
-    }
-
-    .employees-table::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 4px;
-    }
-
-    .employees-table::-webkit-scrollbar-thumb {
-      background: #1976d2;
-      border-radius: 4px;
-    }
-
-    .employees-table table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .employees-table th,
-    .employees-table td {
-      padding: 1rem;
-      text-align: left;
-      border-bottom: 1px solid #ddd;
-    }
-
-    .employees-table th {
-      background-color: #f5f5f5;
-      color: #333;
-      font-weight: 500;
-      font-size: 0.875rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .employees-table td {
-      color: #333;
-      font-size: 0.875rem;
-    }
-
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .employee-details {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .employee-details span {
-      color: #333;
-    }
-
-    .employee-details span:first-child {
-      font-weight: 500;
-    }
-
-    .status-badge {
-      padding: 0.25rem 0.75rem;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 500;
-    }
-
-    .status-badge.active {
-      background-color: rgba(76, 175, 80, 0.1);
-      color: #4caf50;
-    }
-
-    .status-badge.inactive {
-      background-color: rgba(244, 67, 54, 0.1);
-      color: #f44336;
-    }
-
-    .status-badge.on-leave {
-      background-color: rgba(255, 152, 0, 0.1);
-      color: #ff9800;
-    }
-
-    .actions {
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-    }
-
-    .action-btn {
-      background: transparent;
-      border: none;
-      color: #666;
-      cursor: pointer;
-      padding: 0.25rem;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-
-    .action-btn:hover {
-      color: #1976d2;
-      background-color: rgba(25, 118, 210, 0.1);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      transform: translateY(-1px);
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 2rem;
-      color: #666;
-    }
-
-    .empty-state p {
-      margin: 0;
-    }
-
-    .pagination {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 1rem;
-      margin-top: 2rem;
-    }
-
-    .page-btn {
-      padding: 0.5rem;
-      background: transparent;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .page-btn:hover:not(:disabled) {
-      background: #f5f5f5;
-      transform: translateY(-1px);
-    }
-
-    .page-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .page-info {
-      color: #333;
-      font-size: 0.875rem;
-    }
-
-    .loading-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1rem;
-      padding: 2rem;
-      color: #666;
-    }
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #1976d2;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    .error-message {
-      background: #ffebee;
-      color: #d32f2f;
-      padding: 1rem;
-      border-radius: 4px;
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .error-message i {
-      font-size: 1.25rem;
-    }
-
-    .retry-btn {
-      margin-left: auto;
-      background: transparent;
-      border: 1px solid #d32f2f;
-      color: #d32f2f;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.875rem;
-    }
-
-    .retry-btn:hover {
-      background: rgba(211, 47, 47, 0.1);
-    }
-
-    @media (max-width: 768px) {
-      .header {
-        flex-direction: column;
-        gap: 1rem;
-      }
-
-      .header-left {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-      }
-
-      .search {
-        width: 100%;
-      }
-
-      .header-right {
-        width: 100%;
-        justify-content: space-between;
-      }
-
-      .filter-options {
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-
-      .employees-list {
-        grid-template-columns: 1fr;
-      }
-    }
-  `]
+  styleUrls: ['./employees.component.scss']
 })
 export class EmployeesComponent implements OnInit {
   employees: Employee[] = [];
   filteredEmployees: Employee[] = [];
+  sortedEmployees: Employee[] = [];
+  paginatedEmployees: Employee[] = [];
   searchTerm = '';
   isFilterOpen = false;
   currentPage = 1;
   itemsPerPage = 10;
+  pageSizeOptions = [10, 25, 50, 200];
   totalPages = 1;
   isLoading = false;
   errorMessage: string | null = null;
+  sortConfig: TableSort = { column: '', direction: '' };
+  Math = Math;
   isModalOpen = false;
   isSubmitting = false;
   selectedEmployee: Employee | null = null;
@@ -644,15 +288,15 @@ export class EmployeesComponent implements OnInit {
     roles: {
       admin: true,
       provider: true,
-      client: false,
-      ninguem: false
+      client: false
     }
   };
 
   constructor(
     private employeeService: EmployeeService,
     public authService: AuthService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private tableUtils: TableUtilsService
   ) {}
 
   ngOnInit() {
@@ -676,12 +320,6 @@ export class EmployeesComponent implements OnInit {
     });
   }
 
-  get paginatedEmployees(): Employee[] {
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    const end = start + this.itemsPerPage;
-    return this.filteredEmployees.slice(start, end);
-  }
-
   filterEmployees() {
     let filtered = [...this.employees];
 
@@ -696,13 +334,20 @@ export class EmployeesComponent implements OnInit {
     }
 
     // Status filter
-    const activeStatuses = Object.entries(this.filters.status)
-      .filter(([_, isActive]) => isActive)
-      .map(([status, _]) => status as Employee['TypeAccount']['type']);
+    filtered = filtered.filter(employee => {
+      const status = employee.status || (employee.deleted ? 'inactive' : 'active');
 
-    if (activeStatuses.length > 0) {
-      filtered = filtered.filter(employee => activeStatuses.includes(employee.TypeAccount.type));
-    }
+      if (status === 'on_leave') {
+        return this.filters.status.on_leave;
+      }
+
+      if (status === 'inactive') {
+        return this.filters.status.inactive;
+      }
+
+      // Default to active
+      return this.filters.status.active;
+    });
 
     // Role filter
     const activeRoles = Object.entries(this.filters.roles)
@@ -713,9 +358,33 @@ export class EmployeesComponent implements OnInit {
       filtered = filtered.filter(employee => activeRoles.includes(employee.TypeAccount.type));
     }
 
-    this.filteredEmployees = filtered;
-    this.totalPages = Math.max(1, Math.ceil(filtered.length / this.itemsPerPage));
-    this.currentPage = Math.min(this.currentPage, this.totalPages || 1);
+    // Aplicar ordenação
+    this.sortedEmployees = this.tableUtils.sortData(filtered, this.sortConfig.column, this.sortConfig.direction);
+    this.filteredEmployees = this.sortedEmployees; // Mantém para compatibilidade
+    
+    // Recalcular paginação
+    this.totalPages = this.tableUtils.calculateTotalPages(this.sortedEmployees.length, this.itemsPerPage);
+    this.currentPage = Math.max(1, Math.min(this.currentPage, this.totalPages));
+    
+    // Aplicar paginação
+    this.paginatedEmployees = this.tableUtils.paginateData(this.sortedEmployees, this.currentPage, this.itemsPerPage);
+  }
+
+  onSort(column: string): void {
+    this.sortConfig = this.tableUtils.toggleSort(this.sortConfig, column);
+    this.filterEmployees();
+  }
+
+  getSortIcon(column: string): string {
+    if (this.sortConfig.column !== column) {
+      return 'fa-sort';
+    }
+    return this.sortConfig.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down';
+  }
+
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.filterEmployees();
   }
 
   toggleFilter() {
@@ -730,11 +399,13 @@ export class EmployeesComponent implements OnInit {
     Object.keys(this.filters.roles).forEach(role => {
       this.filters.roles[role as EmployeeRole] = true;
     });
+    this.currentPage = 1;
     this.filterEmployees();
   }
 
   changePage(page: number) {
     this.currentPage = page;
+    this.filterEmployees();
   }
 
   getRoleLabel(role: EmployeeRole): string {
@@ -742,14 +413,27 @@ export class EmployeesComponent implements OnInit {
     return roleObj ? roleObj.label : role;
   }
 
-  getStatusLabel(status: Employee['deleted']): string {
-    if (status === null) {return 'Ativo'}
-    else {return 'Inativo';}
+  getStatusLabel(employee: Employee): string {
+    const status = employee.status || (employee.deleted ? 'inactive' : 'active');
+
+    switch (status) {
+      case 'inactive':
+        return 'Inativo';
+      case 'on_leave':
+        return 'Em licença';
+      default:
+        return 'Ativo';
+    }
   }
 
   getStatusClass(employee: Employee): string {
-    if (employee.deleted === null) {return 'active';}
-    else{ return "inactive";}
+    const status = employee.status || (employee.deleted ? 'inactive' : 'active');
+
+    if (status === 'on_leave') {
+      return 'on-leave';
+    }
+
+    return status === 'inactive' ? 'inactive' : 'active';
   }
 
   getEmployeePhone(employee: Employee): string | null {
@@ -805,10 +489,19 @@ export class EmployeesComponent implements OnInit {
         this.isDeleteLoading = false;
       },
       error: (error) => {
-        this.notificationService.error(
-          'Erro ao excluir funcionário. Por favor, tente novamente.'
-        );
+        // Não recarregar a tabela em caso de erro
         this.isDeleteLoading = false;
+        
+        // Tratar erro específico de registros relacionados (409) - usar warning ao invés de error
+        if (error?.status === 409) {
+          const errorMsg = error?.error?.message || 'Este funcionário possui registros associados e não pode ser excluído.';
+          this.notificationService.warning(errorMsg, 'Atenção');
+        } else {
+          // Tratar outros erros
+          const errorMsg = error?.error?.message || error?.message || 'Não foi possível excluir o funcionário. Por favor, tente novamente.';
+          this.notificationService.error(errorMsg);
+        }
+        // Garantir que o modal permaneça aberto para o usuário ver a mensagem
       }
     });
   }

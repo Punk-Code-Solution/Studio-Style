@@ -6,6 +6,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ServiceFormModalComponent } from './service-form-modal/service-form-modal.component';
 import { ServiceDeleteModalComponent } from './service-delete-modal/service-delete-modal.component';
+import { TableUtilsService, TableSort } from '../../core/services/table-utils.service';
 
 @Component({
   selector: 'app-services',
@@ -54,8 +55,18 @@ import { ServiceDeleteModalComponent } from './service-delete-modal/service-dele
           <table>
             <thead>
               <tr>
-                <th>Serviço</th>
-                <th>Preço</th>
+                <th (click)="onSort('service')" class="sortable">
+                  Serviço
+                  <i class="fas" [ngClass]="getSortIcon('service')"></i>
+                </th>
+                <th (click)="onSort('price')" class="sortable">
+                  Preço
+                  <i class="fas" [ngClass]="getSortIcon('price')"></i>
+                </th>
+                <th (click)="onSort('commission_rate')" class="sortable">
+                  Comissão Colaborador
+                  <i class="fas" [ngClass]="getSortIcon('commission_rate')"></i>
+                </th>
                 <th>Comentários</th>
                 <th *ngIf="isAdmin">Ações</th>
               </tr>
@@ -64,6 +75,9 @@ import { ServiceDeleteModalComponent } from './service-delete-modal/service-dele
               <tr *ngFor="let service of paginatedServices">
                 <td>{{ service.service }}</td>
                 <td>R$ {{ formatPrice(service.price) }}</td>
+                <td>
+                  {{ formatCommission(service.commission_rate) }}
+                </td>
                 <td>{{ service.additionalComments || '-' }}</td>
                 <td *ngIf="isAdmin">
                   <div class="actions">
@@ -87,22 +101,36 @@ import { ServiceDeleteModalComponent } from './service-delete-modal/service-dele
       </div>
 
       <!-- Pagination -->
-      <div class="pagination" *ngIf="!isLoading && filteredServices.length > 0">
-        <button 
-          class="page-btn" 
-          [disabled]="currentPage === 1" 
-          (click)="changePage(currentPage - 1)"
-        >
-          <i class="fas fa-chevron-left"></i>
-        </button>
-        <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
-        <button 
-          class="page-btn" 
-          [disabled]="currentPage === totalPages" 
-          (click)="changePage(currentPage + 1)"
-        >
-          <i class="fas fa-chevron-right"></i>
-        </button>
+      <div class="pagination" *ngIf="!isLoading && sortedServices.length > 0">
+        <div class="pagination-controls">
+          <label for="pageSize">Itens por página:</label>
+          <select id="pageSize" [(ngModel)]="itemsPerPage" (change)="onPageSizeChange()">
+            <option [value]="10">10</option>
+            <option [value]="25">25</option>
+            <option [value]="50">50</option>
+            <option [value]="200">200</option>
+          </select>
+          <span class="page-info">
+            Mostrando {{ (currentPage - 1) * itemsPerPage + 1 }} - {{ Math.min(currentPage * itemsPerPage, sortedServices.length) }} de {{ sortedServices.length }}
+          </span>
+        </div>
+        <div class="pagination-buttons">
+          <button 
+            class="page-btn" 
+            [disabled]="currentPage === 1" 
+            (click)="changePage(currentPage - 1)"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
+          <button 
+            class="page-btn" 
+            [disabled]="currentPage === totalPages" 
+            (click)="changePage(currentPage + 1)"
+          >
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Service Form Modal -->
@@ -232,6 +260,32 @@ import { ServiceDeleteModalComponent } from './service-delete-modal/service-dele
       font-size: 0.875rem;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      
+      &.sortable {
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+        padding-right: 2rem;
+        transition: background-color 0.2s;
+        
+        &:hover {
+          background-color: #e8e8e8;
+        }
+        
+        i {
+          position: absolute;
+          right: 0.5rem;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #666;
+          font-size: 0.875rem;
+          transition: color 0.2s;
+        }
+        
+        &:hover i {
+          color: #1976d2;
+        }
+      }
     }
 
     .services-table td {
@@ -270,10 +324,49 @@ import { ServiceDeleteModalComponent } from './service-delete-modal/service-dele
 
     .pagination {
       display: flex;
-      justify-content: center;
-      align-items: center;
+      flex-direction: column;
       gap: 1rem;
       margin-top: 2rem;
+      
+      .pagination-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background-color: #f5f5f5;
+        border-radius: 8px;
+        
+        label {
+          color: #333;
+          font-weight: 500;
+        }
+        
+        select {
+          padding: 0.25rem 0.5rem;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          background-color: white;
+          cursor: pointer;
+          
+          &:focus {
+            outline: none;
+            border-color: #1976d2;
+          }
+        }
+        
+        .page-info {
+          color: #666;
+          font-size: 0.875rem;
+        }
+      }
+      
+      .pagination-buttons {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+      }
     }
 
     .page-btn {
@@ -327,9 +420,12 @@ import { ServiceDeleteModalComponent } from './service-delete-modal/service-dele
 export class ServicesComponent implements OnInit {
   services: Service[] = [];
   filteredServices: Service[] = [];
+  sortedServices: Service[] = [];
+  paginatedServices: Service[] = [];
   searchTerm = '';
   currentPage = 1;
   itemsPerPage = 10;
+  pageSizeOptions = [10, 25, 50, 200];
   totalPages = 1;
   isLoading = false;
   isModalOpen = false;
@@ -338,11 +434,14 @@ export class ServicesComponent implements OnInit {
   isDeleteModalOpen = false;
   isDeleteLoading = false;
   isAdmin = false;
+  sortConfig: TableSort = { column: '', direction: '' };
+  Math = Math;
 
   constructor(
     private servicesService: ServicesService,
     public authService: AuthService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private tableUtils: TableUtilsService
   ) {}
 
   ngOnInit() {
@@ -368,12 +467,6 @@ export class ServicesComponent implements OnInit {
     });
   }
 
-  get paginatedServices(): Service[] {
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    const end = start + this.itemsPerPage;
-    return this.filteredServices.slice(start, end);
-  }
-
   filterServices() {
     let filtered = [...this.services];
 
@@ -385,17 +478,47 @@ export class ServicesComponent implements OnInit {
       );
     }
 
-    this.filteredServices = filtered;
-    this.totalPages = Math.max(1, Math.ceil(filtered.length / this.itemsPerPage));
-    this.currentPage = Math.min(this.currentPage, this.totalPages || 1);
+    // Aplicar ordenação
+    this.sortedServices = this.tableUtils.sortData(filtered, this.sortConfig.column, this.sortConfig.direction);
+    this.filteredServices = this.sortedServices; // Mantém para compatibilidade
+    
+    // Recalcular paginação
+    this.totalPages = this.tableUtils.calculateTotalPages(this.sortedServices.length, this.itemsPerPage);
+    this.currentPage = Math.max(1, Math.min(this.currentPage, this.totalPages));
+    
+    // Aplicar paginação
+    this.paginatedServices = this.tableUtils.paginateData(this.sortedServices, this.currentPage, this.itemsPerPage);
+  }
+
+  onSort(column: string): void {
+    this.sortConfig = this.tableUtils.toggleSort(this.sortConfig, column);
+    this.filterServices();
+  }
+
+  getSortIcon(column: string): string {
+    if (this.sortConfig.column !== column) {
+      return 'fa-sort';
+    }
+    return this.sortConfig.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down';
+  }
+
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.filterServices();
   }
 
   changePage(page: number) {
     this.currentPage = page;
+    this.filterServices();
   }
 
   formatPrice(price: number): string {
     return price.toFixed(2).replace('.', ',');
+  }
+
+  formatCommission(rate?: number): string {
+    const value = rate !== undefined && rate !== null ? rate * 100 : 0;
+    return `${value.toFixed(2).replace('.', ',')} %`;
   }
 
   openCreateModal(): void {
@@ -435,8 +558,19 @@ export class ServicesComponent implements OnInit {
         this.isDeleteLoading = false;
       },
       error: (error) => {
-        this.notificationService.error('Erro ao excluir serviço. Por favor, tente novamente.');
+        // Não recarregar a tabela em caso de erro
         this.isDeleteLoading = false;
+        
+        // Tratar erro específico de registros relacionados (409) - usar warning ao invés de error
+        if (error?.status === 409) {
+          const errorMsg = error?.error?.message || 'Este serviço possui registros associados e não pode ser excluído.';
+          this.notificationService.warning(errorMsg, 'Atenção');
+        } else {
+          // Tratar outros erros
+          const errorMsg = error?.error?.message || error?.message || 'Não foi possível excluir o serviço. Por favor, tente novamente.';
+          this.notificationService.error(errorMsg);
+        }
+        // Garantir que o modal permaneça aberto para o usuário ver a mensagem
       }
     });
   }
@@ -448,15 +582,25 @@ export class ServicesComponent implements OnInit {
     }
 
     this.isSubmitting = true;
-    const request = {
+    
+    // Garantir que os campos obrigatórios estão presentes para satisfazer o TypeScript
+    const createRequest = {
       service: serviceData.service,
       additionalComments: serviceData.additionalComments,
-      price: serviceData.price
+      price: serviceData.price,
+      commission_rate: serviceData.commission_rate
     };
 
     if (this.selectedService?.id) {
       // Update
-      this.servicesService.updateService({ id: this.selectedService.id, ...request }).subscribe({
+      const updateRequest = {
+        id: this.selectedService.id,
+        service: serviceData.service,
+        additionalComments: serviceData.additionalComments,
+        price: serviceData.price,
+        commission_rate: serviceData.commission_rate
+      };
+      this.servicesService.updateService(updateRequest).subscribe({
         next: () => {
           this.notificationService.success('Serviço atualizado com sucesso!');
           this.closeModal();
@@ -470,7 +614,7 @@ export class ServicesComponent implements OnInit {
       });
     } else {
       // Create
-      this.servicesService.createService(request).subscribe({
+      this.servicesService.createService(createRequest).subscribe({
         next: () => {
           this.notificationService.success('Serviço criado com sucesso!');
           this.closeModal();

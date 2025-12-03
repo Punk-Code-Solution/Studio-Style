@@ -396,7 +396,6 @@ export class PatientFormModalComponent implements OnInit {
     deleted: false,
     avatar: '',
     typeaccount_id: '',
-    company_id_account: '',
     type_hair_id: ''
   };
 
@@ -428,7 +427,6 @@ export class PatientFormModalComponent implements OnInit {
         birthday: this.patient.birthday ? this.formatDateForInput(this.patient.birthday) : '',
         avatar: this.patient.avatar || '',
         typeaccount_id: this.patient.typeaccount_id || '',
-        company_id_account: this.patient.company_id_account || '',
         type_hair_id: this.patient.type_hair_id || ''
       };
     }
@@ -495,9 +493,6 @@ export class PatientFormModalComponent implements OnInit {
     }
     if (!dataToSend.type_hair_id || dataToSend.type_hair_id.trim() === '') {
       delete (dataToSend as any).type_hair_id;
-    }
-    if (!dataToSend.company_id_account || dataToSend.company_id_account.trim() === '') {
-      delete (dataToSend as any).company_id_account;
     }
     if (!dataToSend.avatar || dataToSend.avatar.trim() === '') {
       delete (dataToSend as any).avatar;

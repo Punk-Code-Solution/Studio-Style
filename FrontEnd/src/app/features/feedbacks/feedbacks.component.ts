@@ -121,7 +121,16 @@ export class FeedbacksComponent implements OnInit {
           this.notificationService.success('Feedback excluído com sucesso');
         },
         error: (error) => {
-          this.notificationService.error('Erro ao excluir feedback');
+          // Não recarregar a tabela em caso de erro
+          // Tratar erro específico de registros relacionados (409) - usar warning ao invés de error
+          if (error?.status === 409) {
+            const errorMsg = error?.error?.message || 'Este feedback possui registros associados e não pode ser excluído.';
+            this.notificationService.warning(errorMsg, 'Atenção');
+          } else {
+            // Tratar outros erros
+            const errorMsg = error?.error?.message || error?.message || 'Não foi possível excluir o feedback. Por favor, tente novamente.';
+            this.notificationService.error(errorMsg);
+          }
         }
       });
     }

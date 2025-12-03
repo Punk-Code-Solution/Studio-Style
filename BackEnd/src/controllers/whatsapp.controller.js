@@ -380,15 +380,44 @@ class WhatsAppController {
 
     if (cleanText === 'confirmar') {
       try {
+        // Validações antes de criar o agendamento
+        if (!session || !session.selectedService || !session.selectedService.id) {
+          await this.sendMessageSafely(phone, 
+            '❌ Erro: Serviço não encontrado. Por favor, inicie um novo agendamento.');
+          this.clearUserSession(phone);
+          return;
+        }
+
+        if (!session.appointmentDateTime) {
+          await this.sendMessageSafely(phone, 
+            '❌ Erro: Data e horário não encontrados. Por favor, inicie um novo agendamento.');
+          this.clearUserSession(phone);
+          return;
+        }
+
         // 1. Cria o agendamento (Schedules)
         const schedule = await this.createSchedule(session);
+        
+        if (!schedule || !schedule.id) {
+          throw new Error('Falha ao criar agendamento no banco de dados');
+        }
         
         // 2. Associa o serviço (Service) ao agendamento (Schedules)
         //    usando a tabela pivo (Schedule_Service)
         const serviceId = session.selectedService.id; // UUID do serviço
-        await this.schedulesServiceRepo.addSchedule_Service(schedule.id, [serviceId]);
+        const serviceAssociation = await this.schedulesServiceRepo.addSchedule_Service(schedule.id, [serviceId]);
 
-        
+        // Se a associação falhar, remove o agendamento criado (rollback)
+        if (!serviceAssociation) {
+          // Tenta remover o agendamento criado
+          try {
+            await Schedules.destroy({ where: { id: schedule.id } });
+          } catch (destroyError) {
+            console.error('Erro ao remover agendamento após falha na associação de serviço:', destroyError);
+          }
+          throw new Error('Falha ao associar serviço ao agendamento');
+        }
+
         const message = `✅ Agendamento confirmado com sucesso!\n\n` +
           `📅 Data: ${session.appointmentDateTime.format('DD/MM/YYYY')}\n` +
           ` Horário: ${session.appointmentDateTime.format('HH:mm')}\n` +
@@ -405,6 +434,7 @@ class WhatsAppController {
         console.error('Erro ao criar agendamento:', error);
         await this.sendMessageSafely(phone, 
           '❌ Erro ao confirmar agendamento. Tente novamente mais tarde.');
+        // Não limpa a sessão em caso de erro, permitindo que o usuário tente novamente
       }
     } else if (cleanText === 'cancelar') {
       await this.cancelProcess(phone);

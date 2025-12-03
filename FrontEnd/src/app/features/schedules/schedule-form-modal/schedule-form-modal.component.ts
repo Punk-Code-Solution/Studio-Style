@@ -167,6 +167,40 @@ import { User } from '../../../core/services/user.service';
                   <option value="cancelled">Cancelado</option>
                 </select>
               </div>
+
+              <div class="form-group">
+                <label for="payment_method">
+                  <i class="fas fa-credit-card"></i>
+                  Forma de Pagamento
+                </label>
+                <select
+                  id="payment_method"
+                  [(ngModel)]="scheduleData.payment_method"
+                  name="payment_method"
+                  (change)="onPaymentMethodChange()"
+                >
+                  <option value="">Selecione a forma de pagamento</option>
+                  <option value="CASH">Dinheiro</option>
+                  <option value="CARD">Cartão</option>
+                  <option value="PIX">PIX</option>
+                  <option value="OTHER">Outro</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group" *ngIf="scheduleData.payment_method === 'CARD'">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="scheduleData.apply_gateway_fee"
+                  name="apply_gateway_fee"
+                >
+                <span>
+                  <i class="fas fa-percentage"></i>
+                  Aplicar taxa do gateway de pagamento ({{ gatewayFeeRate | percent:'1.2-2' }})
+                </span>
+              </label>
+              <small class="help-text">Marque esta opção se o pagamento foi feito por cartão e deseja deduzir a taxa do gateway</small>
             </div>
 
             <div class="form-group">
@@ -531,6 +565,7 @@ export class ScheduleFormModalComponent implements OnInit {
   notes = '';
   clientMode: 'select' | 'manual' = 'select';
   selectedClient: User | null = null;
+  gatewayFeeRate = 0.0299; // Taxa padrão de 2.99%
 
   ngOnInit(): void {
 
@@ -543,7 +578,9 @@ export class ScheduleFormModalComponent implements OnInit {
         finished: this.schedule.finished,
         provider_id_schedules: this.schedule.provider_id_schedules,
         client_id_schedules: this.schedule.client_id_schedules,
-        services: this.schedule.Services?.map(s => s.id) || []
+        services: this.schedule.Services?.map(s => s.id) || [],
+        payment_method: this.schedule.payment_method,
+        apply_gateway_fee: this.schedule.apply_gateway_fee || false
       };
       this.selectedServices = [...this.scheduleData.services];
 
@@ -613,6 +650,18 @@ export class ScheduleFormModalComponent implements OnInit {
         this.scheduleData.active = false;
         this.scheduleData.finished = false;
         break;
+    }
+  }
+
+  onPaymentMethodChange(): void {
+    // Se não for cartão, desmarcar apply_gateway_fee
+    if (this.scheduleData.payment_method !== 'CARD') {
+      this.scheduleData.apply_gateway_fee = false;
+    } else {
+      // Se for cartão, marcar por padrão
+      if (this.scheduleData.apply_gateway_fee === undefined) {
+        this.scheduleData.apply_gateway_fee = true;
+      }
     }
   }
 

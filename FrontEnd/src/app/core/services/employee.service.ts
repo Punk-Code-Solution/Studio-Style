@@ -14,7 +14,7 @@ export interface ApiResponse<T> {
 
 export interface TypeAccount {
   id: string;
-  type: 'admin' | 'provider' | 'client' | 'ninguem';
+  type: 'admin' | 'provider' | 'client';
   edit: boolean;
   creat: boolean;
   viwer: boolean;
@@ -61,7 +61,7 @@ export interface Employee {
     Adress?: any;
     // Propriedades adicionais para compatibilidade com o template
     email?: string;
-    role?: 'enfermeiro' | 'recepcionista' | 'administrativo' | 'admin' | 'provider';
+    role?: 'admin' | 'provider';
     phone?: string;
     address?: string;
     status?: 'active' | 'inactive' | 'on_leave';
@@ -133,8 +133,23 @@ export class EmployeeService {
       emp.role = emp.TypeAccount.type as any;
     }
     
-    // Mapear status a partir de deleted
-    emp.status = emp.deleted ? 'inactive' : 'active';
+    // Normalizar flag deleted (pode vir como boolean, string ou null)
+    const rawDeleted = (emp as any).deleted;
+    const isDeleted =
+      rawDeleted === true ||
+      rawDeleted === 1 ||
+      rawDeleted === '1' ||
+      rawDeleted === 'true' ||
+      (typeof rawDeleted === 'string' &&
+        rawDeleted.length > 0 &&
+        rawDeleted !== 'false' &&
+        rawDeleted !== '0');
+
+    // Mantenha deleted como boolean padronizado para facilitar o consumo
+    emp.deleted = isDeleted ? 'true' : 'false';
+    
+    // Mapear status a partir de deleted (permite extender para outros estados futuramente)
+    emp.status = isDeleted ? 'inactive' : 'active';
     
     return emp;
   }

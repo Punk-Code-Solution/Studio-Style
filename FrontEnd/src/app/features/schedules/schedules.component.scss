@@ -211,6 +211,32 @@
     background-color: $background-dark;
     color: $text-primary;
     @include typography($font-size-base, $font-weight-medium);
+    
+    &.sortable {
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      padding-right: $spacing-xl;
+      transition: background-color 0.2s;
+      
+      &:hover {
+        background-color: darken($background-dark, 5%);
+      }
+      
+      i {
+        position: absolute;
+        right: $spacing-sm;
+        top: 50%;
+        transform: translateY(-50%);
+        color: $text-secondary;
+        font-size: 0.875rem;
+        transition: color 0.2s;
+      }
+      
+      &:hover i {
+        color: $primary-color;
+      }
+    }
   }
 
   td {
@@ -317,9 +343,46 @@
 }
 
 .pagination {
-  @include flex(row, center, center);
+  @include flex(column, center, stretch);
   gap: $spacing-md;
   margin-top: $spacing-xl;
+  
+  .pagination-controls {
+    @include flex(row, space-between, center);
+    gap: $spacing-md;
+    padding: $spacing-md;
+    background-color: $background-light;
+    border-radius: $border-radius-lg;
+    
+    label {
+      color: $text-primary;
+      @include typography($font-size-base, $font-weight-medium);
+    }
+    
+    select {
+      padding: $spacing-xs $spacing-sm;
+      border: 1px solid $border-color;
+      border-radius: $border-radius-sm;
+      background-color: white;
+      color: $text-primary;
+      cursor: pointer;
+      
+      &:focus {
+        outline: none;
+        border-color: $primary-color;
+      }
+    }
+    
+    .page-info {
+      color: $text-secondary;
+      @include typography($font-size-sm);
+    }
+  }
+  
+  .pagination-buttons {
+    @include flex(row, center, center);
+    gap: $spacing-md;
+  }
 }
 
 .page-btn {

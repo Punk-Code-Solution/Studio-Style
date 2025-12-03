@@ -70,7 +70,9 @@ module.exports = {
 
     if (!adminAccountId) {
       adminAccountId = uuidv4();
-      const passwordHash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+      // Usa senha padrão se ADMIN_PASSWORD não estiver definido
+      const adminPassword = process.env.ADMIN_PASSWORD || '123456';
+      const passwordHash = await bcrypt.hash(adminPassword, 10);
       await queryInterface.bulkInsert('Accounts', [{
         id: adminAccountId,
         name: 'Administrador',
@@ -82,7 +84,6 @@ module.exports = {
         deleted: false,
         avatar: null,
         typeaccount_id: typeAccountAdminId,
-        company_id_account: null,
         type_hair_id: null,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -122,7 +123,6 @@ module.exports = {
         active: new Date(),
         type: 'celular',
         account_id_phone: adminAccountId,
-        company_id_phone: null,
         createdAt: new Date(),
         updatedAt: new Date()
       }], {});

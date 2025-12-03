@@ -34,7 +34,12 @@ module.exports = (sequelize, DataTypes) => {
     },
     service: DataTypes.STRING,
     additionalComments: DataTypes.STRING,
-    price: DataTypes.FLOAT
+    price: DataTypes.FLOAT,
+    // Comissão padrão do colaborador para este serviço (0.0 - 1.0, ex: 0.5 = 50%)
+    commission_rate: {
+      type: DataTypes.FLOAT,
+      allowNull: true
+    }
   }, {
     sequelize,
     modelName: 'Service',
