@@ -546,8 +546,19 @@ export class HairTypesComponent implements OnInit {
         this.isDeleteLoading = false;
       },
       error: (error) => {
-        this.notificationService.error('Erro ao excluir tipo de cabelo. Por favor, tente novamente.');
+        // Não recarregar a tabela em caso de erro
         this.isDeleteLoading = false;
+        
+        // Tratar erro específico de registros relacionados (409) - usar warning ao invés de error
+        if (error?.status === 409) {
+          const errorMsg = error?.error?.message || 'Este tipo de cabelo possui registros associados e não pode ser excluído.';
+          this.notificationService.warning(errorMsg, 'Atenção');
+        } else {
+          // Tratar outros erros
+          const errorMsg = error?.error?.message || error?.message || 'Não foi possível excluir o tipo de cabelo. Por favor, tente novamente.';
+          this.notificationService.error(errorMsg);
+        }
+        // Garantir que o modal permaneça aberto para o usuário ver a mensagem
       }
     });
   }

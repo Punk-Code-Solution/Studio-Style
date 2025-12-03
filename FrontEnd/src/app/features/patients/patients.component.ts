@@ -468,9 +468,46 @@ import { TableUtilsService, TableSort } from '../../core/services/table-utils.se
       }
 
       .pagination {
-        @include flex(row, center, center);
+        @include flex(column, center, stretch);
         gap: $spacing-md;
         margin-top: $spacing-xl;
+
+        .pagination-controls {
+          @include flex(row, space-between, center);
+          gap: $spacing-md;
+          padding: $spacing-md;
+          background-color: $background-light;
+          border-radius: $border-radius-lg;
+
+          label {
+            color: $text-primary;
+            @include typography($font-size-base, $font-weight-medium);
+          }
+
+          select {
+            padding: $spacing-xs $spacing-sm;
+            border: 1px solid $border-color;
+            border-radius: $border-radius-sm;
+            background-color: white;
+            color: $text-primary;
+            cursor: pointer;
+
+            &:focus {
+              outline: none;
+              border-color: $primary-color;
+            }
+          }
+
+          .page-info {
+            color: $text-secondary;
+            @include typography($font-size-sm);
+          }
+        }
+
+        .pagination-buttons {
+          @include flex(row, center, center);
+          gap: $spacing-md;
+        }
       }
 
       .page-btn {
@@ -844,11 +881,21 @@ export class PatientsComponent implements OnInit {
         this.closeDeleteModal();
       },
       error: (error) => {
-        const errorMsg = error?.error?.message || error?.message || 'Erro desconhecido';
-        this.error = 'Erro ao excluir cliente';
-        console.error('Erro ao excluir cliente:', error);
+        // Não recarregar a tabela em caso de erro
         this.deleteLoading = false;
-        this.notificationService.error(`Erro ao excluir cliente: ${errorMsg}`);
+        
+        // Tratar erro específico de registros relacionados (409) - usar warning ao invés de error
+        if (error?.status === 409) {
+          const errorMsg = error?.error?.message || 'Este cliente possui registros associados e não pode ser excluído.';
+          this.notificationService.warning(errorMsg, 'Atenção');
+        } else {
+          // Tratar outros erros
+          const errorMsg = error?.error?.message || error?.message || 'Não foi possível excluir o cliente. Por favor, tente novamente.';
+          this.error = 'Erro ao excluir cliente';
+          console.error('Erro ao excluir cliente:', error);
+          this.notificationService.error(errorMsg);
+        }
+        // Garantir que o modal permaneça aberto para o usuário ver a mensagem
       },
     });
   }

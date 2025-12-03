@@ -476,6 +476,14 @@ class AccountController {
       
       return ResponseHandler.success(res, 200, 'Account deleted successfully');
     } catch (error) {
+      // Tratar erro específico de registros relacionados
+      if (error.code === 'HAS_RELATED_RECORDS') {
+        const relatedRecords = error.relatedRecords || [];
+        const message = `Não é possível excluir esta conta pois ela possui ${relatedRecords.join(', ')} associados.`;
+        return ResponseHandler.error(res, 409, message, { relatedRecords });
+      }
+      
+      console.error('Error deleting account:', error);
       return ResponseHandler.error(res, 500, 'Failed to delete account', error);
     }
   }

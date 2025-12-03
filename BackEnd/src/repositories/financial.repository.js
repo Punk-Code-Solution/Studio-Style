@@ -34,9 +34,18 @@ class FinancialRepository {
   async findLedgerEntries(filters) {
     const where = {};
 
+    // Filtro de data: aceita apenas startDate, apenas endDate, ou ambos
     if (filters.startDate && filters.endDate) {
       where.transaction_date = {
         [Op.between]: [filters.startDate, filters.endDate]
+      };
+    } else if (filters.startDate) {
+      where.transaction_date = {
+        [Op.gte]: filters.startDate
+      };
+    } else if (filters.endDate) {
+      where.transaction_date = {
+        [Op.lte]: filters.endDate
       };
     }
 

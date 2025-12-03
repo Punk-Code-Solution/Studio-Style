@@ -197,6 +197,17 @@ class FinancialController {
         dateFilter.date_and_houres = {
           [Op.between]: [start, end]
         };
+      } else if (startDate) {
+        const start = new Date(startDate);
+        dateFilter.date_and_houres = {
+          [Op.gte]: start
+        };
+      } else if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        dateFilter.date_and_houres = {
+          [Op.lte]: end
+        };
       }
 
       const finishedSchedules = await Schedules.findAll({
@@ -361,8 +372,23 @@ class FinancialController {
         }
       }
 
-      // Combinar entradas reais com entradas virtuais
-      const allEntries = [...entries, ...virtualEntries];
+      // Aplicar filtros de transactionType e category nas entradas virtuais
+      let filteredVirtualEntries = virtualEntries;
+      
+      if (transactionType) {
+        filteredVirtualEntries = filteredVirtualEntries.filter(
+          entry => entry.transaction_type === transactionType
+        );
+      }
+      
+      if (category) {
+        filteredVirtualEntries = filteredVirtualEntries.filter(
+          entry => entry.category === category
+        );
+      }
+
+      // Combinar entradas reais com entradas virtuais filtradas
+      const allEntries = [...entries, ...filteredVirtualEntries];
 
       // Ordenar por data (mais recente primeiro)
       allEntries.sort((a, b) => {

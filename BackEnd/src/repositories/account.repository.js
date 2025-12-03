@@ -378,23 +378,89 @@ module.exports = class accountRepository{
   }
 
   async deleteAccountId( id ) {
+    try {
+      // Verificar se há registros relacionados que impedem a exclusão
+      const hasSchedules = await Schedules.findOne({
+        where: {
+          [Op.or]: [
+            { client_id_schedules: id },
+            { provider_id_schedules: id }
+          ]
+        }
+      });
 
-    const result = await Account.destroy({
-      where: {
-        id: id
-      },
-      include: [
-        { model: Phone, where: { account_id_phone: id } },
-        { model: Email, where: { account_id_email: id } },
-        { model: Adress, where: { account_id_adress: id } }
-      ]
-    });
+      const hasSales = await Sale.findOne({
+        where: {
+          [Op.or]: [
+            { client_id_sale: id },
+            { account_id_sale: id }
+          ]
+        }
+      });
 
-    if( result ){      
-      return true
+      const hasPurchases = await Purchase.findOne({
+        where: {
+          account_id_purchase: id
+        }
+      });
+
+      const hasPurchaseMaterials = await Purchase_Material.findOne({
+        where: {
+          account_id_purchase_material: id
+        }
+      });
+
+      // Se houver registros relacionados, retornar erro informativo
+      if (hasSchedules || hasSales || hasPurchases || hasPurchaseMaterials) {
+        const errors = [];
+        if (hasSchedules) errors.push('agendamentos');
+        if (hasSales) errors.push('vendas');
+        if (hasPurchases) errors.push('compras');
+        if (hasPurchaseMaterials) errors.push('materiais de compra');
+        
+        const error = new Error(`Não é possível excluir esta conta pois ela possui ${errors.join(', ')} associados.`);
+        error.code = 'HAS_RELATED_RECORDS';
+        error.relatedRecords = errors;
+        throw error;
+      }
+
+      // Primeiro, deletar os relacionamentos manualmente
+      // Deletar telefones associados
+      await Phone.destroy({
+        where: {
+          account_id_phone: id
+        }
+      });
+
+      // Deletar emails associados
+      await Email.destroy({
+        where: {
+          account_id_email: id
+        }
+      });
+
+      // Deletar endereços associados
+      await Adress.destroy({
+        where: {
+          account_id_adress: id
+        }
+      });
+
+      // Por fim, deletar a conta principal
+      const result = await Account.destroy({
+        where: {
+          id: id
+        }
+      });
+
+      if( result ){      
+        return true
+      }
+      return false
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      throw error;
     }
-    return false
-
   }
 
   async findAccountByPhone(phoneNumber) {

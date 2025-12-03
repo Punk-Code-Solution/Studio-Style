@@ -565,11 +565,21 @@ export class SchedulesComponent implements OnInit {
         this.closeDeleteModal();
       },
       error: (error) => {
-        const errorMsg = error?.error?.message || error?.message || 'Erro desconhecido';
-        this.error = 'Erro ao excluir agendamento';
-        console.error('Erro ao excluir agendamento:', error);
+        // Não recarregar a tabela em caso de erro
         this.deleteLoading = false;
-        this.notificationService.error(`Erro ao excluir agendamento: ${errorMsg}`);
+        
+        // Tratar erro específico de registros relacionados (409) - usar warning ao invés de error
+        if (error?.status === 409) {
+          const errorMsg = error?.error?.message || 'Este agendamento possui registros associados e não pode ser excluído.';
+          this.notificationService.warning(errorMsg, 'Atenção');
+        } else {
+          // Tratar outros erros
+          const errorMsg = error?.error?.message || error?.message || 'Não foi possível excluir o agendamento. Por favor, tente novamente.';
+          this.error = 'Erro ao excluir agendamento';
+          console.error('Erro ao excluir agendamento:', error);
+          this.notificationService.error(errorMsg);
+        }
+        // Garantir que o modal permaneça aberto para o usuário ver a mensagem
       }
     });
   }
