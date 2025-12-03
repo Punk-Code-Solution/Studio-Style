@@ -34,7 +34,7 @@ module.exports = class serviceController{
                 console.log('First service sample:', JSON.stringify(result[0], null, 2));
             }
             
-            return response.status(200).json({result: result || []})
+            return response.status(201).json({result: result || []})
     
         }catch(erro){
             console.error("Erro ao buscar serviços:", erro);

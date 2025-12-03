@@ -19,11 +19,12 @@
     }
   },
   "test": {
-    "username": "root",
-    "password": null,
-    "database": "database_test",
+    "username": "thiago",
+    "password": "354430",
+    "database": "HMSDB",
     "host": "127.0.0.1",
     "dialect": "postgres",
+    "port": 5433,
     "pool": {
       "max": 5,
       "min": 0,

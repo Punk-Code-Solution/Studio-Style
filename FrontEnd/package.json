@@ -2,12 +2,13 @@
   "name": "studio_style",
   "version": "0.0.0",
   "scripts": {
+    "test": "ng test --no-watch --no-progress --browsers=ChromeHeadless",
+    "test:watch": "ng test --watch",
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build --configuration production --output-path dist/estudio_style",
     "build:vercel": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
     "serve:ssr:StudioStyle": "node dist/studio_style/server/server.mjs"
   },
   "private": true,
