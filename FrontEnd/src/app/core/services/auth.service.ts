@@ -8,7 +8,7 @@ import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
 
 // Tipos centralizados
-export type UserRole = 'admin' | 'ninguem' | 'provider' | 'client';
+export type UserRole = 'admin' | 'provider' | 'client' | 'ninguem';
 
 interface AuthState {
   user: User | null;
@@ -43,23 +43,22 @@ export class AuthService {
   private permissionCache = new Map<string, boolean>();
 
   // Única fonte de verdade para todas as permissões
-  private readonly permissions: Permissions = {
+  private readonly permissions: Partial<Permissions> = {
     routes: {
       // Rotas principais
       dashboard: ['admin', 'provider'],
       patients: ['admin'],
       financial: ['admin'],
-      messages: ['ninguem'],
-      employees: ['admin', 'provider'],
+      employees: ['admin'],
       feedbacks: ['ninguem'],
       services: ['admin', 'provider'],
       'services-management': ['admin'],
       'hair-types': ['admin'],
 
       // Sub-rotas de pacientes
-      'patients/new': ['admin'],
-      'patients/:id': ['admin'],
-      'patients/:id/edit': ['admin'],
+      'patients/new': ['admin', 'provider'],
+      'patients/:id': ['admin', 'provider'],
+      'patients/:id/edit': ['admin', 'provider'],
 
       // Sub-rotas de consultas
       'services/new': ['admin', 'provider'],
@@ -68,24 +67,7 @@ export class AuthService {
       // Sub-rotas de funcionários
       'employees/new': ['admin', 'provider'],
       'employees/:id': ['admin', 'provider'],
-    },
-    fields: {
-      'patient.medicalRecord': ['ninguem'],
-      'patient.prescriptions': ['ninguem'],
-      'patient.appointments': ['ninguem'],
-      'patient.billing': ['ninguem'],
-      'patient.personal': ['ninguem'],
-      'patient.contact': ['ninguem'],
-    },
-    actions: {
-      'edit.all': ['ninguem'],
-      'edit.email': ['ninguem'],
-      'edit.phone': ['ninguem'],
-      'edit.appointments': ['ninguem'],
-      'edit.medicalRecord': ['ninguem'],
-      'view.fullPatientDetails': ['ninguem'],
-      'edit.patientData': ['ninguem'],
-    },
+    }
   };
 
   constructor(
@@ -218,7 +200,7 @@ export class AuthService {
     }
 
     const normalizedKey = key.startsWith('/') ? key.substring(1) : key;
-    const allowedRoles = this.permissions[type][normalizedKey];
+    const allowedRoles = this.permissions[type]?.[normalizedKey];
     const allowed = (allowedRoles || []).map(r => String(r).toLowerCase());
     const result = allowed.includes(role);
 

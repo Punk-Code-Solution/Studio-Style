@@ -68,11 +68,7 @@
           [class.error]="employeeForm.get('role')?.invalid && employeeForm.get('role')?.touched"
         >
           <option value="">Selecione um cargo</option>
-          <option value="enfermeiro">Enfermeiro</option>
-          <option value="recepcionista">Recepcionista</option>
-          <option value="administrativo">Administrativo</option>
-          <option value="admin">Administrador</option>
-          <option value="provider">Fornecedor</option>
+          <option value="provider">Prestador de Serviço</option>
         </select>
         <div class="error-message" *ngIf="employeeForm.get('role')?.invalid && employeeForm.get('role')?.touched">
           {{ getErrorMessage('role') }}
