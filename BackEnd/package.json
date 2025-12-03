@@ -10,6 +10,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:crud": "jest src/__tests__/full-system-crud.test.js --detectOpenHandles",
+    "test:report": "jest src/__tests__/full-system-crud.test.js --json --outputFile=report.json",  
     "test:validate-update": "node src/tests/validate-account-update.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

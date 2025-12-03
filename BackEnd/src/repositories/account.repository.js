@@ -11,7 +11,7 @@ const {
   Phone,
   Adress } = require("../Database/models");
 const { v4: uuidv4 } = require('uuid');
-const bkrypt = require('bcrypt');
+const bcrypt = require('bcrypt');
 const { Op } = require('sequelize');
 
 module.exports = class accountRepository{
@@ -321,7 +321,7 @@ module.exports = class accountRepository{
       if (account.name !== undefined) updateData.name = account.name;
       if (account.lastname !== undefined) updateData.lastname = account.lastname;
       if (account.password !== undefined && account.password !== null && account.password.trim() !== '') {
-        updateData.password = bkrypt.hashSync(account.password, 10);
+        updateData.password = account.password
       }
       if (account.cpf !== undefined) updateData.cpf = account.cpf;
       if (account.type_hair_id !== undefined) updateData.type_hair_id = account.type_hair_id;
