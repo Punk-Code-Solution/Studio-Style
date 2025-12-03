@@ -127,7 +127,6 @@
 .filter-actions {
   @include flex(row, flex-end, center);
   margin-top: $spacing-lg;
-  width: 100%;
 }
 
 .clear-btn {
@@ -179,6 +178,7 @@
 
 .ledger-table {
   overflow-x: auto;
+  display: inline-grid;
 
   &::-webkit-scrollbar {
     height: 8px;

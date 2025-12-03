@@ -16,7 +16,7 @@ import { AuditLogService } from '../../../core/services/audit-log.service';
       <!-- Loading State -->
       <div class="loading-state" *ngIf="isLoading">
         <div class="spinner"></div>
-        <span>Carregando dados do paciente...</span>
+        <span>Carregando dados do cliente...</span>
       </div>
 
       <!-- Error Message -->
@@ -44,11 +44,11 @@ import { AuditLogService } from '../../../core/services/audit-log.service';
           <div class="actions">
             <button class="action-btn" [routerLink]="['/patients', patient.id, 'edit']" title="Editar paciente">
               <i class="fas fa-edit"></i>
-              Editar Paciente
+              Editar Cliente
             </button>
             <button class="action-btn delete" (click)="deletePatient()" title="Excluir paciente">
               <i class="fas fa-trash"></i>
-              Excluir Paciente
+              Excluir Cliente
             </button>
           </div>
         </div>
