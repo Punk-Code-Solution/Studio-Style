@@ -139,33 +139,37 @@ class AccountController {
         }
       }
       
-      const result = await this.accountRepository.addAccount(account);
+      // Usar transação se disponível no request
+      const transaction = req.transaction || null;
+      
+      const result = await this.accountRepository.addAccount(account, transaction);
 
-      if (result && result.error) {
-        return ResponseHandler.error(res, 409, `Duplicate field: ${result.error}`, { field: result.error });
+      // Create associated email only if email is provided
+      if (result.email) {
+        const emailResult = await this.createEmail(result);
+        if (emailResult && emailResult.error) {
+          return ResponseHandler.error(res, 409, `Duplicate field: ${emailResult.error}`, { field: emailResult.error });
+        }
       }
 
-      if (result) {
-        // Create associated email only if email is provided
-        if (result.email) {
-          const emailResult = await this.createEmail(result);
-          if (emailResult && emailResult.error) {
-            return ResponseHandler.error(res, 409, `Duplicate field: ${emailResult.error}`, { field: emailResult.error });
-          }
-        }
-
-        if (account.phone) {
-
-          await this.createPhone(result.id, account.phone);
-
-        }
-
-        return ResponseHandler.success(res, 201, 'Account created successfully', result);
-      } else {
-        return ResponseHandler.error(res, 400, 'Failed to create account');
+      if (account.phone) {
+        await this.createPhone(result.id, account.phone);
       }
+
+      return ResponseHandler.success(res, 201, 'Account created successfully', result);
       
     } catch (error) {
+      // Tratar erros de duplicata
+      if (error.code === 'DUPLICATE_CPF' || error.code === 'DUPLICATE_EMAIL') {
+        return ResponseHandler.error(res, 409, error.message, { field: error.field });
+      }
+      
+      // Tratar erros de constraint único do Sequelize
+      if (error.name === 'SequelizeUniqueConstraintError') {
+        const field = error.errors && error.errors[0] ? error.errors[0].path : 'unknown';
+        return ResponseHandler.error(res, 409, `${field} already exists`, { field });
+      }
+      
       return ResponseHandler.error(res, 500, 'Failed to create account', error);
     }
   }
@@ -464,6 +468,9 @@ class AccountController {
    * Delete account by ID
    */
   async deleteAccountById(req, res) {
+    // Usar transação se disponível no request (via middleware withTransaction)
+    const transaction = req.transaction || null;
+    
     try {
       // ID pode vir de params ou query (compatibilidade)
       const id = req.params.id || req.query.id;
@@ -472,7 +479,7 @@ class AccountController {
         return ResponseHandler.validationError(res, 'Account ID is required');
       }
       
-      const result = await this.accountRepository.deleteAccountId(id);
+      const result = await this.accountRepository.deleteAccountId(id, transaction);
       
       if (!result) {
         return ResponseHandler.notFound(res, 'Account not found');

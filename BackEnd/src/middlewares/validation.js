@@ -1,4 +1,4 @@
-const { validationResult } = require('express-validator');
+const { validationResult, body, param, query } = require('express-validator');
 const ResponseHandler = require('../utils/responseHandler');
 
 /**
@@ -56,7 +56,78 @@ const validateProductCreation = [
  * Validation rules for service creation
  */
 const validateServiceCreation = [
-  // Add your validation rules here
+  body('service')
+    .notEmpty()
+    .withMessage('Service name is required')
+    .trim()
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Service name must be between 2 and 255 characters'),
+  body('price')
+    .notEmpty()
+    .withMessage('Price is required')
+    .isFloat({ min: 0 })
+    .withMessage('Price must be a positive number'),
+  body('commission_rate')
+    .optional()
+    .isFloat({ min: 0, max: 1 })
+    .withMessage('Commission rate must be between 0 and 1'),
+  body('additionalComments')
+    .optional()
+    .isString()
+    .isLength({ max: 1000 })
+    .withMessage('Additional comments must be less than 1000 characters'),
+  handleValidationErrors
+];
+
+/**
+ * Validation rules for service update
+ */
+const validateServiceUpdate = [
+  body('id')
+    .notEmpty()
+    .withMessage('Service ID is required'),
+  body('service')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Service name must be between 2 and 255 characters'),
+  body('price')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Price must be a positive number'),
+  body('commission_rate')
+    .optional()
+    .isFloat({ min: 0, max: 1 })
+    .withMessage('Commission rate must be between 0 and 1'),
+  body('additionalComments')
+    .optional()
+    .isString()
+    .isLength({ max: 1000 })
+    .withMessage('Additional comments must be less than 1000 characters'),
+  handleValidationErrors
+];
+
+/**
+ * Validation rules for service ID parameter
+ */
+const validateServiceId = [
+  param('id')
+    .notEmpty()
+    .withMessage('Service ID is required')
+    .isUUID()
+    .withMessage('Service ID must be a valid UUID'),
+  handleValidationErrors
+];
+
+/**
+ * Validation rules for service query ID
+ */
+const validateServiceQueryId = [
+  query('id')
+    .notEmpty()
+    .withMessage('Service ID is required')
+    .isUUID()
+    .withMessage('Service ID must be a valid UUID'),
   handleValidationErrors
 ];
 
@@ -66,5 +137,8 @@ module.exports = {
   validateAccountUpdate,
   validateLogin,
   validateProductCreation,
-  validateServiceCreation
+  validateServiceCreation,
+  validateServiceUpdate,
+  validateServiceId,
+  validateServiceQueryId
 };

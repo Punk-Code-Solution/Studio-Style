@@ -34,8 +34,14 @@ try {
 const errorHandler = require('./src/middlewares/errorHandler');
 const { authenticateToken } = require('./src/middlewares/auth');
 
+const http = require('http');
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
+
+// Initialize Socket.IO
+const { initializeSocketIO } = require('./src/utils/socket.io');
+initializeSocketIO(server);
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -191,8 +197,9 @@ const startServer = async () => {
 
      // Start server locally
      if (process.env.NODE_ENV === 'development') {
-       app.listen(PORT, () => {
+       server.listen(PORT, () => {
          console.log(`Server running on port ${PORT}`);
+         console.log(`Socket.IO disponível em http://localhost:${PORT}`);
        });
      }
    } catch (error) {
@@ -208,5 +215,8 @@ if (process.env.NODE_ENV === 'development') {
   startServer();
 }
 
-// Export app for Vercel (always export for serverless)
+// Export app for Vercel (serverless functions)
+// Nota: Vercel serverless functions podem não suportar WebSockets completamente
+// Para produção, considere usar um serviço dedicado de WebSocket ou polling como fallback
+// O Socket.IO será inicializado apenas em desenvolvimento ou quando o server estiver disponível
 module.exports = app;

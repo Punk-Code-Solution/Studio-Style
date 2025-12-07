@@ -116,9 +116,8 @@ describe('Integração Completa do Sistema (CRUD & Fluxos)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ limit: 100, base: 0 }); 
 
-      // ADAPTAÇÃO: ServiceController retorna { "result": [ ... ] } (Array direto no result)
-      // Nota: O status code no seu controller é 201 para GET (atípico, mas adaptamos aqui)
-      expect(res.status).toBe(201); 
+      // CORREÇÃO: GET deve retornar 200 (OK), não 201 (Created)
+      expect(res.status).toBe(200); 
       expect(res.body).toHaveProperty('result');
       expect(Array.isArray(res.body.result)).toBe(true);
       
@@ -138,8 +137,8 @@ describe('Integração Completa do Sistema (CRUD & Fluxos)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send(updateData);
 
-      // ADAPTAÇÃO: ServiceController retorna { "newService": { ... } }
-      expect(res.status).toBe(201);
+      // CORREÇÃO: PUT deve retornar 200 (OK), não 201 (Created)
+      expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('newService');
       expect(res.body.newService.price).toBe(75.50);
     });
