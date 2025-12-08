@@ -527,9 +527,8 @@ class WhatsAppController {
     const greeting = clientName ? `Olá ${clientName}!` : 'Olá!';
     
     const welcomeMessage = `${greeting}\n\n` +
-      'Bem-vindo ao Studio & Style! ✨\n\n' +
-      'Estou aqui para ajudá-lo com seus agendamentos.\n\n' +
-      'Aguarde um momento enquanto carrego o menu...';
+      'Bem-vindo ao Salão fio a fio! ✨\n\n' +
+      'Estou aqui para ajudá-lo com seus agendamentos.\n\n';
     
     await this.sendMessageSafely(phone, welcomeMessage);
     
