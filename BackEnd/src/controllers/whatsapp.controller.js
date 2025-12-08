@@ -533,7 +533,7 @@ class WhatsAppController {
     await this.sendMessageSafely(phone, welcomeMessage);
     
     // Pequeno delay para melhorar a experiência do usuário
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 5000));
   }
 
   /**
