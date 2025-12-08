@@ -427,6 +427,21 @@ class WhatsAppController {
 
         await this.sendMessageSafely(phone, message);
         
+        // Emitir evento Socket.IO para atualizar Dashboard em tempo real
+        try {
+          const { emitScheduleCreated } = require('../utils/socket.io');
+          // Buscar o agendamento completo com relacionamentos
+          const SchedulesRepository = require('../repositories/schedules.repository');
+          const schedulesRepo = new SchedulesRepository();
+          const fullSchedule = await schedulesRepo.findSchedules(schedule.id);
+          if (fullSchedule) {
+            emitScheduleCreated(fullSchedule);
+          }
+        } catch (socketError) {
+          // Não falhar a criação se o Socket.IO não estiver disponível
+          console.warn('Erro ao emitir evento Socket.IO:', socketError.message);
+        }
+        
         // Limpa a sessao
         this.clearUserSession(phone);
         

@@ -2,6 +2,12 @@ const { Router } = require("express");
 const rota = Router()
 const { authorizeRoles } = require('../middlewares/auth');
 const ServiceController = require("../controllers/service.controller");
+const { 
+  validateServiceCreation, 
+  validateServiceUpdate, 
+  validateServiceQueryId 
+} = require('../middlewares/validation');
+const { withTransaction } = require('../middlewares/transaction');
 const servicecontroller = new ServiceController()
 
 /**
@@ -23,7 +29,9 @@ const servicecontroller = new ServiceController()
  *       400:
  *         description: Erro na requisição
  */
-rota.post("/", async (request, response) => { await servicecontroller.addService( request, response ); });
+rota.post("/", validateServiceCreation, async (request, response) => { 
+  await servicecontroller.addService( request, response ); 
+});
 
 /**
  * @swagger
@@ -44,7 +52,9 @@ rota.post("/", async (request, response) => { await servicecontroller.addService
  *       400:
  *         description: Erro na requisição
  */
-rota.put("/",  async (request, response) => {  await servicecontroller.updateService( request, response ); });
+rota.put("/", validateServiceUpdate, async (request, response) => {  
+  await servicecontroller.updateService( request, response ); 
+});
 
 /**
  * @swagger
@@ -79,7 +89,9 @@ rota.get("/", async (request, response) => { await servicecontroller.findAll( re
  *       404:
  *         description: Serviço não encontrado
  */
-rota.get("/one", async (request, response) => { await servicecontroller.findService( request, response ); });
+rota.get("/one", validateServiceQueryId, async (request, response) => { 
+  await servicecontroller.findService( request, response ); 
+});
 
 /**
  * @swagger
@@ -101,7 +113,9 @@ rota.get("/one", async (request, response) => { await servicecontroller.findServ
  *       404:
  *         description: Serviço não encontrado
  */
-rota.delete("/", async (request, response) => { await servicecontroller.deleteService( request, response ); });
+rota.delete("/", validateServiceQueryId, withTransaction((request, response, next) => { 
+  servicecontroller.deleteService( request, response ).catch(next);
+}));
 
 /**
  * @swagger

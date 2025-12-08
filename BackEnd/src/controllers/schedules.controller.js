@@ -84,6 +84,19 @@ class SchedulesController {
         return ResponseHandler.error(res, 400, 'Falha ao associar serviços ao agendamento');
       }
 
+      // 5. Emitir evento Socket.IO para atualizar Dashboard em tempo real
+      try {
+        const { emitScheduleCreated } = require('../utils/socket.io');
+        // Buscar o agendamento completo com relacionamentos para enviar no evento
+        const fullSchedule = await this.schedulesRepository.findSchedules(result.dataValues.id);
+        if (fullSchedule) {
+          emitScheduleCreated(fullSchedule);
+        }
+      } catch (socketError) {
+        // Não falhar a criação se o Socket.IO não estiver disponível
+        console.warn('Erro ao emitir evento Socket.IO:', socketError.message);
+      }
+
       return ResponseHandler.success(res, 201, 'Agendamento criado com sucesso', {
         schedule: result,
         services: result_services

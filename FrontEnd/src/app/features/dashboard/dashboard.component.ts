@@ -1,10 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { User, UserService } from '../../core/services/user.service';
 import { SchedulesService, Schedule } from '../../core/services/schedules.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { SocketService } from '../../core/services/socket.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -16,7 +18,7 @@ import { NotificationService } from '../../core/services/notification.service';
     RouterModule
   ]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   appointments: Schedule[] = [];
   currentUser: User | null = null;
   isLoading = true;
@@ -25,6 +27,7 @@ export class DashboardComponent implements OnInit {
   completedAppointmentsThisMonth = 0;
   totalClients = 0;
   newClientsThisMonth = 0;
+  private socketSubscriptions: Subscription[] = [];
 
   get completedAppointmentsToday(): number {
     return this.appointments.filter(a => !!a.finished).length;
@@ -35,7 +38,8 @@ export class DashboardComponent implements OnInit {
     private router: Router,
     private schedulesService: SchedulesService,
     private userService: UserService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private socketService: SocketService
   ) {
     this.currentUser = this.authService.currentUser;
   }
@@ -46,6 +50,50 @@ export class DashboardComponent implements OnInit {
       return;
     }
     this.loadData();
+    this.setupSocketListeners();
+  }
+
+  ngOnDestroy(): void {
+    // Limpar todas as subscrições do Socket.IO
+    this.socketSubscriptions.forEach(sub => sub.unsubscribe());
+  }
+
+  /**
+   * Configura os listeners do Socket.IO para atualização automática
+   */
+  private setupSocketListeners(): void {
+    // Listener para quando um novo agendamento é criado
+    const createdSub = this.socketService.onScheduleCreated.subscribe((event) => {
+      console.log('Novo agendamento recebido via Socket.IO:', event);
+      
+      // Verificar se o agendamento é de hoje
+      const scheduleDate = new Date(event.schedule.date_and_houres);
+      const today = new Date();
+      const isToday = scheduleDate.toDateString() === today.toDateString();
+      
+      if (isToday) {
+        // Recarregar dados do dashboard
+        this.loadData();
+        this.notificationService.info('Novo agendamento adicionado!', 'Dashboard atualizado');
+      } else {
+        // Apenas atualizar estatísticas do mês
+        this.loadAppointments();
+      }
+    });
+
+    // Listener para quando um agendamento é atualizado
+    const updatedSub = this.socketService.onScheduleUpdated.subscribe((event) => {
+      console.log('Agendamento atualizado via Socket.IO:', event);
+      this.loadData();
+    });
+
+    // Listener para quando um agendamento é deletado
+    const deletedSub = this.socketService.onScheduleDeleted.subscribe((event) => {
+      console.log('Agendamento deletado via Socket.IO:', event);
+      this.loadData();
+    });
+
+    this.socketSubscriptions.push(createdSub, updatedSub, deletedSub);
   }
 
   async loadData() {
