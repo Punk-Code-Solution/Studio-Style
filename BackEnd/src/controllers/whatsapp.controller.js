@@ -627,6 +627,33 @@ class WhatsAppController {
     }
     this.userSessions.delete(phone);
   }
+
+  /**
+   * Cancela o processo atual e retorna ao menu principal
+   */
+  async cancelProcess(phone) {
+    try {
+      // Limpa a sessão do usuário
+      this.clearUserSession(phone);
+      
+      // Envia mensagem de cancelamento
+      await this.sendMessageSafely(
+        phone,
+        '❌ Operação cancelada.\n\n' +
+        'Digite *MENU* para ver as opções disponíveis.'
+      );
+      
+      // Retorna ao menu principal
+      await this.sendMainMenu(phone, '', false);
+      
+    } catch (error) {
+      console.error('Erro ao processar cancelamento:', error);
+      await this.sendMessageSafely(
+        phone,
+        '❌ Ocorreu um erro ao processar o cancelamento. Por favor, tente novamente.'
+      );
+    }
+  }
 }
 
 module.exports = new WhatsAppController();
