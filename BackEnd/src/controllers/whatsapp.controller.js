@@ -226,43 +226,62 @@ class WhatsAppController {
     const cleanText = text.toLowerCase().trim();
     const normalizedText = cleanText.replace(/[^a-z0-9\s]/gi, '').toLowerCase();
 
-    // Se há uma sessão ativa com um step específico, processa baseado no step
+    // VALIDAÇÃO 1: Se há uma sessão ativa com um step específico, processa baseado no step
     // Isso evita que números sejam interpretados como comandos principais
     if (session && session.step && 
         (session.step === 'select_service' || 
          session.step === 'select_date' || 
          session.step === 'select_time' || 
-         session.step === 'confirm_booking')) {
+         session.step === 'confirm_booking' ||
+         session.step === 'viewing_schedules')) {
       console.log(`[processMessage] Processando step: ${session.step}, Telefone: ${phone}, Texto: ${text}`);
       await this.processSessionStep(phone, text, session);
       return;
     }
 
-    // Se não há sessão ativa ou está no menu principal, verifica comandos principais
+    // VALIDAÇÃO 2: Comandos principais só são aceitos se não estiver em um fluxo ativo
+    // Se está no menu principal, processa comandos normalmente
     const isFirstInteraction = !session || !session.step;
+    const isInMainMenu = session && session.step === 'main_menu';
     
+    // Comandos que sempre funcionam (MENU, CANCELAR)
     if (normalizedText === 'menu' || normalizedText === 'inicio' || normalizedText === 'comecar' || normalizedText === '0') {
       await this.sendMainMenu(phone, clientName, isFirstInteraction);
       this.setUserSession(phone, { step: 'main_menu', clientId, clientName });
+      return;
     }
-    else if (normalizedText === 'agendar' || normalizedText === 'marcar' || normalizedText === '1') {
-      await this.startSchedulingProcess(phone, clientId, clientName);
-    }
-    else if (normalizedText === 'meus agendamentos' || normalizedText === 'agendamentos' || normalizedText === '2') {
-      await this.showUserSchedules(phone, clientId, clientName);
-    }
-    else if (normalizedText === 'cancelar' || normalizedText === 'sair' || normalizedText === '9') {
+    
+    if (normalizedText === 'cancelar' || normalizedText === 'sair' || normalizedText === '9') {
       await this.cancelProcess(phone);
+      return;
     }
-    else {
-      // Se é primeira interação, mostra boas-vindas e menu
-      if (isFirstInteraction) {
-        await this.sendMainMenu(phone, clientName, true);
-        this.setUserSession(phone, { step: 'main_menu', clientId, clientName });
-      } else {
-        // Processa baseado no estado da sessao (menu principal)
-        await this.processSessionStep(phone, text, session);
+    
+    // VALIDAÇÃO 3: Comandos numéricos só funcionam no menu principal ou primeira interação
+    // Isso evita que números sejam interpretados incorretamente após mostrar agendamentos
+    if (isFirstInteraction || isInMainMenu) {
+      if (normalizedText === 'agendar' || normalizedText === 'marcar' || normalizedText === '1') {
+        await this.startSchedulingProcess(phone, clientId, clientName);
+        return;
       }
+      
+      if (normalizedText === 'meus agendamentos' || normalizedText === 'agendamentos' || normalizedText === '2') {
+        await this.showUserSchedules(phone, clientId, clientName);
+        return;
+      }
+    }
+    
+    // VALIDAÇÃO 4: Se não reconheceu o comando e não está em um step específico
+    if (isFirstInteraction) {
+      await this.sendMainMenu(phone, clientName, true);
+      this.setUserSession(phone, { step: 'main_menu', clientId, clientName });
+    } else if (isInMainMenu) {
+      // Se está no menu principal mas não reconheceu o comando
+      await this.sendMessageSafely(phone,
+        '❌ Opção inválida. Por favor, digite o *número* (1, 2 ou 9) ou o *nome* da opção desejada.\n\n' +
+        'Digite *MENU* para ver as opções novamente.');
+    } else {
+      // Processa baseado no estado da sessao (menu principal)
+      await this.processSessionStep(phone, text, session);
     }
   }
 
@@ -349,7 +368,21 @@ class WhatsAppController {
             await this.cancelProcess(phone);
           } else {
             await this.sendMessageSafely(phone,
-              'Opção inválida. Digite o número (1, 2 ou 9) ou o nome da opção desejada.');
+              '❌ Opção inválida. Digite o *número* (1, 2 ou 9) ou o *nome* da opção desejada.');
+          }
+          break;
+        case 'viewing_schedules':
+          // VALIDAÇÃO: Após ver agendamentos, apenas MENU ou comandos específicos são aceitos
+          const viewingOption = text.trim().toLowerCase();
+          const normalizedViewingOption = viewingOption.replace(/[^a-z0-9\s]/gi, '').toLowerCase();
+          
+          if (normalizedViewingOption === 'menu' || normalizedViewingOption === 'inicio' || normalizedViewingOption === 'comecar' || normalizedViewingOption === '0') {
+            await this.sendMainMenu(phone, session.clientName || '', false);
+            this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+          } else {
+            await this.sendMessageSafely(phone,
+              '⚠️ Você está visualizando seus agendamentos.\n\n' +
+              'Digite *MENU* para voltar ao início e escolher outra opção.');
           }
           break;
         case 'select_service':
@@ -382,14 +415,33 @@ class WhatsAppController {
    */
   async handleServiceSelection(phone, text, session) {
     try {
+      // VALIDAÇÃO: Verifica se está no step correto
+      if (!session || session.step !== 'select_service') {
+        await this.sendMessageSafely(phone,
+          '⚠️ Você não está no processo de seleção de serviço.\n\n' +
+          'Digite *MENU* para começar um novo agendamento.');
+        return;
+      }
+      
+      // VALIDAÇÃO: Verifica se há serviços disponíveis
+      if (!session.services || session.services.length === 0) {
+        await this.sendMessageSafely(phone,
+          '❌ Não há serviços disponíveis. Por favor, tente novamente mais tarde.');
+        await this.sendMainMenu(phone, session.clientName || '', false);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+        return;
+      }
+      
       console.log(`[handleServiceSelection] Telefone: ${phone}, Texto: ${text}, Step: ${session?.step}`);
       console.log(`[handleServiceSelection] Serviços disponíveis: ${session?.services?.length || 0}`);
       
       const serviceIndex = parseInt(text.trim(), 10) - 1;
       
-      if (isNaN(serviceIndex) || serviceIndex < 0 || !session.services || serviceIndex >= session.services.length) {
+      // VALIDAÇÃO: Verifica se o índice é válido
+      if (isNaN(serviceIndex) || serviceIndex < 0 || serviceIndex >= session.services.length) {
         console.log(`[handleServiceSelection] Índice inválido: ${serviceIndex}, Total de serviços: ${session.services?.length || 0}`);
-        await this.sendMessageSafely(phone, '❌ Serviço inválido. Por favor, escolha um serviço da lista.');
+        await this.sendMessageSafely(phone, 
+          `❌ Serviço inválido. Por favor, escolha um número entre 1 e ${session.services.length}.`);
         return;
       }
       
@@ -436,10 +488,36 @@ class WhatsAppController {
    */
   async handleDateSelection(phone, text, session) {
     try {
+      // VALIDAÇÃO: Verifica se está no step correto
+      if (!session || session.step !== 'select_date') {
+        await this.sendMessageSafely(phone,
+          '⚠️ Você não está no processo de seleção de data.\n\n' +
+          'Digite *MENU* para começar um novo agendamento.');
+        return;
+      }
+      
+      // VALIDAÇÃO: Verifica se há serviço selecionado
+      if (!session.selectedService || !session.selectedService.id) {
+        await this.sendMessageSafely(phone,
+          '❌ Serviço não encontrado. Por favor, inicie um novo agendamento.');
+        await this.sendMainMenu(phone, session.clientName || '', false);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+        return;
+      }
+      
       const dateIndex = parseInt(text.trim(), 10) - 1;
       
-      if (isNaN(dateIndex) || dateIndex < 0 || !session.availableDates || dateIndex >= session.availableDates.length) {
-        await this.sendMessageSafely(phone, '❌ Data inválida. Por favor, escolha uma data da lista.');
+      // VALIDAÇÃO: Verifica se há datas disponíveis
+      if (!session.availableDates || session.availableDates.length === 0) {
+        await this.sendMessageSafely(phone, '❌ Não há datas disponíveis. Por favor, tente novamente mais tarde.');
+        await this.sendMainMenu(phone, session.clientName || '', false);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+        return;
+      }
+      
+      if (isNaN(dateIndex) || dateIndex < 0 || dateIndex >= session.availableDates.length) {
+        await this.sendMessageSafely(phone, 
+          `❌ Data inválida. Por favor, escolha um número entre 1 e ${session.availableDates.length}.`);
         return;
       }
       
@@ -482,10 +560,55 @@ class WhatsAppController {
    */
   async handleTimeSelection(phone, text, session) {
     try {
+      // VALIDAÇÃO: Verifica se está no step correto
+      if (!session || session.step !== 'select_time') {
+        await this.sendMessageSafely(phone,
+          '⚠️ Você não está no processo de seleção de horário.\n\n' +
+          'Digite *MENU* para começar um novo agendamento.');
+        return;
+      }
+      
+      // VALIDAÇÃO: Verifica se há serviço e data selecionados
+      if (!session.selectedService || !session.selectedService.id) {
+        await this.sendMessageSafely(phone,
+          '❌ Serviço não encontrado. Por favor, inicie um novo agendamento.');
+        await this.sendMainMenu(phone, session.clientName || '', false);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+        return;
+      }
+      
+      if (!session.selectedDate) {
+        await this.sendMessageSafely(phone,
+          '❌ Data não encontrada. Por favor, inicie um novo agendamento.');
+        await this.sendMainMenu(phone, session.clientName || '', false);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+        return;
+      }
+      
       const timeIndex = parseInt(text.trim(), 10) - 1;
       
-      if (isNaN(timeIndex) || timeIndex < 0 || !session.availableTimes || timeIndex >= session.availableTimes.length) {
-        await this.sendMessageSafely(phone, '❌ Horário inválido. Por favor, escolha um horário da lista.');
+      // VALIDAÇÃO: Verifica se há horários disponíveis
+      if (!session.availableTimes || session.availableTimes.length === 0) {
+        await this.sendMessageSafely(phone, '❌ Não há horários disponíveis. Por favor, escolha outra data.');
+        // Volta para seleção de data
+        const availableDates = this.getAvailableDates();
+        const message = `Escolha uma data para o agendamento:\n\n` +
+          availableDates.map((date, index) => 
+            `${index + 1}. ${date.format('DD/MM/YYYY')}`
+          ).join('\n') +
+          '\n\nDigite o *número* da data desejada.';
+        await this.sendMessageSafely(phone, message);
+        this.setUserSession(phone, {
+          ...session,
+          step: 'select_date',
+          availableDates: availableDates
+        });
+        return;
+      }
+      
+      if (isNaN(timeIndex) || timeIndex < 0 || timeIndex >= session.availableTimes.length) {
+        await this.sendMessageSafely(phone, 
+          `❌ Horário inválido. Por favor, escolha um número entre 1 e ${session.availableTimes.length}.`);
         return;
       }
       
@@ -535,6 +658,31 @@ class WhatsAppController {
    */
   async handleBookingConfirmation(phone, text, session) {
     try {
+      // VALIDAÇÃO: Verifica se está no step correto
+      if (!session || session.step !== 'confirm_booking') {
+        await this.sendMessageSafely(phone,
+          '⚠️ Você não está no processo de confirmação de agendamento.\n\n' +
+          'Digite *MENU* para começar um novo agendamento.');
+        return;
+      }
+      
+      // VALIDAÇÃO: Verifica se todos os dados necessários estão presentes
+      if (!session.selectedService || !session.selectedService.id) {
+        await this.sendMessageSafely(phone,
+          '❌ Serviço não encontrado. Por favor, inicie um novo agendamento.');
+        await this.sendMainMenu(phone, session.clientName || '', false);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+        return;
+      }
+      
+      if (!session.appointmentDateTime) {
+        await this.sendMessageSafely(phone,
+          '❌ Data e horário não encontrados. Por favor, inicie um novo agendamento.');
+        await this.sendMainMenu(phone, session.clientName || '', false);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+        return;
+      }
+      
       const cleanText = text.trim().toLowerCase();
       
       if (cleanText === 'confirmar' || cleanText === 'confirm') {
@@ -598,18 +746,26 @@ class WhatsAppController {
         limit: 5 // Limita a 5 agendamentos
       });
 
+      // Define sessão como "viewing_schedules" para evitar processamento incorreto de números
+      const session = this.getUserSession(phone);
+      
       if (!schedules || schedules.length === 0) {
         await this.sendMessageSafely(phone,
-          `Olá ${clientName}, você não possui agendamentos futuros.`);
+          `Olá ${clientName}! 👋\n\n` +
+          `Você não possui agendamentos futuros no momento.\n\n` +
+          `Digite *MENU* para ver outras opções.`);
+        // Volta para o menu principal
+        this.setUserSession(phone, { step: 'main_menu', clientId, clientName });
       } else {
         let message = `📅 *Seus próximos agendamentos*\n\n`;
         
         schedules.forEach((schedule, index) => {
-          const date = moment(schedule.date_and_houres);
+          // Converte de UTC para UTC+3 para exibição
+          const date = moment(schedule.date_and_houres).utcOffset(3);
           message += `*${index + 1}.* ${date.format('DD/MM/YYYY [às] HH:mm')}\n`;
           
           if (schedule.Services && schedule.Services.length > 0) {
-            message += `   - ${schedule.Services.map(s => s.service).join(', ')}\n\n`;
+            message += `   ✂️ ${schedule.Services.map(s => s.service).join(', ')}\n\n`;
           } else {
             message += '\n';
           }
@@ -617,6 +773,13 @@ class WhatsAppController {
         
         message += 'Digite *MENU* para voltar ao início.';
         await this.sendMessageSafely(phone, message);
+        
+        // Define sessão como "viewing_schedules" para evitar que números sejam interpretados como comandos
+        this.setUserSession(phone, { 
+          step: 'viewing_schedules', 
+          clientId, 
+          clientName 
+        });
       }
       
     } catch (error) {
