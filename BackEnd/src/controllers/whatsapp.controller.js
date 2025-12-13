@@ -332,7 +332,7 @@ class WhatsAppController {
       step: 'select_date',
       selectedService: cleanSelectedService,
       availableDates: availableDates
-    }
+    })
     
     if (!session.services || !Array.isArray(session.services)) {
       console.error('Nenhum serviço disponível na sessão');
