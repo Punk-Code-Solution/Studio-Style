@@ -468,42 +468,6 @@ class WhatsAppController {
       await this.sendMessageSafely(phone,
         'Erro ao buscar seus agendamentos. Tente novamente mais tarde.');
     }
-  }
-
-  /**
-   * Cancela processo atual
-   */
-  async cancelProcess(phone) {
-    const session = this.getUserSession(phone);
-    const clientName = session ? session.clientName : '';
-    this.clearUserSession(phone);
-    await this.sendMessageSafely(phone,
-      'Processo cancelado. Digite "MENU" para ver as opções disponíveis.');
-  }
-
-  /**
-   * Envia mensagem de boas-vindas inicial
-   */
-  async sendWelcomeMessage(phone, clientName = '') {
-
-    const greeting = clientName ? `Olá, ${clientName}!` : 'Olá!';
-    const message = `${greeting} Eu sou o assistente virtual do *Salão Fio a Fio*.\n\n` +
-      'Como posso te ajudar hoje?\n' +
-      'Digite *menu* a qualquer momento para ver as opções.';
-      
-    // Pequeno delay para melhorar a experiência do usuário
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return this.sendMessageSafely(phone, message);
-  }
-
-  /**
-   * Envia menu principal
-   */
-  async sendMainMenu(phone, clientName = '', showWelcome = false) {
-    if (showWelcome) {
-      await this.sendWelcomeMessage(phone, clientName);
-    }
-
     const message = '📋 *MENU PRINCIPAL*\n\n' +
       'Escolha uma opção:\n\n' +
       '1️⃣ AGENDAR um serviço\n' +
