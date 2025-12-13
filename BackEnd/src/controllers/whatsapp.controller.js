@@ -223,12 +223,22 @@ class WhatsAppController {
 
     const session = this.getUserSession(phone);
     const cleanText = text.toLowerCase().trim();
-
-    // Se não há sessão ativa, trata como primeira interação
-    const isFirstInteraction = !session || !session.step;
-
-    // Comandos principais - agora aceita números também
     const normalizedText = cleanText.replace(/[^a-z0-9\s]/gi, '').toLowerCase();
+
+    // Se há uma sessão ativa com um step específico, processa baseado no step
+    // Isso evita que números sejam interpretados como comandos principais
+    if (session && session.step && 
+        (session.step === 'select_service' || 
+         session.step === 'select_date' || 
+         session.step === 'select_time' || 
+         session.step === 'confirm_booking')) {
+      console.log(`[processMessage] Processando step: ${session.step}, Telefone: ${phone}, Texto: ${text}`);
+      await this.processSessionStep(phone, text, session);
+      return;
+    }
+
+    // Se não há sessão ativa ou está no menu principal, verifica comandos principais
+    const isFirstInteraction = !session || !session.step;
     
     if (normalizedText === 'menu' || normalizedText === 'inicio' || normalizedText === 'comecar' || normalizedText === '0') {
       await this.sendMainMenu(phone, clientName, isFirstInteraction);
@@ -249,7 +259,7 @@ class WhatsAppController {
         await this.sendMainMenu(phone, clientName, true);
         this.setUserSession(phone, { step: 'main_menu', clientId, clientName });
       } else {
-        // Processa baseado no estado da sessao
+        // Processa baseado no estado da sessao (menu principal)
         await this.processSessionStep(phone, text, session);
       }
     }
@@ -368,14 +378,20 @@ class WhatsAppController {
    */
   async handleServiceSelection(phone, text, session) {
     try {
+      console.log(`[handleServiceSelection] Telefone: ${phone}, Texto: ${text}, Step: ${session?.step}`);
+      console.log(`[handleServiceSelection] Serviços disponíveis: ${session?.services?.length || 0}`);
+      
       const serviceIndex = parseInt(text.trim(), 10) - 1;
       
       if (isNaN(serviceIndex) || serviceIndex < 0 || !session.services || serviceIndex >= session.services.length) {
+        console.log(`[handleServiceSelection] Índice inválido: ${serviceIndex}, Total de serviços: ${session.services?.length || 0}`);
         await this.sendMessageSafely(phone, '❌ Serviço inválido. Por favor, escolha um serviço da lista.');
         return;
       }
       
       const selectedService = session.services[serviceIndex];
+      console.log(`[handleServiceSelection] Serviço selecionado: ${selectedService.service}`);
+      
       const availableDates = this.getAvailableDates();
       
       if (!availableDates || availableDates.length === 0) {
@@ -392,12 +408,15 @@ class WhatsAppController {
         
       await this.sendMessageSafely(phone, message);
       
-      this.setUserSession(phone, {
+      const updatedSession = {
         ...session,
         step: 'select_date',
         selectedService: selectedService,
         availableDates: availableDates
-      });
+      };
+      
+      console.log(`[handleServiceSelection] Atualizando sessão para step: select_date`);
+      this.setUserSession(phone, updatedSession);
       
     } catch (error) {
       console.error('Erro ao processar seleção de serviço:', error);
