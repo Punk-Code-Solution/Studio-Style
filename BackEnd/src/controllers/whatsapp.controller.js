@@ -326,20 +326,12 @@ class WhatsAppController {
       await this.sendMessageSafely(phone,
         '❌ Ocorreu um erro ao carregar os serviços. Por favor, tente novamente.');
     }
-  }
-
-  /**
-   * Processa selecao de servico
-   */
-  async handleServiceSelection(phone, text, session) {
-    console.log('handleServiceSelection - Entrada:', { text, sessionServices: session?.services?.length });
     
-    const serviceIndex = parseInt(text.trim(), 10) - 1;
-    
-    if (isNaN(serviceIndex) || serviceIndex < 0) {
-      console.log('Índice de serviço inválido:', text);
-      await this.sendMessageSafely(phone, '❌ Por favor, digite apenas o número do serviço desejado.');
-      return;
+    this.setUserSession(phone, {
+      ...session,
+      step: 'select_date',
+      selectedService: cleanSelectedService,
+      availableDates: availableDates
     }
     
     if (!session.services || !Array.isArray(session.services)) {
