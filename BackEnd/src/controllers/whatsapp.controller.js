@@ -151,6 +151,20 @@ class WhatsAppController {
 
 
   /**
+   * Envia mensagem de boas-vindas ao usuário
+   */
+  async sendWelcomeMessage(phone, clientName = '') {
+    const greeting = clientName ? `Olá, ${clientName}!` : 'Olá!';
+    const message = `${greeting} Eu sou o assistente virtual do *Salão Fio a Fio*.\n\n` +
+      'Como posso te ajudar hoje?\n' +
+      'Digite *MENU* para ver as opções disponíveis.';
+    
+    // Pequeno delay para melhorar a experiência do usuário
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return this.sendMessageSafely(phone, message);
+  }
+
+  /**
    * Envia o menu principal para o usuário
    */
   async sendMainMenu(phone, clientName = '', showWelcome = false) {
