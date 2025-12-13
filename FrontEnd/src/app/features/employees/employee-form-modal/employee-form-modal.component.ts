@@ -133,10 +133,6 @@ interface EmployeeFormData {
                 >
                   <option value="">Selecione um cargo</option>
                   <option value="provider">Prestador de Serviço</option>
-                  <option value="admin">Administrador</option>
-                  <option value="enfermeiro">Enfermeiro</option>
-                  <option value="recepcionista">Recepcionista</option>
-                  <option value="administrativo">Administrativo</option>
                 </select>
                 <div class="error-message" *ngIf="roleField.invalid && roleField.touched">
                   Cargo é obrigatório

@@ -12,7 +12,6 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       
       this.belongsTo( models.Account, { foreignKey: "account_id_purchase", constraints: false } ),
-      this.belongsTo( models.Company, { foreignKey: "company_id_purchase", constraints: false } ),
       this.hasMany( models.Product, { constraints: false } );
       
     }
@@ -28,8 +27,7 @@ module.exports = (sequelize, DataTypes) => {
     value_product: DataTypes.FLOAT,
     date_purchase: DataTypes.DATE,
     product_description: DataTypes.TEXT,
-    account_id_purchase: DataTypes.UUID,
-    company_id_purchase: DataTypes.UUID
+    account_id_purchase: DataTypes.UUID
   }, {
     sequelize,
     modelName: 'Purchase',

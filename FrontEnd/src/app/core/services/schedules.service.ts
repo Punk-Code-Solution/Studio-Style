@@ -13,6 +13,8 @@ export interface Schedule {
   finished: boolean;
   provider_id_schedules: string;
   client_id_schedules: string;
+  payment_method?: 'CASH' | 'CARD' | 'PIX' | 'OTHER';
+  apply_gateway_fee?: boolean;
   Services?: Service[];
   provider?: User;
   client?: User;
@@ -44,6 +46,8 @@ export interface CreateScheduleRequest {
   client_id_schedules: string;
   phone?: string;
   services: string[];
+  payment_method?: 'CASH' | 'CARD' | 'PIX' | 'OTHER';
+  apply_gateway_fee?: boolean;
 }
 
 @Injectable({

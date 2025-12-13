@@ -36,7 +36,6 @@ class phoneRepository{
       active,
       type,
       account_id_phone,
-      company_id_phone
      } = phones;
     
     return await Phone.create(
@@ -45,8 +44,7 @@ class phoneRepository{
         ddd,
         active,
         type,
-        account_id_phone,
-        company_id_phone
+        account_id_phone
     });
   }
 
@@ -59,8 +57,7 @@ class phoneRepository{
         ddd: phone.ddd ? phone.ddd : Phone.ddd,
         active: phone.active ? phone.active : Phone.active,
         type: phone.type ? phone.type : Phone.type,
-        account_id_phone: phone.account_id_phone ? phone.account_id_phone : Phone.account_id_phone,
-        company_id_phone: phone.company_id_phone ? phone.company_id_phone : Phone.company_id_phone
+        account_id_phone: phone.account_id_phone ? phone.account_id_phone : Phone.account_id_phone
       },
       {
         where: {

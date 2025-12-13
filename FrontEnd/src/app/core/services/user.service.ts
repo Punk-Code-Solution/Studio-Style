@@ -21,7 +21,6 @@ export interface Email {
   email: string;
   active: string;
   account_id_email: string;
-  company_id_email?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,12 +36,10 @@ export interface User {
   deleted?: string;
   avatar?: string;
   typeaccount_id: string;
-  company_id_account?: string;
   type_hair_id?: string;
   createdAt: string;
   updatedAt: string;
   TypeAccount: TypeAccount;
-  Company?: any;
   Emails: Email[];
   Hair?: any;
   Schedules: any[];
@@ -268,13 +265,6 @@ export class UserService {
   getUsersByTypeAccount(typeAccountId: string): Observable<User[]> {
     return this.getUsers().pipe(
       map(users => users.filter(user => user.typeaccount_id === typeAccountId))
-    );
-  }
-
-  // Buscar usuários por empresa
-  getUsersByCompany(companyId: string): Observable<User[]> {
-    return this.getUsers().pipe(
-      map(users => users.filter(user => user.company_id_account === companyId))
     );
   }
 

@@ -7,9 +7,9 @@ import { User } from '../../core/services/user.service';
 // Constante centralizada para labels de roles
 const ROLE_LABELS: Record<UserRole, string> = {
   'admin': 'Administrador',
-  'ninguem': 'Usuário', // 'ninguem' parece ser um tipo legado, mas mantido
   'provider': 'Colaborador',
-  'client': 'Cliente' 
+  'client': 'Cliente',
+  'ninguem': 'Ninguem'
 
 };
 
@@ -28,7 +28,7 @@ export class SidebarComponent implements OnInit {
   userAvatar = 'assets/images/avatar.png';
 
   get userRole(): string {
-    return this.currentUser?.TypeAccount.type ? ROLE_LABELS[this.currentUser.TypeAccount.type] : '';
+    return this.currentUser?.TypeAccount.type ? ROLE_LABELS[this.currentUser.TypeAccount.type as UserRole] : '';
   }
 
   constructor(

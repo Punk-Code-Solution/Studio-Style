@@ -9,6 +9,8 @@ export interface Service {
   service: string;
   additionalComments?: string;
   price: number;
+  // Comissão do colaborador para este serviço (0.0 - 1.0, ex: 0.5 = 50%)
+  commission_rate?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -23,6 +25,7 @@ export interface CreateServiceRequest {
   service: string;
   additionalComments?: string;
   price: number;
+  commission_rate?: number;
 }
 
 export interface UpdateServiceRequest {
@@ -30,6 +33,7 @@ export interface UpdateServiceRequest {
   service?: string;
   additionalComments?: string;
   price?: number;
+  commission_rate?: number;
 }
 
 @Injectable({

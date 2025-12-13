@@ -11,8 +11,7 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       
-      this.belongsTo( models.Account, { foreignKey: { name: "account_id_adress" }, constraints: false }),
-      this.belongsTo( models.Company, { foreignKey: { name: "company_id_adress" }, constraints: false });
+      this.belongsTo( models.Account, { foreignKey: { name: "account_id_adress" }, constraints: false })
 
     }
   }
@@ -21,8 +20,7 @@ module.exports = (sequelize, DataTypes) => {
     neighborhood: DataTypes.STRING,
     road: DataTypes.STRING,
     //cep: DataTypes.INTEGER,
-    account_id_adress: DataTypes.UUID,
-    company_id_adress: DataTypes.UUID
+    account_id_adress: DataTypes.UUID
   }, {
     sequelize,
     modelName: 'Adress',

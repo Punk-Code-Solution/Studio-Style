@@ -120,7 +120,6 @@ class AuthController {
         name: name, 
         email: email, 
         active: true, // Default to active
-        company_id_email: null // Assuming no company association for now
       };
 
       const emailResult = await this.accountRepository.createEmail(emailData);

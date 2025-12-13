@@ -1,7 +1,6 @@
 const { 
   Account,
   TypeAccount,
-  Company,
   Email,
   Hair,
   Service,
@@ -12,7 +11,7 @@ const {
   Phone,
   Adress } = require("../Database/models");
 const { v4: uuidv4 } = require('uuid');
-const bkrypt = require('bcrypt');
+const bcrypt = require('bcrypt');
 const { Op } = require('sequelize');
 
 module.exports = class accountRepository{
@@ -21,7 +20,6 @@ module.exports = class accountRepository{
   getDefaultIncludes() {
     return [
       { model: TypeAccount },
-      { model: Company },
       { model: Email },
       { model: Hair },
       { model: Schedules },
@@ -35,7 +33,7 @@ module.exports = class accountRepository{
 
   async createEmail( emailUser ){
 
-    const { account_id_email, name, email, active, company_id_email } = emailUser
+    const { account_id_email, name, email, active } = emailUser
 
     // Prevent duplicate email
     if (email) {
@@ -46,17 +44,11 @@ module.exports = class accountRepository{
     }
     
     const result = await Email.create({
-
       id: uuidv4(), 
       account_id_email, 
       name, 
       email, 
-      active: active || new Date(), 
-      company_id_email
-       
-    }
-    ,{
-      association: [ Account.account_id_email, Company.company_id_email ]
+      active: active || new Date()
     });
 
     if( result ){
@@ -252,64 +244,86 @@ module.exports = class accountRepository{
   }
   
   //OK
-  async addAccount(account) {
+  async addAccount(account, transaction = null) {
+    try {
+      const {
+        name,
+        email,
+        lastname,
+        password,
+        cpf,
+        birthday,
+        deleted,
+        avatar,
+        typeaccount_id,
+        company_id_account,
+        type_hair_id
+      } = account;
 
-    const {
-      name,
-      email,
-      lastname,
-      password,
-      cpf,
-      birthday,
-      deleted,
-      avatar,
-      typeaccount_id,
-      company_id_account,
-      type_hair_id
-
-    } = account;
-
-    // Prevent duplicate by CPF
-    if (cpf) {
-      const existingByCpf = await this.findAccountCpf(cpf);
-      if (existingByCpf) {
-        return { error: 'cpf' }; // Duplicate CPF
+      // Validações básicas
+      if (!name || !name.trim()) {
+        throw new Error('Name is required');
       }
-    }
 
-    // Prevent duplicate by email (if provided)
-    if (email) {
-      const existingEmail = await this.findEmail(email);
-      if (existingEmail) {
-        return { error: 'email' }; // Duplicate email
+      // Verificar duplicatas - mas confiar principalmente nas constraints do banco
+      // para evitar race conditions
+      if (cpf) {
+        const existingByCpf = await this.findAccountCpf(cpf);
+        if (existingByCpf) {
+          const error = new Error('CPF already exists');
+          error.code = 'DUPLICATE_CPF';
+          error.field = 'cpf';
+          throw error;
+        }
       }
-    }
 
-    const result = await Account.create({     
+      if (email) {
+        const existingEmail = await this.findEmail(email);
+        if (existingEmail) {
+          const error = new Error('Email already exists');
+          error.code = 'DUPLICATE_EMAIL';
+          error.field = 'email';
+          throw error;
+        }
+      }
 
-      id: uuidv4(),
-      name,
-      lastname,
-      password,
-      cpf: cpf,
-      start_date: account.start_date || new Date(),
-      birthday,
-      deleted: deleted !== undefined ? deleted : false,
-      avatar,
-      typeaccount_id,
-      company_id_account,
-      type_hair_id
+      const result = await Account.create({     
+        id: uuidv4(),
+        name,
+        lastname,
+        password,
+        cpf: cpf,
+        start_date: account.start_date || new Date(),
+        birthday,
+        deleted: deleted !== undefined ? deleted : false,
+        avatar,
+        typeaccount_id,
+        company_id_account,
+        type_hair_id
+      }, {
+        association: [ Account.typeaccount_id, Account.company_id_account, Account.type_hair_id ],
+        transaction
+      });
+
+      if (!result) {
+        throw new Error('Failed to create account');
+      }
+
+      account.id = result.id;
+      return account;
+    } catch (error) {
+      // Se for erro de constraint único do Sequelize, converter para nosso formato
+      if (error.name === 'SequelizeUniqueConstraintError') {
+        const field = error.errors && error.errors[0] ? error.errors[0].path : 'unknown';
+        const newError = new Error(`${field} already exists`);
+        newError.code = field === 'cpf' ? 'DUPLICATE_CPF' : field === 'email' ? 'DUPLICATE_EMAIL' : 'DUPLICATE_FIELD';
+        newError.field = field;
+        throw newError;
+      }
       
-    }, {
-      association: [ Account.typeaccount_id, Account.company_id_account, Account.type_hair_id ]
-    })
-
-    if(result){
-      account.id = result.id
-      return account
+      console.error('Erro ao criar conta no repositório:', error);
+      throw error;
     }
-    return false;
-    
   }
     
   async updateAccount( account ) {
@@ -329,7 +343,7 @@ module.exports = class accountRepository{
       if (account.name !== undefined) updateData.name = account.name;
       if (account.lastname !== undefined) updateData.lastname = account.lastname;
       if (account.password !== undefined && account.password !== null && account.password.trim() !== '') {
-        updateData.password = bkrypt.hashSync(account.password, 10);
+        updateData.password = account.password
       }
       if (account.cpf !== undefined) updateData.cpf = account.cpf;
       if (account.type_hair_id !== undefined) updateData.type_hair_id = account.type_hair_id;
@@ -385,24 +399,99 @@ module.exports = class accountRepository{
 
   }
 
-  async deleteAccountId( id ) {
+  async deleteAccountId(id, transaction = null) {
+    try {
+      // Otimização: Verificar relacionamentos usando COUNT em uma única query quando possível
+      // ou usar Promise.all para executar verificações em paralelo
+      const [schedulesCount, salesCount, purchasesCount, purchaseMaterialsCount] = await Promise.all([
+        Schedules.count({
+          where: {
+            [Op.or]: [
+              { client_id_schedules: id },
+              { provider_id_schedules: id }
+            ]
+          },
+          transaction
+        }),
+        Sale.count({
+          where: {
+            [Op.or]: [
+              { client_id_sale: id },
+              { account_id_sale: id }
+            ]
+          },
+          transaction
+        }),
+        Purchase.count({
+          where: {
+            account_id_purchase: id
+          },
+          transaction
+        }),
+        Purchase_Material.count({
+          where: {
+            account_id_purchase_material: id
+          },
+          transaction
+        })
+      ]);
 
-    const result = await Account.destroy({
-      where: {
-        id: id
-      },
-      include: [
-        { model: Phone, where: { account_id_phone: id } },
-        { model: Email, where: { account_id_email: id } },
-        { model: Adress, where: { account_id_adress: id } }
-      ]
-    });
+      // Se houver registros relacionados, retornar erro informativo
+      if (schedulesCount > 0 || salesCount > 0 || purchasesCount > 0 || purchaseMaterialsCount > 0) {
+        const errors = [];
+        if (schedulesCount > 0) errors.push('agendamentos');
+        if (salesCount > 0) errors.push('vendas');
+        if (purchasesCount > 0) errors.push('compras');
+        if (purchaseMaterialsCount > 0) errors.push('materiais de compra');
+        
+        const error = new Error(`Não é possível excluir esta conta pois ela possui ${errors.join(', ')} associados.`);
+        error.code = 'HAS_RELATED_RECORDS';
+        error.relatedRecords = errors;
+        throw error;
+      }
 
-    if( result ){      
-      return true
+      // Deletar relacionamentos e conta principal dentro da transação
+      // Deletar telefones associados
+      await Phone.destroy({
+        where: {
+          account_id_phone: id
+        },
+        transaction
+      });
+
+      // Deletar emails associados
+      await Email.destroy({
+        where: {
+          account_id_email: id
+        },
+        transaction
+      });
+
+      // Deletar endereços associados
+      await Adress.destroy({
+        where: {
+          account_id_adress: id
+        },
+        transaction
+      });
+
+      // Por fim, deletar a conta principal
+      const result = await Account.destroy({
+        where: {
+          id: id
+        },
+        transaction
+      });
+
+      if (result === 0) {
+        throw new Error('Account not found');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      throw error;
     }
-    return false
-
   }
 
   async findAccountByPhone(phoneNumber) {

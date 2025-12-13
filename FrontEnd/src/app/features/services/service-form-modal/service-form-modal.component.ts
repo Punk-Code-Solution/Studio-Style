@@ -7,6 +7,8 @@ interface ServiceFormData {
   service: string;
   additionalComments: string;
   price: number | null;
+  // Campo em porcentagem para o formulário (0 - 100)
+  commissionPercent: number | null;
 }
 
 @Component({
@@ -68,6 +70,30 @@ interface ServiceFormData {
               <div class="error-message" *ngIf="priceField.invalid && priceField.touched">
                 <span *ngIf="priceField.errors?.['required']">Preço é obrigatório</span>
                 <span *ngIf="priceField.errors?.['min']">Preço deve ser maior que zero</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="commission">
+                <i class="fas fa-percentage"></i>
+                Comissão do Colaborador (%) *
+              </label>
+              <input
+                type="number"
+                id="commission"
+                [(ngModel)]="serviceData.commissionPercent"
+                name="commissionPercent"
+                required
+                min="0"
+                max="100"
+                step="0.01"
+                placeholder="Ex: 50 para 50%"
+                #commissionField="ngModel"
+              >
+              <div class="error-message" *ngIf="commissionField.invalid && commissionField.touched">
+                <span *ngIf="commissionField.errors?.['required']">Comissão é obrigatória</span>
+                <span *ngIf="commissionField.errors?.['min']">Comissão não pode ser negativa</span>
+                <span *ngIf="commissionField.errors?.['max']">Comissão não pode ser maior que 100%</span>
               </div>
             </div>
 
@@ -281,7 +307,8 @@ export class ServiceFormModalComponent implements OnInit {
   serviceData: ServiceFormData = {
     service: '',
     additionalComments: '',
-    price: null
+    price: null,
+    commissionPercent: null
   };
 
   constructor() {}
@@ -292,8 +319,12 @@ export class ServiceFormModalComponent implements OnInit {
       this.serviceData = {
         service: this.service.service || '',
         additionalComments: this.service.additionalComments || '',
-        price: this.service.price || null
+        price: this.service.price || null,
+        commissionPercent: this.service.commission_rate != null ? this.service.commission_rate * 100 : null
       };
+    } else {
+      // Valor padrão de 50% para novos serviços
+      this.serviceData.commissionPercent = 50;
     }
   }
 
@@ -306,10 +337,13 @@ export class ServiceFormModalComponent implements OnInit {
       return;
     }
 
+    const commissionRate = (this.serviceData.commissionPercent ?? 0) / 100;
+
     const dataToSend: Partial<Service> = {
       service: this.serviceData.service,
       additionalComments: this.serviceData.additionalComments || undefined,
-      price: this.serviceData.price || 0
+      price: this.serviceData.price || 0,
+      commission_rate: commissionRate
     };
 
     this.save.emit(dataToSend);

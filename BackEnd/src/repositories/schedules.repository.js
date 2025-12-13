@@ -88,7 +88,9 @@ class schedulesRepository{
       active,
       finished,
       provider_id_schedules,
-      client_id_schedules
+      client_id_schedules,
+      payment_method,
+      apply_gateway_fee
     } = scheduleData
 
     await Schedules.update(
@@ -98,7 +100,9 @@ class schedulesRepository{
         active: active !== undefined ? active : undefined,
         finished: finished !== undefined ? finished : undefined,
         provider_id_schedules: provider_id_schedules ? provider_id_schedules : undefined,
-        client_id_schedules: client_id_schedules ? client_id_schedules : undefined
+        client_id_schedules: client_id_schedules ? client_id_schedules : undefined,
+        payment_method: payment_method !== undefined ? payment_method : undefined,
+        apply_gateway_fee: apply_gateway_fee !== undefined ? apply_gateway_fee : undefined
       },
       {
         where: {

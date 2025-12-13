@@ -8,12 +8,12 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const authRoutes = require('./src/Routes/auth.routes.js');
 const accountRoutes = require('./src/Routes/account.routes.js');
-const companyRoutes = require('./src/Routes/company.routes.js');
 const productRoutes = require('./src/Routes/product.routes.js');
 const purchaseRoutes = require('./src/Routes/purchase_sale.routes.js');
 const serviceRoutes = require('./src/Routes/service.routes.js');
 const schedulesRoutes = require('./src/Routes/schedules.routes.js');
 const whatsappRoutes = require('./src/Routes/whatsapp.routes.js');
+const financialRoutes = require('./src/Routes/financial.routes.js');
 
 // Import database connection
 let db;
@@ -34,8 +34,14 @@ try {
 const errorHandler = require('./src/middlewares/errorHandler');
 const { authenticateToken } = require('./src/middlewares/auth');
 
+const http = require('http');
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
+
+// Initialize Socket.IO
+const { initializeSocketIO } = require('./src/utils/socket.io');
+initializeSocketIO(server);
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -95,7 +101,7 @@ app.use((req, res, next) => {
 // Rate limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 10000, // limit each IP to 100 requests per windowMs
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.'
@@ -154,12 +160,12 @@ app.get('/', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/account', accountRoutes);
-app.use('/api/company', authenticateToken, companyRoutes);
 app.use('/api/product', authenticateToken, productRoutes);
 app.use('/api/purchase', authenticateToken, purchaseRoutes);
 app.use('/api/service', authenticateToken, serviceRoutes);
 app.use('/api/schedules', authenticateToken, schedulesRoutes)
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/financial', authenticateToken, financialRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -191,8 +197,9 @@ const startServer = async () => {
 
      // Start server locally
      if (process.env.NODE_ENV === 'development') {
-       app.listen(PORT, () => {
+       server.listen(PORT, () => {
          console.log(`Server running on port ${PORT}`);
+         console.log(`Socket.IO disponível em http://localhost:${PORT}`);
        });
      }
    } catch (error) {
@@ -208,5 +215,8 @@ if (process.env.NODE_ENV === 'development') {
   startServer();
 }
 
-// Export app for Vercel (always export for serverless)
+// Export app for Vercel (serverless functions)
+// Nota: Vercel serverless functions podem não suportar WebSockets completamente
+// Para produção, considere usar um serviço dedicado de WebSocket ou polling como fallback
+// O Socket.IO será inicializado apenas em desenvolvimento ou quando o server estiver disponível
 module.exports = app;

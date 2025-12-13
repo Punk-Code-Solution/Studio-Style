@@ -118,6 +118,14 @@ class SaleRepository{
     });
   }
 
+  async deleteSale(id) {
+    return await Sale.destroy({
+      where: {
+        id: id,
+      },
+    });
+  }
+
 }
 
 module.exports = SaleRepository

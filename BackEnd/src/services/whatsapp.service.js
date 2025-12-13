@@ -7,7 +7,7 @@ class WhatsAppService {
     this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
     this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
     this.verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
-    this.apiUrl = `https://graph.facebook.com/v18.0/${this.phoneNumberId}/messages`;
+    this.apiUrl = `https://graph.facebook.com/v24.0/${this.phoneNumberId}/messages`;
   }
 
   verifyWebhook(mode, token, challenge) {
