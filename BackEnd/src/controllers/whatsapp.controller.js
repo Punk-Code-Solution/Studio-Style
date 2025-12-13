@@ -16,7 +16,7 @@ class WhatsAppController {
   constructor() {
     this.whatsappService = new WhatsAppService();
     this.userSessions = new Map(); // Armazena sessoes de usuarios
-    this.SESSION_TIMEOUT = 15 * 60 * 1000; // 15 minutos de inatividade
+    this.SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutos de inatividade
 
     // Instanciando os repositórios
     this.accountRepo = new AccountRepository();
@@ -168,13 +168,14 @@ class WhatsAppController {
    * Envia mensagem de boas-vindas ao usuário
    */
   async sendWelcomeMessage(phone, clientName = '') {
-    const greeting = clientName ? `Olá, ${clientName}!` : 'Olá!';
-    const message = `${greeting} Eu sou o assistente virtual do *Salão Fio a Fio*.\n\n` +
-      'Como posso te ajudar hoje?\n' +
+    const greeting = clientName ? `Olá, ${clientName}! 👋` : 'Olá! 👋';
+    const message = `${greeting}\n\n` +
+      'Bem-vindo ao *Salão Fio a Fio*! ✨\n\n' +
+      'Estou aqui para ajudar você a agendar seus serviços de forma rápida e fácil.\n\n' +
       'Digite *MENU* para ver as opções disponíveis.';
     
     // Pequeno delay para melhorar a experiência do usuário
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1500));
     return this.sendMessageSafely(phone, message);
   }
 
@@ -290,11 +291,12 @@ class WhatsAppController {
         return;
       }
 
-      const message = `Olá ${clientName}! \n\nEscolha o serviço que deseja agendar:\n\n` +
+      const message = `Perfeito, ${clientName}! ✂️\n\n` +
+        'Aqui estão nossos serviços disponíveis:\n\n' +
         validServices.map((s, index) => 
-          `${index + 1}. ${s.service} (R$ ${s.price.toFixed(2)})`
+          `${index + 1}. ${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`
         ).join('\n') +
-        '\n\nDigite o número do serviço desejado.';
+        '\n\nDigite o *número* do serviço que deseja agendar.';
 
       await this.sendMessageSafely(phone, message);
       
@@ -337,11 +339,13 @@ class WhatsAppController {
         case 'main_menu':
           // Trata números no menu principal
           const menuOption = text.trim();
-          if (menuOption === '1' || menuOption.toLowerCase() === 'agendar' || menuOption.toLowerCase() === 'marcar') {
+          const normalizedMenuOption = menuOption.replace(/[^a-z0-9\s]/gi, '').toLowerCase();
+          
+          if (normalizedMenuOption === '1' || normalizedMenuOption === 'agendar' || normalizedMenuOption === 'marcar') {
             await this.startSchedulingProcess(phone, session.clientId, session.clientName);
-          } else if (menuOption === '2' || menuOption.toLowerCase() === 'meus agendamentos' || menuOption.toLowerCase() === 'agendamentos') {
+          } else if (normalizedMenuOption === '2' || normalizedMenuOption === 'meus agendamentos' || normalizedMenuOption === 'agendamentos') {
             await this.showUserSchedules(phone, session.clientId, session.clientName);
-          } else if (menuOption === '9' || menuOption.toLowerCase() === 'cancelar' || menuOption.toLowerCase() === 'sair') {
+          } else if (normalizedMenuOption === '9' || normalizedMenuOption === 'cancelar' || normalizedMenuOption === 'sair') {
             await this.cancelProcess(phone);
           } else {
             await this.sendMessageSafely(phone,
@@ -399,12 +403,14 @@ class WhatsAppController {
         return;
       }
       
-      const message = `Serviço selecionado: ${selectedService.service}\n\n` +
-        'Escolha uma data para o agendamento:\n\n' +
+      const message = `Ótima escolha! ✨\n\n` +
+        `*Serviço:* ${selectedService.service}\n` +
+        `*Valor:* R$ ${selectedService.price.toFixed(2).replace('.', ',')}\n\n` +
+        'Agora, escolha uma data para seu agendamento:\n\n' +
         availableDates.map((date, index) => 
-          `${index + 1}. ${date.format('DD/MM/YYYY')}`
+          `${index + 1}. ${date.format('DD/MM/YYYY')} (${date.format('dddd').charAt(0).toUpperCase() + date.format('dddd').slice(1)})`
         ).join('\n') +
-        '\n\nDigite o número da data desejada.';
+        '\n\nDigite o *número* da data desejada.';
         
       await this.sendMessageSafely(phone, message);
       
@@ -446,12 +452,13 @@ class WhatsAppController {
         return;
       }
       
-      const message = `Data selecionada: ${selectedDate.format('DD/MM/YYYY')}\n\n` +
-        'Escolha um horário:\n\n' +
+      const message = `Perfeito! 📅\n\n` +
+        `*Data selecionada:* ${selectedDate.format('DD/MM/YYYY')}\n\n` +
+        'Agora, escolha um horário disponível:\n\n' +
         availableTimes.map((time, index) => 
-          `${index + 1}. ${time.format('HH:mm')}`
+          `${index + 1}. ${time.format('HH:mm')}h`
         ).join('\n') +
-        '\n\nDigite o número do horário desejado.';
+        '\n\nDigite o *número* do horário desejado.';
         
       await this.sendMessageSafely(phone, message);
       
@@ -483,11 +490,14 @@ class WhatsAppController {
       }
       
       const selectedTime = session.availableTimes[timeIndex];
-      const appointmentDateTime = selectedTime.clone();
+      // O horário já está em UTC+3, mantemos assim para exibição
+      const appointmentDateTime = selectedTime.clone().utcOffset(3);
       
       // Verifica se ainda há vagas disponíveis
       const duration = session.duration || session.selectedService?.duration || 60;
-      const isAvailable = await this.checkAvailability(appointmentDateTime, duration);
+      // Para verificação de disponibilidade, usamos o horário em UTC+3
+      const timeForCheck = appointmentDateTime.clone();
+      const isAvailable = await this.checkAvailability(timeForCheck, duration);
 
       if (!isAvailable) {
         await this.sendMessageSafely(phone,
@@ -503,11 +513,13 @@ class WhatsAppController {
       });
       
       // Envia mensagem de confirmação
-      const message = `📅 *Confirme seu agendamento*\n\n` +
-        `📌 Serviço: ${session.selectedService.service}\n` +
-        `📅 Data: ${appointmentDateTime.format('DD/MM/YYYY')}\n` +
-        `⏰ Horário: ${appointmentDateTime.format('HH:mm')}\n\n` +
-        'Digite *CONFIRMAR* para confirmar ou *CANCELAR* para cancelar.';
+      const message = `📋 *Resumo do Agendamento*\n\n` +
+        `✂️ *Serviço:* ${session.selectedService.service}\n` +
+        `💰 *Valor:* R$ ${session.selectedService.price.toFixed(2).replace('.', ',')}\n` +
+        `📅 *Data:* ${appointmentDateTime.format('DD/MM/YYYY')}\n` +
+        `⏰ *Horário:* ${appointmentDateTime.format('HH:mm')}h\n\n` +
+        'Está tudo correto?\n\n' +
+        'Digite *CONFIRMAR* para finalizar ou *CANCELAR* para voltar.';
         
       await this.sendMessageSafely(phone, message);
       
@@ -534,12 +546,14 @@ class WhatsAppController {
         }
 
         // Envia mensagem de confirmação
-        const message = `✅ *Agendamento confirmado!*\n\n` +
-          `📌 Serviço: ${session.selectedService.service}\n` +
-          `📅 Data: ${session.appointmentDateTime.format('DD/MM/YYYY')}\n` +
-          `⏰ Horário: ${session.appointmentDateTime.format('HH:mm')}\n\n` +
-          'Obrigado por agendar conosco! Estamos ansiosos para atendê-lo.\n\n' +
-          'Digite *MENU* para voltar ao início.';
+        const message = `✅ *Agendamento confirmado com sucesso!*\n\n` +
+          `✂️ *Serviço:* ${session.selectedService.service}\n` +
+          `💰 *Valor:* R$ ${session.selectedService.price.toFixed(2).replace('.', ',')}\n` +
+          `📅 *Data:* ${session.appointmentDateTime.format('DD/MM/YYYY')}\n` +
+          `⏰ *Horário:* ${session.appointmentDateTime.format('HH:mm')}h\n\n` +
+          'Muito obrigado por escolher o *Salão Fio a Fio*! 💇‍♀️✨\n\n' +
+          'Estamos ansiosos para atendê-lo. Se precisar de algo, é só chamar!\n\n' +
+          'Digite *MENU* para ver outras opções.';
           
         await this.sendMessageSafely(phone, message);
         
@@ -636,10 +650,20 @@ class WhatsAppController {
         throw new Error("Nenhum prestador de serviço disponível.");
       }
 
+      // O horário foi selecionado em UTC+3 (horário local do Brasil)
+      // Para salvar no banco (que espera UTC), precisamos:
+      // - Se o usuário selecionou 8h UTC+3, queremos salvar como 11h UTC (8h + 3h = 11h)
+      // Isso garante que quando lermos do banco e convertermos para UTC+3, teremos 8h novamente
+      const appointmentDate = session.appointmentDateTime.clone();
+      // Garante que está em UTC+3 primeiro
+      const dateInUTC3 = appointmentDate.utcOffset(3, true);
+      // Converte para UTC (adiciona 3 horas ao horário para compensar o timezone)
+      const dateToSave = dateInUTC3.utc().toDate();
+      
       // Cria o agendamento usando o método do repositório
       const schedule = await this.schedulesRepo.addSchedules({
         name_client: session.clientName,
-        date_and_houres: session.appointmentDateTime.toDate(),
+        date_and_houres: dateToSave,
         active: true,
         finished: false,
         client_id_schedules: session.clientId,
@@ -685,21 +709,24 @@ class WhatsAppController {
 
   /**
    * Verifica disponibilidade de horário
+   * Usa timezone UTC+3 (Brasil)
    */
   async checkAvailability(dateTime, duration) {
-    const startTime = moment(dateTime);
-    const endTime = moment(dateTime).add(duration, 'minutes');
+    // Garante que está trabalhando com UTC+3
+    const startTime = moment(dateTime).utcOffset(3);
+    const endTime = moment(dateTime).utcOffset(3).add(duration, 'minutes');
     
     // Capacidade máxima de 3 agendamentos simultâneos
     const MAX_CAPACITY = 3;
 
     // Conta quantos agendamentos existem no mesmo horário
+    // Converte para UTC para comparar com o banco (que salva em UTC)
     const count = await Schedules.count({
       where: {
         active: true,
         date_and_houres: {
-          [Op.gte]: startTime.toDate(),
-          [Op.lt]: endTime.toDate()
+          [Op.gte]: startTime.utc().toDate(),
+          [Op.lt]: endTime.utc().toDate()
         }
       }
     });
@@ -709,11 +736,13 @@ class WhatsAppController {
 
   /**
    * Obtém datas disponíveis para agendamento (próximos 30 dias)
+   * Usa timezone UTC+3 (Brasil)
    */
   getAvailableDates() {
     const dates = [];
-    const today = moment().startOf('day');
-    const endDate = moment().add(30, 'days');
+    // Define timezone UTC+3 para o Brasil
+    const today = moment().utcOffset(3).startOf('day');
+    const endDate = moment().utcOffset(3).add(30, 'days');
     
     for (let date = moment(today); date.isBefore(endDate); date.add(1, 'day')) {
       // Exclui domingos (0) e sábados (6)
@@ -727,16 +756,19 @@ class WhatsAppController {
 
   /**
    * Obtém horários disponíveis para uma data específica
+   * Usa timezone UTC+3 (Brasil)
    */
   async getAvailableTimes(date, duration) {
     const times = [];
     const startHour = 8; // 8:00
     const endHour = 18;  // 18:00
-    const now = moment();
+    // Define timezone UTC+3 para comparação
+    const now = moment().utcOffset(3);
     
     // Para cada hora do dia
     for (let hour = startHour; hour < endHour; hour++) {
-      const time = moment(date).hour(hour).minute(0).second(0);
+      // Garante que a data está em UTC+3
+      const time = moment(date).utcOffset(3).hour(hour).minute(0).second(0);
       
       // Não mostra horários que já passaram
       if (time.isAfter(now)) {
@@ -779,9 +811,11 @@ class WhatsAppController {
     // Configura um novo timeout para a sessão
     const timeoutId = setTimeout(() => {
       this.sendMessageSafely(phone, 
-        '⚠️ *Sessão encerrada por inatividade*\n\n' +
-        'Sua sessão foi encerrada por ficar muito tempo sem interação.\n' +
-        'Digite *MENU* para começar novamente.');
+        '⏰ *Sessão encerrada por inatividade*\n\n' +
+        'Olá! Percebi que você não respondeu por um tempo.\n' +
+        'Sua sessão foi encerrada automaticamente.\n\n' +
+        'Não se preocupe, você pode continuar de onde parou a qualquer momento.\n\n' +
+        'Digite *MENU* para ver as opções disponíveis.');
       this.clearUserSession(phone);
     }, this.SESSION_TIMEOUT);
     
