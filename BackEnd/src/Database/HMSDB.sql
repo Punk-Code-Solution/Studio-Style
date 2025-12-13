@@ -262,6 +262,77 @@ CREATE TABLE public."FinancialLedger"(
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
 
+-- Create Conversations Table
+CREATE TABLE public."Conversations"(
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  phone_number VARCHAR(20) NOT NULL,
+  contact_name VARCHAR(255),
+  last_message TEXT,
+  last_message_at TIMESTAMP,
+  unread_count INTEGER DEFAULT 0,
+  status VARCHAR(20) CHECK (status IN ('active', 'archived', 'spam')) DEFAULT 'active',
+  account_id UUID REFERENCES public."Accounts" (id) ON DELETE SET NULL,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  "createdAt" TIMESTAMP DEFAULT NOW(),
+  "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+
+-- Create Messages Table
+CREATE TABLE public."Messages"(
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES public."Conversations" (id) ON DELETE CASCADE,
+  whatsapp_message_id VARCHAR(255),
+  "from" VARCHAR(20) NOT NULL,
+  "to" VARCHAR(20) NOT NULL,
+  direction VARCHAR(10) CHECK (direction IN ('incoming', 'outgoing')) NOT NULL,
+  message_type VARCHAR(20) CHECK (message_type IN ('text', 'image', 'video', 'audio', 'document', 'location', 'contacts', 'interactive', 'button', 'template')) DEFAULT 'text',
+  content TEXT NOT NULL,
+  media_url TEXT,
+  status VARCHAR(20) CHECK (status IN ('sent', 'delivered', 'read', 'failed')) DEFAULT 'sent',
+  error_message TEXT,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  timestamp TIMESTAMP DEFAULT NOW(),
+  "createdAt" TIMESTAMP DEFAULT NOW(),
+  "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+
+-- Create Indexes for better performance
+CREATE INDEX idx_conversations_phone_number ON public."Conversations" ("phone_number");
+CREATE INDEX idx_conversations_status ON public."Conversations" ("status");
+CREATE INDEX idx_conversations_last_message_at ON public."Conversations" ("last_message_at");
+CREATE INDEX idx_conversations_account_id ON public."Conversations" ("account_id");
+
+CREATE INDEX idx_messages_conversation_id ON public."Messages" ("conversation_id");
+CREATE INDEX idx_messages_whatsapp_id ON public."Messages" ("whatsapp_message_id");
+CREATE INDEX idx_messages_from ON public."Messages" ("from");
+CREATE INDEX idx_messages_to ON public."Messages" ("to");
+CREATE INDEX idx_messages_direction ON public."Messages" ("direction");
+CREATE INDEX idx_messages_timestamp ON public."Messages" ("timestamp");
+
+-- 1. Corrigir nome da tabela Adresses para Addresses
+ALTER TABLE IF EXISTS public."Adresses" RENAME TO "Addresses";
+
+-- 2. Adicionar restrição de chave estrangeira para Conversations
+ALTER TABLE public."Conversations" 
+ADD CONSTRAINT "Conversations_fk_Account" 
+FOREIGN KEY ("account_id") 
+REFERENCES public."Accounts" (id) 
+ON DELETE SET NULL 
+ON UPDATE CASCADE;
+
+-- 3. (Opcional) Renomear tabela Hairs para HairStyles
+-- ALTER TABLE public."Hairs" RENAME TO "HairStyles";
+
+-- 4. Adicionar índices adicionais para melhor desempenho
+-- Índice para busca por data de criação em Conversations
+CREATE INDEX IF NOT EXISTS idx_conversations_created_at ON public."Conversations" ("createdAt");
+
+-- Índice para busca por data de criação em Messages
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON public."Messages" ("createdAt");
+
+-- Índice para busca por status em Messages
+CREATE INDEX IF NOT EXISTS idx_messages_status ON public."Messages" ("status");
+
 -- Add Foreign Key Constraints
 ALTER TABLE public."Emails" ADD CONSTRAINT "Emails_fk_Account" FOREIGN KEY ("account_id_email")
   REFERENCES public."Accounts" (id) ON DELETE SET NULL ON UPDATE CASCADE;
@@ -281,7 +352,7 @@ ALTER TABLE public."Actions" ADD CONSTRAINT "Actions_fk" FOREIGN KEY ("service_i
 ALTER TABLE public."Purchase_Materials" ADD CONSTRAINT "Purchase_Materials_fk_Account" FOREIGN KEY ("account_id_purchase_material")
   REFERENCES public."Accounts" (id) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
-ALTER TABLE public."Adresses" ADD CONSTRAINT "Adresses_fk_Account" FOREIGN KEY ("account_id_adress")
+ALTER TABLE public."Addresses" ADD CONSTRAINT "Adresses_fk_Account" FOREIGN KEY ("account_id_adress")
   REFERENCES public."Accounts" (id) ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE public."Schedules" ADD CONSTRAINT "Schedules_fk_Account_Client" FOREIGN KEY ("client_id_schedules")
