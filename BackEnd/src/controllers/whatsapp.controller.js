@@ -130,9 +130,24 @@ class WhatsAppController {
       }
       
       // 2c. Associa o número de telefone à nova conta
+      // O número do WhatsApp vem no formato: 5511999999999 (55 + DDD + número)
+      const cleanPhone = phone.replace(/\D/g, ''); // Remove caracteres não numéricos
+      let phoneWithoutCountryCode = cleanPhone;
+      let ddd = null;
+      
+      // Se começa com 55 (código do Brasil), remove e extrai DDD
+      if (cleanPhone.startsWith('55') && cleanPhone.length >= 12) {
+        phoneWithoutCountryCode = cleanPhone.substring(2); // Remove "55"
+        ddd = cleanPhone.substring(2, 4); // Extrai DDD (posições 2-4 do número original)
+      } else if (cleanPhone.length >= 10) {
+        // Se não tem código do país, assume que os 2 primeiros dígitos são o DDD
+        ddd = cleanPhone.substring(0, 2);
+        phoneWithoutCountryCode = cleanPhone;
+      }
+      
       const phoneData = {
-        phone: phone, // Número completo
-        ddd: phone.substring(2, 4), // Extrai DDD (Ex: 55[11]9...
+        phone: phoneWithoutCountryCode, // Número sem código do país
+        ddd: ddd,
         type: 'whatsapp',
         account_id_phone: newAccount.id
       };
@@ -211,6 +226,20 @@ class WhatsAppController {
     }
 
     switch (session.step) {
+      case 'main_menu':
+        // Trata números no menu principal
+        const menuOption = text.trim();
+        if (menuOption === '1' || menuOption.toLowerCase() === 'agendar' || menuOption.toLowerCase() === 'marcar') {
+          await this.startSchedulingProcess(phone, session.clientId, session.clientName);
+        } else if (menuOption === '2' || menuOption.toLowerCase() === 'meus agendamentos' || menuOption.toLowerCase() === 'agendamentos') {
+          await this.showUserSchedules(phone, session.clientId, session.clientName);
+        } else if (menuOption === '3' || menuOption.toLowerCase() === 'cancelar' || menuOption.toLowerCase() === 'sair') {
+          await this.cancelProcess(phone);
+        } else {
+          await this.sendMessageSafely(phone,
+            'Opção inválida. Digite o número (1, 2 ou 3) ou o nome da opção desejada.');
+        }
+        break;
       case 'select_service':
         await this.handleServiceSelection(phone, text, session);
         break;
@@ -264,13 +293,15 @@ class WhatsAppController {
    */
   async handleServiceSelection(phone, text, session) {
     const serviceIndex = parseInt(text.trim()) - 1;
-    const selectedService = session.services[serviceIndex];
-
-    if (!selectedService) {
+    
+    // Valida se é um número válido e está dentro do range
+    if (isNaN(serviceIndex) || serviceIndex < 0 || !session.services || serviceIndex >= session.services.length) {
       await this.sendMessageSafely(phone,
         'Opção inválida. Digite o número do serviço desejado.');
       return;
     }
+    
+    const selectedService = session.services[serviceIndex];
 
     // Busca datas disponiveis (proximos 30 dias)
     const availableDates = this.getAvailableDates();
@@ -296,13 +327,15 @@ class WhatsAppController {
    */
   async handleDateSelection(phone, text, session) {
     const dateIndex = parseInt(text.trim()) - 1;
-    const selectedDate = session.availableDates[dateIndex];
-
-    if (!selectedDate) {
+    
+    // Valida se é um número válido e está dentro do range
+    if (isNaN(dateIndex) || dateIndex < 0 || !session.availableDates || dateIndex >= session.availableDates.length) {
       await this.sendMessageSafely(phone,
         'Data inválida. Digite o número da data desejada.');
       return;
     }
+    
+    const selectedDate = session.availableDates[dateIndex];
 
     // Busca horarios disponiveis para a data selecionada
     // (Simulando duração - Idealmente o serviço teria uma duração no DB)
@@ -337,13 +370,15 @@ class WhatsAppController {
    */
   async handleTimeSelection(phone, text, session) {
     const timeIndex = parseInt(text.trim()) - 1;
-    const selectedTime = session.availableTimes[timeIndex];
-
-    if (!selectedTime) {
+    
+    // Valida se é um número válido e está dentro do range
+    if (isNaN(timeIndex) || timeIndex < 0 || !session.availableTimes || timeIndex >= session.availableTimes.length) {
       await this.sendMessageSafely(phone,
         'Horário inválido. Digite o número do horário desejado.');
       return;
     }
+    
+    const selectedTime = session.availableTimes[timeIndex];
 
     const appointmentDateTime = session.selectedDate.clone().hour(selectedTime.hour()).minute(selectedTime.minute());
 

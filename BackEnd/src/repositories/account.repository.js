@@ -499,17 +499,37 @@ module.exports = class accountRepository{
       // Remove caracteres não numéricos para garantir a busca
       const cleanPhone = phoneNumber.replace(/\D/g, '');
       
-      const phoneRecord = await Phone.findOne({
+      // Remove código do país (55) se presente para normalizar a busca
+      let phoneToSearch = cleanPhone;
+      if (cleanPhone.startsWith('55') && cleanPhone.length >= 12) {
+        phoneToSearch = cleanPhone.substring(2); // Remove "55"
+      }
+      
+      // Busca exata primeiro (mais eficiente)
+      let phoneRecord = await Phone.findOne({
         where: { 
-          phone: {
-            [Op.like]: `%${cleanPhone}` // Busca flexível
-          } 
+          phone: phoneToSearch
         },
         include: [{
           model: Account,
           include: [TypeAccount] // Inclui o tipo de conta
         }]
       });
+      
+      // Se não encontrou com busca exata, tenta busca flexível (para números antigos)
+      if (!phoneRecord) {
+        phoneRecord = await Phone.findOne({
+          where: { 
+            phone: {
+              [Op.like]: `%${phoneToSearch}` // Busca flexível apenas se necessário
+            } 
+          },
+          include: [{
+            model: Account,
+            include: [TypeAccount]
+          }]
+        });
+      }
       
       // Retorna o objeto Account se encontrado
       return phoneRecord ? phoneRecord.Account : null;
@@ -528,12 +548,28 @@ module.exports = class accountRepository{
     
     // Limpa o telefone para armazenamento
     const cleanPhone = phone.replace(/\D/g, '');
+    
+    // Garante que o telefone não tenha código do país
+    let phoneToStore = cleanPhone;
+    let dddToStore = ddd;
+    
+    // Se o telefone ainda tem código do país (55), remove
+    if (cleanPhone.startsWith('55') && cleanPhone.length >= 12) {
+      phoneToStore = cleanPhone.substring(2);
+      // Se não foi fornecido o DDD, extrai das posições 2-4 do número original
+      if (!dddToStore) {
+        dddToStore = cleanPhone.substring(2, 4);
+      }
+    } else if (!dddToStore && cleanPhone.length >= 10) {
+      // Se não tem código do país e não foi fornecido DDD, assume que os 2 primeiros são o DDD
+      dddToStore = cleanPhone.substring(0, 2);
+    }
 
     try {
       return await Phone.create({
         id: uuidv4(),
-        phone: cleanPhone, // Armazena o número limpo
-        ddd: ddd || cleanPhone.substring(2, 4), // Tenta extrair DDD
+        phone: phoneToStore, // Armazena o número sem código do país
+        ddd: dddToStore,
         type: type || 'whatsapp',
         active: new Date(),
         account_id_phone: account_id_phone
