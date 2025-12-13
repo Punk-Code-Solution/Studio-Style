@@ -71,7 +71,7 @@ module.exports = {
     if (!adminAccountId) {
       adminAccountId = uuidv4();
       // Usa senha padrão se ADMIN_PASSWORD não estiver definido
-      const adminPassword = process.env.ADMIN_PASSWORD || '123456';
+      const adminPassword = process.env.ADMIN_PASSWORD;
       const passwordHash = await bcrypt.hash(adminPassword, 10);
       await queryInterface.bulkInsert('Accounts', [{
         id: adminAccountId,

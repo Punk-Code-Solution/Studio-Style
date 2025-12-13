@@ -611,12 +611,15 @@ export class ScheduleFormModalComponent implements OnInit {
     }
   }
   
-  // Adicionada função para formatar a data para o input datetime-local
+  // Formata a data para o input datetime-local, ajustando para o fuso horário local (UTC-3)
   private formatDateForInput(dateString: string): string {
     if (!dateString) return '';
     const date = new Date(dateString);
+    // Ajusta para o fuso horário local (UTC-3)
+    const tzOffset = date.getTimezoneOffset() * 60000; // offset em milissegundos
+    const localISOTime = new Date(date.getTime() - tzOffset).toISOString();
     // Formato YYYY-MM-DDTHH:mm
-    return date.toISOString().slice(0, 16);
+    return localISOTime.slice(0, 16);
   }
 
   closeModal(): void {
