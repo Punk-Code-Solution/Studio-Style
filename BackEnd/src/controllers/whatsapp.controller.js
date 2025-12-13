@@ -326,32 +326,6 @@ class WhatsAppController {
       await this.sendMessageSafely(phone,
         '❌ Ocorreu um erro ao carregar os serviços. Por favor, tente novamente.');
     }
-    
-    this.setUserSession(phone, {
-      ...session,
-      step: 'select_date',
-      selectedService: cleanSelectedService,
-      availableDates: availableDates
-    })
-    
-    if (!session.services || !Array.isArray(session.services)) {
-      console.error('Nenhum serviço disponível na sessão');
-      await this.sendMessageSafely(phone, '❌ Erro ao carregar os serviços. Por favor, tente novamente.');
-      return;
-    }
-    
-    const selectedService = session.services[serviceIndex];
-    console.log('Serviço selecionado:', { serviceIndex, selectedService });
-
-    if (!selectedService) {
-      await this.sendMessageSafely(phone,
-        `❌ Opção inválida. Por favor, digite um número entre 1 e ${session.services.length}.`);
-      return;
-    }
-
-    try {
-      // Busca datas disponiveis (proximos 30 dias)
-      const availableDates = this.getAvailableDates();
       console.log('Datas disponíveis encontradas:', availableDates.length);
 
       if (!availableDates || availableDates.length === 0) {
