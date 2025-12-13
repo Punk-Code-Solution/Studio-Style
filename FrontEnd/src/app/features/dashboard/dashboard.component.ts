@@ -5,6 +5,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { User, UserService } from '../../core/services/user.service';
 import { SchedulesService, Schedule } from '../../core/services/schedules.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { LoggingService } from '../../core/services/logging.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -35,7 +36,8 @@ export class DashboardComponent implements OnInit {
     private router: Router,
     private schedulesService: SchedulesService,
     private userService: UserService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private loggingService: LoggingService
   ) {
     this.currentUser = this.authService.currentUser;
   }
@@ -56,7 +58,7 @@ export class DashboardComponent implements OnInit {
       await this.loadClients();
     } catch (err) {
       this.error = 'Erro ao carregar dados do dashboard';
-      console.error('Erro ao carregar dashboard:', err);
+      this.loggingService.error('Erro ao carregar dashboard', err);
       this.notificationService.error('Erro ao carregar dados do dashboard. Por favor, tente novamente.');
     } finally {
       this.isLoading = false;
@@ -68,7 +70,7 @@ export class DashboardComponent implements OnInit {
       this.schedulesService.getAllSchedules().subscribe({
         next: (schedules) => {
           if (!schedules || !Array.isArray(schedules)) {
-            console.warn('Nenhum agendamento retornado ou formato inválido');
+            this.loggingService.warn('Nenhum agendamento retornado ou formato inválido');
             this.appointments = [];
             this.totalAppointmentsThisMonth = 0;
             this.completedAppointmentsThisMonth = 0;
@@ -84,7 +86,7 @@ export class DashboardComponent implements OnInit {
               const scheduleDateStr = new Date(schedule.date_and_houres).toISOString().split('T')[0];
               return scheduleDateStr === todayStr;
             } catch (e) {
-              console.warn('Erro ao processar data do agendamento:', schedule.id, e);
+              this.loggingService.warn('Erro ao processar data do agendamento', { scheduleId: schedule.id, error: e });
               return false;
             }
           });
@@ -105,13 +107,13 @@ export class DashboardComponent implements OnInit {
           this.completedAppointmentsThisMonth = monthSchedules.filter(s => !!s.finished).length;
         },
         error: (error) => {
-          console.error('Erro ao carregar agendamentos:', error);
+          this.loggingService.error('Erro ao carregar agendamentos', error);
           this.error = 'Erro ao carregar agendamentos';
           this.notificationService.error('Erro ao carregar agendamentos. Por favor, tente novamente.');
         }
       });
     } catch (error) {
-      console.error('Erro ao carregar agendamentos:', error);
+      this.loggingService.error('Erro ao carregar agendamentos', error);
       this.error = 'Erro ao carregar agendamentos';
     }
   }
@@ -121,7 +123,7 @@ export class DashboardComponent implements OnInit {
       this.userService.getUsers().subscribe({
         next: (users) => {
           if (!users || !Array.isArray(users)) {
-            console.warn('Nenhum usuário retornado ou formato inválido');
+            this.loggingService.warn('Nenhum usuário retornado ou formato inválido');
             this.totalClients = 0;
             this.newClientsThisMonth = 0;
             return;
@@ -130,39 +132,41 @@ export class DashboardComponent implements OnInit {
           const now = new Date();
           const currentMonth = now.getMonth();
           const currentYear = now.getFullYear();
-          
+
           const clients = users.filter(u => u && u.TypeAccount?.type === 'client');
           this.totalClients = clients.length;
-          
+
+          this.loggingService.log('Clientes carregados', { count: clients.length });
+
           this.newClientsThisMonth = clients.filter(u => {
             if (!u || !u.createdAt) {
               return false;
             }
-            
+
             try {
               const created = new Date(u.createdAt);
               // Verifica se a data é válida
               if (isNaN(created.getTime())) {
-                console.warn('Data de criação inválida para cliente:', u.id, u.createdAt);
+                this.loggingService.warn('Data de criação inválida para cliente', { userId: u.id });
                 return false;
               }
-              
+
               return created.getMonth() === currentMonth && created.getFullYear() === currentYear;
             } catch (e) {
-              console.warn('Erro ao processar data de criação do cliente:', u.id, u.createdAt, e);
+              this.loggingService.warn('Erro ao processar data de criação do cliente', { userId: u.id, error: e });
               return false;
             }
           }).length;
         },
         error: (error) => {
-          console.error('Erro ao carregar usuários:', error);
+          this.loggingService.error('Erro ao carregar usuários', error);
           this.totalClients = 0;
           this.newClientsThisMonth = 0;
           this.notificationService.error('Erro ao carregar dados de clientes.');
         }
       });
     } catch (error) {
-      console.error('Erro ao carregar usuários:', error);
+      this.loggingService.error('Erro ao carregar clientes', error);
       this.totalClients = 0;
       this.newClientsThisMonth = 0;
     }
@@ -173,7 +177,7 @@ export class DashboardComponent implements OnInit {
     try {
       return new Date(date).toLocaleDateString('pt-BR');
     } catch (e) {
-      console.warn('Erro ao formatar data:', date, e);
+      this.loggingService.warn('Erro ao formatar data', { date, error: e });
       return 'Data inválida';
     }
   }
@@ -213,14 +217,14 @@ export class DashboardComponent implements OnInit {
         },
         error: (error) => {
           const errorMsg = error?.error?.message || error?.message || 'Erro desconhecido';
-          console.error('Erro ao atualizar status:', error);
+          this.loggingService.error('Erro ao atualizar status do agendamento', error);
           // Reverter para o status anterior
           select.value = this.getStatusValue(appointment);
           this.notificationService.error(`Erro ao atualizar status: ${errorMsg}`);
         }
       });
     } catch (err) {
-      console.error('Erro ao atualizar status:', err);
+      this.loggingService.error('Erro ao atualizar status do agendamento', err);
       // Reverter para o status anterior
       select.value = this.getStatusValue(appointment);
     }
@@ -284,7 +288,7 @@ export class DashboardComponent implements OnInit {
     try {
       const date = new Date(dateTime);
       if (isNaN(date.getTime())) {
-        console.warn('Data inválida:', dateTime);
+        this.loggingService.warn('Data inválida ao formatar hora');
         return '--:--';
       }
       return date.toLocaleTimeString('pt-BR', {
@@ -292,7 +296,7 @@ export class DashboardComponent implements OnInit {
         minute: '2-digit'
       });
     } catch (e) {
-      console.warn('Erro ao formatar hora:', dateTime, e);
+      this.loggingService.warn('Erro ao formatar hora', { dateTime, error: e });
       return '--:--';
     }
   }

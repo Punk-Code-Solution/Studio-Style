@@ -16,6 +16,7 @@ class WhatsAppController {
   constructor() {
     this.whatsappService = new WhatsAppService();
     this.userSessions = new Map(); // Armazena sessoes de usuarios
+    this.SESSION_TIMEOUT = 15 * 60 * 1000; // 15 minutos de inatividade
 
     // Instanciando os repositórios
     this.accountRepo = new AccountRepository();
@@ -153,8 +154,11 @@ class WhatsAppController {
    * Processa mensagem do usuario
    */
   async processMessage(phone, text, contact) {
+    // Remove o prefixo +55 do telefone para armazenamento
+    const cleanPhone = phone.startsWith('55') ? phone.substring(2) : phone;
+    
     // 1. Identifica o cliente (Account UUID) antes de qualquer ação
-    const clientAccount = await this.getOrCreateClient(phone, contact.name);
+    const clientAccount = await this.getOrCreateClient(cleanPhone, contact.name);
 
     if (!clientAccount) {
       await this.sendMessageSafely(phone,
@@ -172,18 +176,20 @@ class WhatsAppController {
     // Se não há sessão ativa, trata como primeira interação
     const isFirstInteraction = !session || !session.step;
 
-    // Comandos principais
-    if (cleanText === 'menu' || cleanText === 'inicio' || cleanText === 'comecar') {
+    // Comandos principais - agora aceita números também
+    const normalizedText = cleanText.replace(/[^a-z0-9\s]/gi, '').toLowerCase();
+    
+    if (normalizedText === 'menu' || normalizedText === 'inicio' || normalizedText === 'comecar' || normalizedText === '0') {
       await this.sendMainMenu(phone, clientName, isFirstInteraction);
       this.setUserSession(phone, { step: 'main_menu', clientId, clientName });
     }
-    else if (cleanText === 'agendar' || cleanText === 'marcar') {
+    else if (normalizedText === 'agendar' || normalizedText === 'marcar' || normalizedText === '1') {
       await this.startSchedulingProcess(phone, clientId, clientName);
     }
-    else if (cleanText === 'meus agendamentos' || cleanText === 'agendamentos') {
+    else if (normalizedText === 'meus agendamentos' || normalizedText === 'agendamentos' || normalizedText === '2') {
       await this.showUserSchedules(phone, clientId, clientName);
     }
-    else if (cleanText === 'cancelar' || cleanText === 'sair') {
+    else if (normalizedText === 'cancelar' || normalizedText === 'sair' || normalizedText === '9') {
       await this.cancelProcess(phone);
     }
     else {
@@ -479,24 +485,20 @@ class WhatsAppController {
    * Envia mensagem de boas-vindas inicial
    */
   async sendWelcomeMessage(phone, clientName = '') {
-    const greeting = clientName ? `Olá ${clientName}!` : 'Olá!';
-    
-    const welcomeMessage = `${greeting}\n\n` +
-      'Bem-vindo ao Studio & Style! ✨\n\n' +
-      'Estou aqui para ajudá-lo com seus agendamentos.\n\n' +
-      'Aguarde um momento enquanto carrego o menu...';
-    
-    await this.sendMessageSafely(phone, welcomeMessage);
-    
+    const greeting = clientName ? `Olá, ${clientName}!` : 'Olá!';
+    const message = `${greeting} Eu sou o assistente virtual do *Salão Fio a Fio*.\n\n` +
+      'Como posso te ajudar hoje?\n' +
+      'Digite *menu* a qualquer momento para ver as opções.';
+      
     // Pequeno delay para melhorar a experiência do usuário
     await new Promise(resolve => setTimeout(resolve, 1000));
+    return this.sendMessageSafely(phone, message);
   }
 
   /**
    * Envia menu principal
    */
   async sendMainMenu(phone, clientName = '', showWelcome = false) {
-    // Se showWelcome for true, envia a mensagem de boas-vindas primeiro
     if (showWelcome) {
       await this.sendWelcomeMessage(phone, clientName);
     }
@@ -505,7 +507,7 @@ class WhatsAppController {
       'Escolha uma opção:\n\n' +
       '1️⃣ AGENDAR um serviço\n' +
       '2️⃣ MEUS AGENDAMENTOS\n' +
-      '3️⃣ CANCELAR\n\n' +
+      '9️⃣ CANCELAR\n\n' +
       'Digite o *número* ou a *palavra* da opção desejada.';
 
     await this.sendMessageSafely(phone, message);
@@ -609,14 +611,34 @@ class WhatsAppController {
    * Gerencia sessoes de usuarios
    */
   getUserSession(phone) {
-    return this.userSessions.get(phone);
+    const session = this.userSessions.get(phone);
+    
+    // Verifica se a sessão expirou
+    if (session && (Date.now() - session.lastActivity > this.SESSION_TIMEOUT)) {
+      this.clearUserSession(phone);
+      return null;
+    }
+    
+    return session || null;
   }
 
   setUserSession(phone, session) {
-    this.userSessions.set(phone, { ...session, phone });
+    this.userSessions.set(phone, { 
+      ...session, 
+      lastActivity: Date.now(),
+      // Configura o timeout para limpar a sessão
+      timeoutId: setTimeout(() => {
+        this.sendMessageSafely(phone, '⚠️ *Sessão encerrada por inatividade*\n\nSua sessão foi encerrada por ficar muito tempo sem interação.\n\nDigite *menu* para começar novamente.');
+        this.clearUserSession(phone);
+      }, this.SESSION_TIMEOUT)
+    });
   }
 
   clearUserSession(phone) {
+    const session = this.userSessions.get(phone);
+    if (session && session.timeoutId) {
+      clearTimeout(session.timeoutId);
+    }
     this.userSessions.delete(phone);
   }
 }
