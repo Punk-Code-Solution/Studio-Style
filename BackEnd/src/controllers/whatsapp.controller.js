@@ -1,4 +1,4 @@
-﻿/* eslint-disable import/order */
+/* eslint-disable import/order */
 const WhatsAppService = require('../services/whatsapp.service');
 const { Schedules, Service, Account, Phone, TypeAccount } = require('../Database/models'); // Modelos do DB
 const moment = require('moment');
@@ -16,6 +16,7 @@ class WhatsAppController {
   constructor() {
     this.whatsappService = new WhatsAppService();
     this.userSessions = new Map(); // Armazena sessoes de usuarios
+    this.SESSION_TIMEOUT = 15 * 60 * 1000; // 15 minutos de inatividade
 
     // Instanciando os repositórios
     this.accountRepo = new AccountRepository();
@@ -163,12 +164,51 @@ class WhatsAppController {
     }
   }
 
+  /**
+   * Envia mensagem de boas-vindas ao usuário
+   */
+  async sendWelcomeMessage(phone, clientName = '') {
+    const greeting = clientName ? `Olá, ${clientName}!` : 'Olá!';
+    const message = `${greeting} Eu sou o assistente virtual do *Salão Fio a Fio*.\n\n` +
+      'Como posso te ajudar hoje?\n' +
+      'Digite *MENU* para ver as opções disponíveis.';
+    
+    // Pequeno delay para melhorar a experiência do usuário
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return this.sendMessageSafely(phone, message);
+  }
+
+  /**
+   * Envia o menu principal para o usuário
+   */
+  async sendMainMenu(phone, clientName = '', showWelcome = false) {
+    try {
+      if (showWelcome) {
+        await this.sendWelcomeMessage(phone, clientName);
+      }
+
+      const message = '📋 *MENU PRINCIPAL*\n\n' +
+        'Escolha uma opção:\n\n' +
+        '1️⃣ AGENDAR um serviço\n' +
+        '2️⃣ MEUS AGENDAMENTOS\n' +
+        '9️⃣ CANCELAR\n\n' +
+        'Digite o *número* ou a *palavra* da opção desejada.';
+
+      await this.sendMessageSafely(phone, message);
+    } catch (error) {
+      console.error('Erro ao enviar menu principal:', error);
+      // Tenta enviar uma mensagem de erro genérica
+      await this.sendMessageSafely(phone, '❌ Ocorreu um erro ao carregar o menu. Por favor, tente novamente.');
+      throw error;
+    }
+  }
 
   /**
    * Processa mensagem do usuario
    */
   async processMessage(phone, text, contact) {
     // 1. Identifica o cliente (Account UUID) antes de qualquer ação
+    // O getOrCreateClient normaliza o telefone internamente
     const clientAccount = await this.getOrCreateClient(phone, contact.name);
 
     if (!clientAccount) {
@@ -187,18 +227,20 @@ class WhatsAppController {
     // Se não há sessão ativa, trata como primeira interação
     const isFirstInteraction = !session || !session.step;
 
-    // Comandos principais
-    if (cleanText === 'menu' || cleanText === 'inicio' || cleanText === 'comecar') {
+    // Comandos principais - agora aceita números também
+    const normalizedText = cleanText.replace(/[^a-z0-9\s]/gi, '').toLowerCase();
+    
+    if (normalizedText === 'menu' || normalizedText === 'inicio' || normalizedText === 'comecar' || normalizedText === '0') {
       await this.sendMainMenu(phone, clientName, isFirstInteraction);
       this.setUserSession(phone, { step: 'main_menu', clientId, clientName });
     }
-    else if (cleanText === 'agendar' || cleanText === 'marcar') {
+    else if (normalizedText === 'agendar' || normalizedText === 'marcar' || normalizedText === '1') {
       await this.startSchedulingProcess(phone, clientId, clientName);
     }
-    else if (cleanText === 'meus agendamentos' || cleanText === 'agendamentos') {
+    else if (normalizedText === 'meus agendamentos' || normalizedText === 'agendamentos' || normalizedText === '2') {
       await this.showUserSchedules(phone, clientId, clientName);
     }
-    else if (cleanText === 'cancelar' || cleanText === 'sair') {
+    else if (normalizedText === 'cancelar' || normalizedText === 'sair' || normalizedText === '9') {
       await this.cancelProcess(phone);
     }
     else {
@@ -214,6 +256,61 @@ class WhatsAppController {
   }
 
   /**
+   * Inicia o processo de agendamento
+   */
+  async startSchedulingProcess(phone, clientId, clientName) {
+    try {
+      // Busca serviços do banco de dados
+      const services = await this.serviceRepo.findAll();
+      console.log('Serviços encontrados:', services?.length);
+
+      if (!services || services.length === 0) {
+        await this.sendMessageSafely(phone,
+          '❌ Desculpe, não há serviços disponíveis para agendamento no momento.');
+        return;
+      }
+
+      // Filtra serviços válidos (com preço e nome)
+      const validServices = services.filter(s => s && s.service && s.price != null);
+      console.log('Serviços válidos:', validServices.length);
+
+      if (validServices.length === 0) {
+        await this.sendMessageSafely(phone,
+          '❌ Nenhum serviço válido encontrado para agendamento.');
+        return;
+      }
+
+      const message = `Olá ${clientName}! \n\nEscolha o serviço que deseja agendar:\n\n` +
+        validServices.map((s, index) => 
+          `${index + 1}. ${s.service} (R$ ${s.price.toFixed(2)})`
+        ).join('\n') +
+        '\n\nDigite o número do serviço desejado.';
+
+      await this.sendMessageSafely(phone, message);
+      
+      // Cria uma cópia limpa dos serviços, removendo métodos e metadados do Sequelize
+      const cleanServices = validServices.map(service => ({
+        id: service.id,
+        service: service.service,
+        price: service.price,
+        duration: service.duration || 60 // Valor padrão de 60 minutos se não houver duração
+      }));
+      
+      console.log('Configurando sessão com serviços:', cleanServices.length);
+      this.setUserSession(phone, {
+        step: 'select_service',
+        services: cleanServices,
+        clientId: clientId,
+        clientName: clientName
+      });
+    } catch (error) {
+      console.error('Erro ao iniciar processo de agendamento:', error);
+      await this.sendMessageSafely(phone,
+        '❌ Ocorreu um erro ao carregar os serviços. Por favor, tente novamente.');
+    }
+  }
+
+  /**
    * Processa passos da sessao de agendamento
    */
   async processSessionStep(phone, text, session) {
@@ -225,293 +322,244 @@ class WhatsAppController {
       return;
     }
 
-    switch (session.step) {
-      case 'main_menu':
-        // Trata números no menu principal
-        const menuOption = text.trim();
-        if (menuOption === '1' || menuOption.toLowerCase() === 'agendar' || menuOption.toLowerCase() === 'marcar') {
-          await this.startSchedulingProcess(phone, session.clientId, session.clientName);
-        } else if (menuOption === '2' || menuOption.toLowerCase() === 'meus agendamentos' || menuOption.toLowerCase() === 'agendamentos') {
-          await this.showUserSchedules(phone, session.clientId, session.clientName);
-        } else if (menuOption === '3' || menuOption.toLowerCase() === 'cancelar' || menuOption.toLowerCase() === 'sair') {
-          await this.cancelProcess(phone);
-        } else {
-          await this.sendMessageSafely(phone,
-            'Opção inválida. Digite o número (1, 2 ou 3) ou o nome da opção desejada.');
-        }
-        break;
-      case 'select_service':
-        await this.handleServiceSelection(phone, text, session);
-        break;
-      case 'select_date':
-        await this.handleDateSelection(phone, text, session);
-        break;
-      case 'select_time':
-        await this.handleTimeSelection(phone, text, session);
-        break;
-      case 'confirm_booking':
-        await this.handleBookingConfirmation(phone, text, session);
-        break;
-      default:
-        await this.sendMainMenu(phone, session?.clientName || '', false);
+    try {
+      switch (session.step) {
+        case 'main_menu':
+          // Trata números no menu principal
+          const menuOption = text.trim();
+          if (menuOption === '1' || menuOption.toLowerCase() === 'agendar' || menuOption.toLowerCase() === 'marcar') {
+            await this.startSchedulingProcess(phone, session.clientId, session.clientName);
+          } else if (menuOption === '2' || menuOption.toLowerCase() === 'meus agendamentos' || menuOption.toLowerCase() === 'agendamentos') {
+            await this.showUserSchedules(phone, session.clientId, session.clientName);
+          } else if (menuOption === '9' || menuOption.toLowerCase() === 'cancelar' || menuOption.toLowerCase() === 'sair') {
+            await this.cancelProcess(phone);
+          } else {
+            await this.sendMessageSafely(phone,
+              'Opção inválida. Digite o número (1, 2 ou 9) ou o nome da opção desejada.');
+          }
+          break;
+        case 'select_service':
+          await this.handleServiceSelection(phone, text, session);
+          break;
+        case 'select_date':
+          await this.handleDateSelection(phone, text, session);
+          break;
+        case 'select_time':
+          await this.handleTimeSelection(phone, text, session);
+          break;
+        case 'confirm_booking':
+          await this.handleBookingConfirmation(phone, text, session);
+          break;
+        default:
+          await this.sendMainMenu(phone, session?.clientName || '', false);
+      }
+    } catch (error) {
+      console.error('Erro ao processar etapa da sessão:', error);
+      await this.sendMessageSafely(phone, 
+        '❌ Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente.');
+      
+      // Volta para o menu principal em caso de erro
+      await this.sendMainMenu(phone, session?.clientName || '', false);
     }
   }
 
   /**
-   * Inicia processo de agendamento (REFATORADO)
-   */
-  async startSchedulingProcess(phone, clientId, clientName) {
-    // Busca serviços do banco de dados
-    const services = await this.serviceRepo.findAll();
-
-    if (!services || services.length === 0) {
-        await this.sendMessageSafely(phone,
-        '❌ Desculpe, não há serviços disponíveis para agendamento no momento.');
-      return;
-    }
-
-    // Filtra serviços válidos (com preço e nome)
-    const validServices = services.filter(s => s.service && s.price != null);
-
-    const message = `Olá ${clientName}! \n\nEscolha o serviço que deseja agendar:\n\n` +
-      validServices.map((s, index) => 
-        `${index + 1}. ${s.service} (R$ ${s.price.toFixed(2)})`
-      ).join('\n') +
-      '\n\nDigite o número do serviço desejado.';
-
-    await this.sendMessageSafely(phone, message);
-    this.setUserSession(phone, {
-      step: 'select_service',
-      services: validServices,
-      clientId: clientId,
-      clientName: clientName
-    });
-  }
-
-  /**
-   * Processa selecao de servico (REFATORADO)
+   * Processa seleção de serviço
    */
   async handleServiceSelection(phone, text, session) {
-    const serviceIndex = parseInt(text.trim()) - 1;
-    
-    // Valida se é um número válido e está dentro do range
-    if (isNaN(serviceIndex) || serviceIndex < 0 || !session.services || serviceIndex >= session.services.length) {
-      await this.sendMessageSafely(phone,
-        'Opção inválida. Digite o número do serviço desejado.');
-      return;
+    try {
+      const serviceIndex = parseInt(text.trim(), 10) - 1;
+      
+      if (isNaN(serviceIndex) || serviceIndex < 0 || !session.services || serviceIndex >= session.services.length) {
+        await this.sendMessageSafely(phone, '❌ Serviço inválido. Por favor, escolha um serviço da lista.');
+        return;
+      }
+      
+      const selectedService = session.services[serviceIndex];
+      const availableDates = this.getAvailableDates();
+      
+      if (!availableDates || availableDates.length === 0) {
+        await this.sendMessageSafely(phone, '❌ Não há datas disponíveis para agendamento no momento.');
+        return;
+      }
+      
+      const message = `Serviço selecionado: ${selectedService.service}\n\n` +
+        'Escolha uma data para o agendamento:\n\n' +
+        availableDates.map((date, index) => 
+          `${index + 1}. ${date.format('DD/MM/YYYY')}`
+        ).join('\n') +
+        '\n\nDigite o número da data desejada.';
+        
+      await this.sendMessageSafely(phone, message);
+      
+      this.setUserSession(phone, {
+        ...session,
+        step: 'select_date',
+        selectedService: selectedService,
+        availableDates: availableDates
+      });
+      
+    } catch (error) {
+      console.error('Erro ao processar seleção de serviço:', error);
+      await this.sendMessageSafely(phone, 
+        '❌ Ocorreu um erro ao processar sua seleção. Por favor, tente novamente.');
     }
-    
-    const selectedService = session.services[serviceIndex];
-
-    // Busca datas disponiveis (proximos 30 dias)
-    const availableDates = this.getAvailableDates();
-
-    const message = `Serviço selecionado: ${selectedService.service}\n\n` +
-      'Escolha uma data:\n\n' +
-      availableDates.map((date, index) =>
-        `${index + 1}. ${date.format('DD/MM/YYYY')}`
-      ).join('\n') +
-      '\n\nDigite o número da data desejada.';
-
-    await this.sendMessageSafely(phone, message);
-    this.setUserSession(phone, {
-      ...session,
-      step: 'select_date',
-      selectedService: selectedService, // selectedService agora é um objeto { id, service, price, ... }
-      availableDates: availableDates
-    });
   }
 
   /**
-   * Processa selecao de data (REFATORADO)
+   * Processa seleção de data
    */
   async handleDateSelection(phone, text, session) {
-    const dateIndex = parseInt(text.trim()) - 1;
-    
-    // Valida se é um número válido e está dentro do range
-    if (isNaN(dateIndex) || dateIndex < 0 || !session.availableDates || dateIndex >= session.availableDates.length) {
-      await this.sendMessageSafely(phone,
-        'Data inválida. Digite o número da data desejada.');
-      return;
+    try {
+      const dateIndex = parseInt(text.trim(), 10) - 1;
+      
+      if (isNaN(dateIndex) || dateIndex < 0 || !session.availableDates || dateIndex >= session.availableDates.length) {
+        await this.sendMessageSafely(phone, '❌ Data inválida. Por favor, escolha uma data da lista.');
+        return;
+      }
+      
+      const selectedDate = session.availableDates[dateIndex];
+      const duration = session.selectedService?.duration || 60;
+      const availableTimes = await this.getAvailableTimes(selectedDate, duration);
+      
+      if (!availableTimes || availableTimes.length === 0) {
+        await this.sendMessageSafely(phone, '❌ Não há horários disponíveis para a data selecionada. Por favor, escolha outra data.');
+        return;
+      }
+      
+      const message = `Data selecionada: ${selectedDate.format('DD/MM/YYYY')}\n\n` +
+        'Escolha um horário:\n\n' +
+        availableTimes.map((time, index) => 
+          `${index + 1}. ${time.format('HH:mm')}`
+        ).join('\n') +
+        '\n\nDigite o número do horário desejado.';
+        
+      await this.sendMessageSafely(phone, message);
+      
+      this.setUserSession(phone, {
+        ...session,
+        step: 'select_time',
+        selectedDate: selectedDate,
+        availableTimes: availableTimes,
+        duration: duration
+      });
+      
+    } catch (error) {
+      console.error('Erro ao processar seleção de data:', error);
+      await this.sendMessageSafely(phone, 
+        '❌ Ocorreu um erro ao processar a data selecionada. Por favor, tente novamente.');
     }
-    
-    const selectedDate = session.availableDates[dateIndex];
-
-    // Busca horarios disponiveis para a data selecionada
-    // (Simulando duração - Idealmente o serviço teria uma duração no DB)
-    const duration = 60; // Duração padrão de 60 min
-    const availableTimes = await this.getAvailableTimes(selectedDate, duration);
-
-    if (availableTimes.length === 0) {
-      await this.sendMessageSafely(phone,
-        'Não há horários disponíveis para esta data. Escolha outra data.');
-      return;
-    }
-
-    const message = `Data selecionada: ${selectedDate.format('DD/MM/YYYY')}\n\n` +
-      'Horários disponíveis:\n\n' +
-      availableTimes.map((time, index) =>
-        `${index + 1}. ${time.format('HH:mm')}`
-      ).join('\n') +
-      '\n\nDigite o número do horário desejado.';
-
-    await this.sendMessageSafely(phone, message);
-    this.setUserSession(phone, {
-      ...session,
-      step: 'select_time',
-      selectedDate: selectedDate,
-      availableTimes: availableTimes,
-      duration: duration // Armazena a duração
-    });
   }
 
   /**
-   * Processa selecao de horario (REFATORADO)
+   * Processa seleção de horário
    */
   async handleTimeSelection(phone, text, session) {
-    const timeIndex = parseInt(text.trim()) - 1;
-    
-    // Valida se é um número válido e está dentro do range
-    if (isNaN(timeIndex) || timeIndex < 0 || !session.availableTimes || timeIndex >= session.availableTimes.length) {
-      await this.sendMessageSafely(phone,
-        'Horário inválido. Digite o número do horário desejado.');
-      return;
+    try {
+      const timeIndex = parseInt(text.trim(), 10) - 1;
+      
+      if (isNaN(timeIndex) || timeIndex < 0 || !session.availableTimes || timeIndex >= session.availableTimes.length) {
+        await this.sendMessageSafely(phone, '❌ Horário inválido. Por favor, escolha um horário da lista.');
+        return;
+      }
+      
+      const selectedTime = session.availableTimes[timeIndex];
+      const appointmentDateTime = selectedTime.clone();
+      
+      // Verifica se ainda há vagas disponíveis
+      const duration = session.duration || session.selectedService?.duration || 60;
+      const isAvailable = await this.checkAvailability(appointmentDateTime, duration);
+
+      if (!isAvailable) {
+        await this.sendMessageSafely(phone,
+          '❌ Este horário não está mais disponível. Escolha outro horário.');
+        return;
+      }
+      
+      // Atualiza a sessão com os dados do agendamento
+      this.setUserSession(phone, {
+        ...session,
+        step: 'confirm_booking',
+        appointmentDateTime: appointmentDateTime
+      });
+      
+      // Envia mensagem de confirmação
+      const message = `📅 *Confirme seu agendamento*\n\n` +
+        `📌 Serviço: ${session.selectedService.service}\n` +
+        `📅 Data: ${appointmentDateTime.format('DD/MM/YYYY')}\n` +
+        `⏰ Horário: ${appointmentDateTime.format('HH:mm')}\n\n` +
+        'Digite *CONFIRMAR* para confirmar ou *CANCELAR* para cancelar.';
+        
+      await this.sendMessageSafely(phone, message);
+      
+    } catch (error) {
+      console.error('Erro ao processar seleção de horário:', error);
+      await this.sendMessageSafely(phone, 
+        '❌ Ocorreu um erro ao processar o horário selecionado. Por favor, tente novamente.');
     }
-    
-    const selectedTime = session.availableTimes[timeIndex];
-
-    const appointmentDateTime = session.selectedDate.clone().hour(selectedTime.hour()).minute(selectedTime.minute());
-
-    // Verifica se ainda ha vagas disponiveis
-    const isAvailable = await this.checkAvailability(appointmentDateTime, session.duration);
-
-    if (!isAvailable) {
-      await this.sendMessageSafely(phone,
-        'Este horário não está mais disponível. Escolha outro horário.');
-      return;
-    }
-
-    const message = `Confirmação do Agendamento:\n\n` +
-      `Cliente: ${session.clientName}\n` +
-      `Serviço: ${session.selectedService.service}\n` +
-      `Data: ${appointmentDateTime.format('DD/MM/YYYY')}\n` +
-      `Horário: ${appointmentDateTime.format('HH:mm')}\n` +
-      `Duração Aprox.: ${session.duration} minutos\n\n` +
-      `Digite "CONFIRMAR" para confirmar ou "CANCELAR" para cancelar.`;
-
-    await this.sendMessageSafely(phone, message);
-    this.setUserSession(phone, {
-      ...session,
-      step: 'confirm_booking',
-      appointmentDateTime: appointmentDateTime
-    });
   }
 
   /**
-   * Processa confirmacao do agendamento (REFATORADO)
+   * Processa confirmação de agendamento
    */
   async handleBookingConfirmation(phone, text, session) {
-    const cleanText = text.toLowerCase().trim();
-
-    if (cleanText === 'confirmar') {
-      try {
-        // Validações antes de criar o agendamento
-        if (!session || !session.selectedService || !session.selectedService.id) {
-          await this.sendMessageSafely(phone, 
-            '❌ Erro: Serviço não encontrado. Por favor, inicie um novo agendamento.');
-          this.clearUserSession(phone);
-          return;
-        }
-
-        if (!session.appointmentDateTime) {
-          await this.sendMessageSafely(phone, 
-            '❌ Erro: Data e horário não encontrados. Por favor, inicie um novo agendamento.');
-          this.clearUserSession(phone);
-          return;
-        }
-
-        // 1. Cria o agendamento (Schedules)
+    try {
+      const cleanText = text.trim().toLowerCase();
+      
+      if (cleanText === 'confirmar' || cleanText === 'confirm') {
+        // Cria o agendamento no banco de dados
         const schedule = await this.createSchedule(session);
         
         if (!schedule || !schedule.id) {
-          throw new Error('Falha ao criar agendamento no banco de dados');
-        }
-        
-        // 2. Associa o serviço (Service) ao agendamento (Schedules)
-        //    usando a tabela pivo (Schedule_Service)
-        const serviceId = session.selectedService.id; // UUID do serviço
-        const serviceAssociation = await this.schedulesServiceRepo.addSchedule_Service(schedule.id, [serviceId]);
-
-        // Se a associação falhar, remove o agendamento criado (rollback)
-        if (!serviceAssociation) {
-          // Tenta remover o agendamento criado
-          try {
-            await Schedules.destroy({ where: { id: schedule.id } });
-          } catch (destroyError) {
-            console.error('Erro ao remover agendamento após falha na associação de serviço:', destroyError);
-          }
-          throw new Error('Falha ao associar serviço ao agendamento');
+          throw new Error('Falha ao criar agendamento');
         }
 
-        const message = `✅ Agendamento confirmado com sucesso!\n\n` +
+        // Envia mensagem de confirmação
+        const message = `✅ *Agendamento confirmado!*\n\n` +
+          `📌 Serviço: ${session.selectedService.service}\n` +
           `📅 Data: ${session.appointmentDateTime.format('DD/MM/YYYY')}\n` +
-          ` Horário: ${session.appointmentDateTime.format('HH:mm')}\n` +
-          `✂️ Serviço: ${session.selectedService.service}\n\n` +
-          `Obrigado por escolher nosso salão! ✨\n\n` +
-          `Digite "MENU" para voltar ao início.`;
-
+          `⏰ Horário: ${session.appointmentDateTime.format('HH:mm')}\n\n` +
+          'Obrigado por agendar conosco! Estamos ansiosos para atendê-lo.\n\n' +
+          'Digite *MENU* para voltar ao início.';
+          
         await this.sendMessageSafely(phone, message);
         
-        // Emitir evento Socket.IO para atualizar Dashboard em tempo real
-        try {
-          const { emitScheduleCreated } = require('../utils/socket.io');
-          // Buscar o agendamento completo com relacionamentos
-          const SchedulesRepository = require('../repositories/schedules.repository');
-          const schedulesRepo = new SchedulesRepository();
-          const fullSchedule = await schedulesRepo.findSchedules(schedule.id);
-          if (fullSchedule) {
-            emitScheduleCreated(fullSchedule);
-          }
-        } catch (socketError) {
-          // Não falhar a criação se o Socket.IO não estiver disponível
-          console.warn('Erro ao emitir evento Socket.IO:', socketError.message);
-        }
-        
-        // Limpa a sessao
+        // Limpa a sessão
         this.clearUserSession(phone);
-        
-      } catch (error) {
-        console.error('Erro ao criar agendamento:', error);
+      } else if (cleanText === 'cancelar' || cleanText === 'cancel') {
+        await this.cancelProcess(phone);
+      } else {
+        // Se a mensagem não for nem confirmar nem cancelar, pede confirmação novamente
         await this.sendMessageSafely(phone, 
-          '❌ Erro ao confirmar agendamento. Tente novamente mais tarde.');
-        // Não limpa a sessão em caso de erro, permitindo que o usuário tente novamente
+          '❌ Opção inválida. Por favor, digite *CONFIRMAR* para confirmar ou *CANCELAR* para cancelar o agendamento.');
       }
-    } else if (cleanText === 'cancelar') {
-      await this.cancelProcess(phone);
-    } else {
-      await this.sendMessageSafely(phone,
-        'Digite "CONFIRMAR" para confirmar ou "CANCELAR" para cancelar.');
+      
+    } catch (error) {
+      console.error('Erro ao processar confirmação de agendamento:', error);
+      await this.sendMessageSafely(phone, 
+        '❌ Ocorreu um erro ao processar sua confirmação. Por favor, tente novamente.');
+      
+      // Volta para o menu principal em caso de erro
+      await this.sendMainMenu(phone, session?.clientName || '', false);
     }
   }
 
   /**
-   * Mostra agendamentos do usuario (REFATORADO)
+   * Mostra agendamentos do usuário
    */
   async showUserSchedules(phone, clientId, clientName) {
     try {
-      // Busca agendamentos do usuario pelo UUID (clientId)
       const schedules = await Schedules.findAll({
         where: {
-          client_id_schedules: clientId, // Usa o UUID
+          client_id_schedules: clientId,
           date_and_houres: {
-            [Op.gte]: new Date(), // Apenas agendamentos futuros
+            [Op.gte]: new Date() // Apenas agendamentos futuros
           }
         },
         include: [{
           model: Service,
           as: 'Services',
-          attributes: ['service', 'price'], // Puxa nome e preço do serviço
-          through: { attributes: [] } // Não puxe dados da tabela pivo
+          through: { attributes: [] } // Não inclui dados da tabela de junção
         }],
         order: [['date_and_houres', 'ASC']],
         limit: 5 // Limita a 5 agendamentos
@@ -520,183 +568,249 @@ class WhatsAppController {
       if (!schedules || schedules.length === 0) {
         await this.sendMessageSafely(phone,
           `Olá ${clientName}, você não possui agendamentos futuros.`);
-        return;
+      } else {
+        let message = `📅 *Seus próximos agendamentos*\n\n`;
+        
+        schedules.forEach((schedule, index) => {
+          const date = moment(schedule.date_and_houres);
+          message += `*${index + 1}.* ${date.format('DD/MM/YYYY [às] HH:mm')}\n`;
+          
+          if (schedule.Services && schedule.Services.length > 0) {
+            message += `   - ${schedule.Services.map(s => s.service).join(', ')}\n\n`;
+          } else {
+            message += '\n';
+          }
+        });
+        
+        message += 'Digite *MENU* para voltar ao início.';
+        await this.sendMessageSafely(phone, message);
       }
-
-      let message = `Olá ${clientName}, seus próximos agendamentos:\n\n`;
-
-      schedules.forEach((schedule, index) => {
-        const date = moment(schedule.date_and_houres);
-        message += `*${index + 1}. ${date.format('DD/MM/YYYY')} às ${date.format('HH:mm')}*\n`;
-        if (schedule.Services && Array.isArray(schedule.Services) && schedule.Services.length > 0) {
-          message += `  Serviços: ${schedule.Services.map(s => s.service).join(', ')}\n`;
-        }
-        message += `  Status: ${schedule.active ? (schedule.finished ? 'Finalizado' : 'Ativo') : 'Cancelado'}\n\n`;
-      });
-
-      message += `Digite "MENU" para voltar ao início.`;
-      await this.sendMessageSafely(phone, message);
-
+      
     } catch (error) {
       console.error('Erro ao buscar agendamentos:', error);
       await this.sendMessageSafely(phone,
-        'Erro ao buscar seus agendamentos. Tente novamente mais tarde.');
+        '❌ Ocorreu um erro ao buscar seus agendamentos. Por favor, tente novamente mais tarde.');
     }
   }
 
   /**
-   * Cancela processo atual
-   */
-  async cancelProcess(phone) {
-    const session = this.getUserSession(phone);
-    const clientName = session ? session.clientName : '';
-    this.clearUserSession(phone);
-    await this.sendMessageSafely(phone,
-      'Processo cancelado. Digite "MENU" para ver as opções disponíveis.');
-  }
-
-  /**
-   * Envia mensagem de boas-vindas inicial
-   */
-  async sendWelcomeMessage(phone, clientName = '') {
-    const greeting = clientName ? `Olá ${clientName}!` : 'Olá!';
-    
-    const welcomeMessage = `${greeting}\n\n` +
-      'Bem-vindo ao Salão fio a fio! ✨\n\n' +
-      'Estou aqui para ajudá-lo com seus agendamentos.\n\n';
-    
-    await this.sendMessageSafely(phone, welcomeMessage);
-    
-    // Pequeno delay para melhorar a experiência do usuário
-    await new Promise(resolve => setTimeout(resolve, 5000));
-  }
-
-  /**
-   * Envia menu principal
-   */
-  async sendMainMenu(phone, clientName = '', showWelcome = false) {
-    // Se showWelcome for true, envia a mensagem de boas-vindas primeiro
-    if (showWelcome) {
-      await this.sendWelcomeMessage(phone, clientName);
-    }
-
-    const message = '📋 *MENU PRINCIPAL*\n\n' +
-      'Escolha uma opção:\n\n' +
-      '1️⃣ AGENDAR um serviço\n' +
-      '2️⃣ MEUS AGENDAMENTOS\n' +
-      '3️⃣ CANCELAR\n\n' +
-      'Digite o *número* ou a *palavra* da opção desejada.';
-
-    await this.sendMessageSafely(phone, message);
-  }
-
-  /**
-   * Cria agendamento no banco (REFATORADO)
+   * Cria agendamento no banco de dados
    */
   async createSchedule(session) {
-    // Busca um provider (Admin ou Provider) - Lógica de exemplo
-    const providers = await this.accountRepo.findByRoles(['admin', 'provider']);
-    const providerId = (providers && providers.length > 0) 
-      ? providers[0].id 
-      : (process.env.DEFAULT_PROVIDER_ID || null);
-      
-    if (!providerId) {
-        console.error("Nenhum provider 'admin' ou 'provider' encontrado no banco de dados.");
-        throw new Error("Nenhum prestador de serviço disponível.");
-    }
+    try {
+      // Validações antes de criar o agendamento
+      if (!session || !session.selectedService || !session.selectedService.id) {
+        throw new Error('Serviço não encontrado. Por favor, inicie um novo agendamento.');
+      }
 
-    return await Schedules.create({
-      id: uuidv4(),
-      name_client: session.clientName,
-      date_and_houres: session.appointmentDateTime.toDate(),
-      active: true,
-      finished: false,
-      client_id_schedules: session.clientId, // UUID do Cliente
-      provider_id_schedules: providerId // UUID do Prestador
-    });
+      if (!session.appointmentDateTime) {
+        throw new Error('Data e horário não encontrados. Por favor, inicie um novo agendamento.');
+      }
+
+      // Busca um provider (Admin ou Provider)
+      const providers = await this.accountRepo.findByRoles(['admin', 'provider']);
+      const providerId = (providers && providers.length > 0) 
+        ? providers[0].id 
+        : (process.env.DEFAULT_PROVIDER_ID || null);
+        
+      if (!providerId) {
+        throw new Error("Nenhum prestador de serviço disponível.");
+      }
+
+      // Cria o agendamento usando o método do repositório
+      const schedule = await this.schedulesRepo.addSchedules({
+        name_client: session.clientName,
+        date_and_houres: session.appointmentDateTime.toDate(),
+        active: true,
+        finished: false,
+        client_id_schedules: session.clientId,
+        provider_id_schedules: providerId
+      });
+
+      if (!schedule || !schedule.id) {
+        throw new Error('Falha ao criar agendamento no banco de dados');
+      }
+
+      // Associa o serviço ao agendamento usando a tabela pivô
+      const serviceId = session.selectedService.id;
+      const serviceAssociation = await this.schedulesServiceRepo.addSchedule_Service(schedule.id, [serviceId]);
+
+      // Se a associação falhar, remove o agendamento criado (rollback)
+      if (!serviceAssociation) {
+        try {
+          await Schedules.destroy({ where: { id: schedule.id } });
+        } catch (destroyError) {
+          console.error('Erro ao remover agendamento após falha na associação de serviço:', destroyError);
+        }
+        throw new Error('Falha ao associar serviço ao agendamento');
+      }
+
+      // Emitir evento Socket.IO para atualizar Dashboard em tempo real
+      try {
+        const { emitScheduleCreated } = require('../utils/socket.io');
+        const fullSchedule = await this.schedulesRepo.findSchedules(schedule.id);
+        if (fullSchedule) {
+          emitScheduleCreated(fullSchedule);
+        }
+      } catch (socketError) {
+        // Não falhar a criação se o Socket.IO não estiver disponível
+        console.warn('Erro ao emitir evento Socket.IO:', socketError.message);
+      }
+
+      return schedule;
+    } catch (error) {
+      console.error('Erro ao criar agendamento:', error);
+      throw error;
+    }
   }
 
   /**
-   * Verifica disponibilidade de horario (REFATORADO)
+   * Verifica disponibilidade de horário
    */
   async checkAvailability(dateTime, duration) {
     const startTime = moment(dateTime);
     const endTime = moment(dateTime).add(duration, 'minutes');
     
-    // Capacidade máxima de 3 agendamentos simultâneos (lógica do usuário)
+    // Capacidade máxima de 3 agendamentos simultâneos
     const MAX_CAPACITY = 3;
 
-    // Conta quantos agendamentos (Schedules) *começam* durante o slot desejado
+    // Conta quantos agendamentos existem no mesmo horário
     const count = await Schedules.count({
       where: {
-        active: true, // Apenas agendamentos ativos
+        active: true,
         date_and_houres: {
-          [Op.gte]: startTime.toDate(), // Começa em ou depois do início
-          [Op.lt]: endTime.toDate()      // E começa antes do fim
+          [Op.gte]: startTime.toDate(),
+          [Op.lt]: endTime.toDate()
         }
       }
     });
-    
-    // (Lógica mais complexa seria verificar sobreposição total,
-    // mas isso exigiria armazenar a duração de cada agendamento no DB)
     
     return count < MAX_CAPACITY;
   }
 
   /**
-   * Obtem datas disponiveis (proximos 30 dias)
+   * Obtém datas disponíveis para agendamento (próximos 30 dias)
    */
   getAvailableDates() {
     const dates = [];
-    const today = moment();
-
-    for (let i = 1; i <= 30; i++) {
-      const date = today.clone().add(i, 'days');
-      // Exclui domingos (Dia 0)
-      if (date.day() !== 0) {
-        dates.push(date);
+    const today = moment().startOf('day');
+    const endDate = moment().add(30, 'days');
+    
+    for (let date = moment(today); date.isBefore(endDate); date.add(1, 'day')) {
+      // Exclui domingos (0) e sábados (6)
+      if (date.day() !== 0 && date.day() !== 6) {
+        dates.push(date.clone());
       }
     }
+    
     return dates;
   }
 
   /**
-   * Obtem horarios disponiveis para uma data (REFATORADO)
+   * Obtém horários disponíveis para uma data específica
    */
   async getAvailableTimes(date, duration) {
     const times = [];
     const startHour = 8; // 8:00
-    const endHour = 18; // 18:00
+    const endHour = 18;  // 18:00
     const now = moment();
-
+    
+    // Para cada hora do dia
     for (let hour = startHour; hour < endHour; hour++) {
-      // Intervalos de 1 hora
-      const time = moment(date).hour(hour).minute(0).second(0).millisecond(0);
-
+      const time = moment(date).hour(hour).minute(0).second(0);
+      
       // Não mostra horários que já passaram
       if (time.isAfter(now)) {
         const isAvailable = await this.checkAvailability(time, duration);
+        
         if (isAvailable) {
-          times.push(time);
+          times.push(time.clone());
         }
       }
     }
+    
     return times;
   }
 
   /**
-   * Gerencia sessoes de usuarios
+   * Gerencia sessões de usuários
    */
   getUserSession(phone) {
-    return this.userSessions.get(phone);
+    const session = this.userSessions.get(phone);
+    
+    // Verifica se a sessão expirou
+    if (session && (Date.now() - session.lastActivity > this.SESSION_TIMEOUT)) {
+      this.clearUserSession(phone);
+      return null;
+    }
+    
+    return session || null;
   }
 
+  /**
+   * Define/atualiza a sessão do usuário
+   */
   setUserSession(phone, session) {
-    this.userSessions.set(phone, { ...session, phone });
+    // Limpa o timeout anterior, se existir
+    const currentSession = this.userSessions.get(phone);
+    if (currentSession && currentSession.timeoutId) {
+      clearTimeout(currentSession.timeoutId);
+    }
+    
+    // Configura um novo timeout para a sessão
+    const timeoutId = setTimeout(() => {
+      this.sendMessageSafely(phone, 
+        '⚠️ *Sessão encerrada por inatividade*\n\n' +
+        'Sua sessão foi encerrada por ficar muito tempo sem interação.\n' +
+        'Digite *MENU* para começar novamente.');
+      this.clearUserSession(phone);
+    }, this.SESSION_TIMEOUT);
+    
+    // Salva a sessão com o novo timeout
+    this.userSessions.set(phone, {
+      ...session,
+      lastActivity: Date.now(),
+      timeoutId: timeoutId
+    });
   }
 
+  /**
+   * Remove a sessão do usuário
+   */
   clearUserSession(phone) {
+    const session = this.userSessions.get(phone);
+    
+    // Limpa o timeout da sessão
+    if (session && session.timeoutId) {
+      clearTimeout(session.timeoutId);
+    }
+    
+    // Remove a sessão
     this.userSessions.delete(phone);
+  }
+
+  /**
+   * Cancela o processo atual e retorna ao menu principal
+   */
+  async cancelProcess(phone) {
+    try {
+      // Limpa a sessão do usuário
+      this.clearUserSession(phone);
+      
+      // Envia mensagem de cancelamento
+      await this.sendMessageSafely(
+        phone,
+        '❌ Operação cancelada.\n\n' +
+        'Digite *MENU* para ver as opções disponíveis.'
+      );
+      
+    } catch (error) {
+      console.error('Erro ao processar cancelamento:', error);
+      await this.sendMessageSafely(
+        phone,
+        '❌ Ocorreu um erro ao processar o cancelamento. Por favor, tente novamente.'
+      );
+    }
   }
 }
 

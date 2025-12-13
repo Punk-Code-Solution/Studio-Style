@@ -10,8 +10,6 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:crud": "jest src/__tests__/full-system-crud.test.js --detectOpenHandles",
-    "test:report": "jest src/__tests__/full-system-crud.test.js --json --outputFile=report.json",  
     "test:validate-update": "node src/tests/validate-account-update.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -40,7 +38,7 @@
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.29.0",
     "sequelize-cli": "^6.4.1",
-    "socket.io": "^4.5.4",
+    "socket.io": "^4.8.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
     "uuid": "^8.3.2"
