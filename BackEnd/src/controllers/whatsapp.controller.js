@@ -485,6 +485,7 @@ class WhatsAppController {
    * Envia mensagem de boas-vindas inicial
    */
   async sendWelcomeMessage(phone, clientName = '') {
+
     const greeting = clientName ? `Olá, ${clientName}!` : 'Olá!';
     const message = `${greeting} Eu sou o assistente virtual do *Salão Fio a Fio*.\n\n` +
       'Como posso te ajudar hoje?\n' +
