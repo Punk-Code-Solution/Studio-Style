@@ -151,6 +151,31 @@ class WhatsAppController {
 
 
   /**
+   * Envia o menu principal para o usuário
+   */
+  async sendMainMenu(phone, clientName = '', showWelcome = false) {
+    try {
+      if (showWelcome) {
+        await this.sendWelcomeMessage(phone, clientName);
+      }
+
+      const message = '📋 *MENU PRINCIPAL*\n\n' +
+        'Escolha uma opção:\n\n' +
+        '1️⃣ AGENDAR um serviço\n' +
+        '2️⃣ MEUS AGENDAMENTOS\n' +
+        '9️⃣ CANCELAR\n\n' +
+        'Digite o *número* ou a *palavra* da opção desejada.';
+
+      await this.sendMessageSafely(phone, message);
+    } catch (error) {
+      console.error('Erro ao enviar menu principal:', error);
+      // Tenta enviar uma mensagem de erro genérica
+      await this.sendMessageSafely(phone, '❌ Ocorreu um erro ao carregar o menu. Por favor, tente novamente.');
+      throw error;
+    }
+  }
+
+  /**
    * Processa mensagem do usuario
    */
   async processMessage(phone, text, contact) {
