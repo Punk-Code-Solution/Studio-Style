@@ -192,7 +192,7 @@ class WhatsAppController {
         'Escolha uma opção:\n\n' +
         '1️⃣ AGENDAR um serviço\n' +
         '2️⃣ MEUS AGENDAMENTOS\n' +
-        '9️⃣ CANCELAR\n\n' +
+        '3️⃣ FINALIZAR SESSÃO\n\n' +
         'Digite o *número* ou a *palavra* da opção desejada.';
 
       await this.sendMessageSafely(phone, message);
@@ -251,7 +251,7 @@ class WhatsAppController {
       return;
     }
     
-    if (normalizedText === 'cancelar' || normalizedText === 'sair' || normalizedText === '9') {
+    if (normalizedText === 'cancelar' || normalizedText === 'sair' || normalizedText === 'finalizar' || normalizedText === '3') {
       await this.cancelProcess(phone);
       return;
     }
@@ -277,7 +277,7 @@ class WhatsAppController {
     } else if (isInMainMenu) {
       // Se está no menu principal mas não reconheceu o comando
       await this.sendMessageSafely(phone,
-        '❌ Opção inválida. Por favor, digite o *número* (1, 2 ou 9) ou o *nome* da opção desejada.\n\n' +
+        '❌ Opção inválida. Por favor, digite o *número* (1, 2 ou 3) ou o *nome* da opção desejada.\n\n' +
         'Digite *MENU* para ver as opções novamente.');
     } else {
       // Processa baseado no estado da sessao (menu principal)
@@ -364,11 +364,11 @@ class WhatsAppController {
             await this.startSchedulingProcess(phone, session.clientId, session.clientName);
           } else if (normalizedMenuOption === '2' || normalizedMenuOption === 'meus agendamentos' || normalizedMenuOption === 'agendamentos') {
             await this.showUserSchedules(phone, session.clientId, session.clientName);
-          } else if (normalizedMenuOption === '9' || normalizedMenuOption === 'cancelar' || normalizedMenuOption === 'sair') {
+          } else if (normalizedMenuOption === '3' || normalizedMenuOption === 'cancelar' || normalizedMenuOption === 'sair' || normalizedMenuOption === 'finalizar') {
             await this.cancelProcess(phone);
           } else {
             await this.sendMessageSafely(phone,
-              '❌ Opção inválida. Digite o *número* (1, 2 ou 9) ou o *nome* da opção desejada.');
+              '❌ Opção inválida. Digite o *número* (1, 2 ou 3) ou o *nome* da opção desejada.');
           }
           break;
         case 'viewing_schedules':
@@ -1006,25 +1006,27 @@ class WhatsAppController {
   }
 
   /**
-   * Cancela o processo atual e retorna ao menu principal
+   * Finaliza a sessão atual e retorna ao menu principal
    */
   async cancelProcess(phone) {
     try {
       // Limpa a sessão do usuário
       this.clearUserSession(phone);
       
-      // Envia mensagem de cancelamento
+      // Envia mensagem de sessão finalizada
       await this.sendMessageSafely(
         phone,
-        '❌ Operação cancelada.\n\n' +
-        'Digite *MENU* para ver as opções disponíveis.'
+        '✅ *Sessão finalizada*\n\n' +
+        'Sua sessão foi encerrada com sucesso.\n\n' +
+        'Obrigado por usar o *Salão Fio a Fio*! 💇‍♀️✨\n\n' +
+        'Se precisar de algo, é só digitar *MENU* a qualquer momento.'
       );
       
     } catch (error) {
-      console.error('Erro ao processar cancelamento:', error);
+      console.error('Erro ao processar finalização de sessão:', error);
       await this.sendMessageSafely(
         phone,
-        '❌ Ocorreu um erro ao processar o cancelamento. Por favor, tente novamente.'
+        '❌ Ocorreu um erro ao finalizar a sessão. Por favor, tente novamente.'
       );
     }
   }
