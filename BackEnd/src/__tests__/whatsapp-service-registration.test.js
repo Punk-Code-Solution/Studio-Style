@@ -101,38 +101,139 @@ class TestWhatsAppController {
       await this.sendMessageSafely(phone, '❌ Desculpe, não há serviços disponíveis para agendamento no momento.');
       return;
     }
-    const validServices = services.filter(s => s.service && s.price != null);
-    const message = `Olá ${clientName}! \n\nEscolha o serviço que deseja agendar:\n\n` +
-      validServices.map((s, index) => `${index + 1}. ${s.service} (R$ ${s.price.toFixed(2)})`).join('\n') +
-      '\n\nDigite o número do serviço desejado.';
+    // Adiciona duration padrão se não existir
+    const validServices = services
+      .filter(s => s.service && s.price != null)
+      .map(s => ({ ...s, duration: s.duration || 60 }));
+    const message = `Olá ${clientName}! 👋\n\n` +
+      `Bem-vindo ao *Salão Fio a Fio*! ✨\n\n` +
+      `Escolha o(s) serviço(s) que deseja agendar:\n\n` +
+      validServices.map((s, index) => `${index + 1}. ${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`).join('\n') +
+      '\n\n💡 *Dica:* Você pode escolher mais de um serviço!\n' +
+      'Digite o *número* do serviço (ex: 1 ou 1,2,3).';
     await this.sendMessageSafely(phone, message);
     this.setUserSession(phone, {
       step: 'select_service',
       services: validServices,
       clientId: clientId,
-      clientName: clientName
+      clientName: clientName,
+      selectedServices: [],
+      totalPrice: 0,
+      totalDuration: 0
     });
   }
 
   async handleServiceSelection(phone, text, session) {
-    const serviceIndex = parseInt(text.trim()) - 1;
-    const selectedService = session.services[serviceIndex];
-    if (!selectedService) {
-      await this.sendMessageSafely(phone, 'Opção inválida. Digite o número do serviço desejado.');
-      return;
-    }
-    const availableDates = this.getAvailableDates();
-    const message = `Serviço selecionado: ${selectedService.service}\n\n` +
-      'Escolha uma data:\n\n' +
-      availableDates.map((date, index) => `${index + 1}. ${date.format('DD/MM/YYYY')}`).join('\n') +
-      '\n\nDigite o número da data desejada.';
+    try {
+      // VALIDAÇÃO: Verifica se está no step correto
+      if (!session || session.step !== 'select_service') {
+        await this.sendMessageSafely(phone,
+          '⚠️ Você não está no processo de seleção de serviço.\n\n' +
+          'Digite *MENU* para começar um novo agendamento.');
+        return;
+      }
+      
+      // VALIDAÇÃO: Verifica se há serviços disponíveis
+      if (!session.services || session.services.length === 0) {
+        await this.sendMessageSafely(phone,
+          '❌ Não há serviços disponíveis. Por favor, tente novamente mais tarde.');
+        return;
+      }
+
+      const cleanText = text.trim().toLowerCase();
+      
+      // Verifica se o usuário quer continuar
+      if (cleanText === 'continuar' || cleanText === 'pronto') {
+        const selectedServices = session.selectedServices || [];
+        
+        if (selectedServices.length === 0) {
+          await this.sendMessageSafely(phone,
+            '❌ Você precisa selecionar pelo menos um serviço antes de continuar.\n\n' +
+            'Digite o *número* do serviço desejado.');
+          return;
+        }
+        
+        // Calcula o valor total
+        const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+        const totalDuration = selectedServices.reduce((sum, s) => sum + (s.duration || 60), 0);
+        
+        const availableDates = this.getAvailableDates();
+        
+        if (!availableDates || availableDates.length === 0) {
+          await this.sendMessageSafely(phone, '❌ Não há datas disponíveis para agendamento no momento.');
+          return;
+        }
+        
+        const servicesList = selectedServices.map(s => `   • ${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`).join('\n');
+        const message = `Ótima escolha! ✨\n\n` +
+          `*Serviços selecionados:*\n${servicesList}\n\n` +
+          `*Valor total:* R$ ${totalPrice.toFixed(2).replace('.', ',')}\n\n` +
+          'Agora, escolha uma data para seu agendamento:\n\n' +
+          availableDates.map((date, index) => 
+            `${index + 1}. ${date.format('DD/MM/YYYY')} (${date.format('dddd').charAt(0).toUpperCase() + date.format('dddd').slice(1)})`
+      ).join('\n') +
+          '\n\nDigite o *número* da data desejada.';
+
     await this.sendMessageSafely(phone, message);
-    this.setUserSession(phone, {
-      ...session,
-      step: 'select_date',
-      selectedService: selectedService,
-      availableDates: availableDates
-    });
+        
+        const updatedSession = {
+          ...session,
+          step: 'select_date',
+          selectedServices: selectedServices,
+          totalPrice: totalPrice,
+          totalDuration: totalDuration,
+          availableDates: availableDates
+        };
+        
+        this.setUserSession(phone, updatedSession);
+        return;
+      }
+
+      // Processa seleção de serviços (pode ser múltiplos: "1,2,3" ou "1 2 3")
+      const serviceNumbers = text.trim().split(/[\s,]+/).map(Number);
+      let currentSelectedServices = session.selectedServices || [];
+      let currentTotalPrice = session.totalPrice || 0;
+      let currentTotalDuration = session.totalDuration || 0;
+
+      for (const num of serviceNumbers) {
+        const serviceIndex = num - 1;
+        if (isNaN(serviceIndex) || serviceIndex < 0 || serviceIndex >= session.services.length) {
+          await this.sendMessageSafely(phone, `❌ O número "${num}" é inválido. Por favor, escolha um número entre 1 e ${session.services.length}.`);
+          return;
+        }
+        const serviceToAdd = session.services[serviceIndex];
+        // Adiciona duration se não existir
+        if (!serviceToAdd.duration) {
+          serviceToAdd.duration = 60; // Duração padrão
+        }
+        if (!currentSelectedServices.some(s => s.id === serviceToAdd.id)) {
+          currentSelectedServices.push(serviceToAdd);
+          currentTotalPrice += serviceToAdd.price;
+          currentTotalDuration += serviceToAdd.duration;
+        } else {
+          await this.sendMessageSafely(phone, `⚠️ O serviço "${serviceToAdd.service}" já foi adicionado.`);
+        }
+      }
+
+      const servicesList = currentSelectedServices.map(s => `   • ${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`).join('\n');
+      const message = `Serviços selecionados até agora: \n${servicesList}\n\n` +
+        `*Valor total:* R$ ${currentTotalPrice.toFixed(2).replace('.', ',')}\n` +
+        `*Duração estimada:* ${currentTotalDuration} minutos\n\n` +
+        'Deseja *ADICIONAR* mais serviços ou *CONTINUAR* para escolher a data?';
+
+      await this.sendMessageSafely(phone, message);
+      this.setUserSession(phone, {
+        ...session,
+        step: 'select_service', // Permanece no mesmo step para adicionar mais
+        selectedServices: currentSelectedServices,
+        totalPrice: currentTotalPrice,
+        totalDuration: currentTotalDuration
+      });
+    } catch (error) {
+      console.error('Erro ao processar seleção de serviço:', error);
+      await this.sendMessageSafely(phone, 
+        '❌ Ocorreu um erro ao processar sua seleção. Por favor, tente novamente.');
+    }
   }
 
   async handleDateSelection(phone, text, session) {
@@ -170,23 +271,34 @@ class TestWhatsAppController {
       return;
     }
     const appointmentDateTime = session.selectedDate.clone().hour(selectedTime.hour()).minute(selectedTime.minute());
-    const isAvailable = await this.checkAvailability(appointmentDateTime, session.duration);
+    const totalDuration = session.totalDuration || session.duration || 60;
+    const isAvailable = await this.checkAvailability(appointmentDateTime, totalDuration);
     if (!isAvailable) {
       await this.sendMessageSafely(phone, 'Este horário não está mais disponível. Escolha outro horário.');
       return;
     }
-    const message = `Confirmação do Agendamento:\n\n` +
-      `Cliente: ${session.clientName}\n` +
-      `Serviço: ${session.selectedService.service}\n` +
-      `Data: ${appointmentDateTime.format('DD/MM/YYYY')}\n` +
-      `Horário: ${appointmentDateTime.format('HH:mm')}\n` +
-      `Duração Aprox.: ${session.duration} minutos\n\n` +
-      `Digite "CONFIRMAR" para confirmar ou "CANCELAR" para cancelar.`;
+    
+    // Usa selectedServices se disponível, senão usa selectedService (compatibilidade)
+    let selectedServices = session.selectedServices || (session.selectedService ? [session.selectedService] : []);
+    const totalPrice = session.totalPrice || (selectedServices.length > 0 ? selectedServices.reduce((sum, s) => sum + s.price, 0) : 0);
+    
+    const servicesList = selectedServices.map(s => `   • ${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`).join('\n');
+    const message = `📋 *Confirmação do Agendamento:*\n\n` +
+      `👤 Cliente: ${session.clientName}\n\n` +
+      `✂️ *Serviços selecionados:*\n${servicesList}\n\n` +
+      `💰 *Valor total:* R$ ${totalPrice.toFixed(2).replace('.', ',')}\n` +
+      `📅 Data: ${appointmentDateTime.format('DD/MM/YYYY')}\n` +
+      `🕐 Horário: ${appointmentDateTime.format('HH:mm')}\n` +
+      `⏱️ Duração estimada: ${totalDuration} minutos\n\n` +
+      `Digite *CONFIRMAR* para confirmar ou *CANCELAR* para cancelar.`;
     await this.sendMessageSafely(phone, message);
     this.setUserSession(phone, {
       ...session,
       step: 'confirm_booking',
-      appointmentDateTime: appointmentDateTime
+      appointmentDateTime: appointmentDateTime,
+      selectedServices: selectedServices,
+      totalPrice: totalPrice,
+      totalDuration: totalDuration
     });
   }
 
@@ -194,8 +306,11 @@ class TestWhatsAppController {
     const cleanText = text.toLowerCase().trim();
     if (cleanText === 'confirmar') {
       try {
+        // Usa selectedServices se disponível, senão usa selectedService (compatibilidade)
+        let selectedServices = session.selectedServices || (session.selectedService ? [session.selectedService] : []);
+        
         // Validações antes de criar o agendamento
-        if (!session || !session.selectedService || !session.selectedService.id) {
+        if (!session || selectedServices.length === 0 || !selectedServices[0].id) {
           await this.sendMessageSafely(phone, 
             '❌ Erro: Serviço não encontrado. Por favor, inicie um novo agendamento.');
           this.clearUserSession(phone);
@@ -215,8 +330,8 @@ class TestWhatsAppController {
           throw new Error('Falha ao criar agendamento no banco de dados');
         }
         
-        const serviceId = session.selectedService.id;
-        const serviceAssociation = await this.schedulesServiceRepo.addSchedule_Service(schedule.id, [serviceId]);
+        const serviceIds = selectedServices.map(s => s.id);
+        const serviceAssociation = await this.schedulesServiceRepo.addSchedule_Service(schedule.id, serviceIds);
 
         // Se a associação falhar, remove o agendamento criado (rollback)
         if (!serviceAssociation) {
@@ -229,18 +344,29 @@ class TestWhatsAppController {
           throw new Error('Falha ao associar serviço ao agendamento');
         }
 
-        const message = `✅ Agendamento confirmado com sucesso!\n\n` +
+        const servicesList = selectedServices.map(s => `   • ${s.service}`).join('\n');
+        const totalPrice = session.totalPrice || selectedServices.reduce((sum, s) => sum + s.price, 0);
+        const message = `✅ *Agendamento confirmado com sucesso!*\n\n` +
           `📅 Data: ${session.appointmentDateTime.format('DD/MM/YYYY')}\n` +
-          ` Horário: ${session.appointmentDateTime.format('HH:mm')}\n` +
-          `✂️ Serviço: ${session.selectedService.service}\n\n` +
-          `Obrigado por escolher nosso salão! ✨\n\n` +
-          `Digite "MENU" para voltar ao início.`;
+          `🕐 Horário: ${session.appointmentDateTime.format('HH:mm')}\n\n` +
+          `✂️ *Serviços:*\n${servicesList}\n\n` +
+          `💰 *Valor total:* R$ ${totalPrice.toFixed(2).replace('.', ',')}\n\n` +
+          `Obrigado por escolher o Salão Fio a Fio! ✨\n\n` +
+          `Digite *MENU* para voltar ao início.`;
         await this.sendMessageSafely(phone, message);
         this.clearUserSession(phone);
       } catch (error) {
         console.error('Erro ao criar agendamento:', error);
         await this.sendMessageSafely(phone, '❌ Erro ao confirmar agendamento. Tente novamente mais tarde.');
       }
+    } else if (cleanText === 'cancelar' || cleanText === 'cancel') {
+      // Volta para o início do processo de agendamento (seleção de serviço)
+      await this.sendMessageSafely(phone,
+        '🔄 Voltando para seleção de serviços...\n\n' +
+        'Você pode escolher novamente os serviços, data e horário.');
+      
+      // Reinicia o processo de agendamento
+      await this.startSchedulingProcess(phone, session.clientId, session.clientName);
     }
   }
 
@@ -339,18 +465,21 @@ describe('Cadastro de Serviços via WhatsApp', () => {
       id: uuidv4(),
       service: 'Corte de Cabelo',
       price: 50.00,
+      duration: 60,
       additionalComments: 'Corte moderno'
     },
     {
       id: uuidv4(),
       service: 'Barba',
       price: 30.00,
+      duration: 30,
       additionalComments: 'Barba completa'
     },
     {
       id: uuidv4(),
       service: 'Corte + Barba',
       price: 70.00,
+      duration: 90,
       additionalComments: 'Pacote completo'
     }
   ];
@@ -440,12 +569,12 @@ describe('Cadastro de Serviços via WhatsApp', () => {
       
       // Verifica se a mensagem contém os serviços
       expect(sentMessage).toContain('Corte de Cabelo');
-      expect(sentMessage).toContain('R$ 50.00');
+      expect(sentMessage).toContain('R$ 50,00'); // Formato brasileiro com vírgula
       expect(sentMessage).toContain('Barba');
-      expect(sentMessage).toContain('R$ 30.00');
+      expect(sentMessage).toContain('R$ 30,00'); // Formato brasileiro com vírgula
       expect(sentMessage).toContain('Corte + Barba');
-      expect(sentMessage).toContain('R$ 70.00');
-      expect(sentMessage).toContain('Digite o número do serviço desejado');
+      expect(sentMessage).toContain('R$ 70,00'); // Formato brasileiro com vírgula
+      expect(sentMessage).toContain('Digite o *número* do serviço');
 
       // Verifica se a sessão foi configurada corretamente
       const session = whatsappController.getUserSession(mockPhone);
@@ -478,8 +607,8 @@ describe('Cadastro de Serviços via WhatsApp', () => {
       // Assert
       const sentMessage = mockWhatsAppService.sendTextMessage.mock.calls[0][1];
       
-      // Deve conter apenas os 3 serviços válidos
-      expect(sentMessage.match(/R\$\s*\d+\.\d{2}/g)).toHaveLength(3);
+      // Deve conter apenas os 3 serviços válidos (formato brasileiro com vírgula)
+      expect(sentMessage.match(/R\$\s*\d+,\d{2}/g)).toHaveLength(3);
       
       const session = whatsappController.getUserSession(mockPhone);
       expect(session.services).toHaveLength(3); // Apenas serviços válidos
@@ -532,13 +661,25 @@ describe('Cadastro de Serviços via WhatsApp', () => {
       const sentMessage = mockWhatsAppService.sendTextMessage.mock.calls[0][1];
       
       expect(sentMessage).toContain('Barba');
-      expect(sentMessage).toContain('Escolha uma data');
+      expect(sentMessage).toContain('CONTINUAR');
 
       // Verifica se a sessão foi atualizada
       const session = whatsappController.getUserSession(mockPhone);
-      expect(session.step).toBe('select_date');
-      expect(session.selectedService).toEqual(mockServices[1]);
-      expect(session.availableDates).toBeDefined();
+      expect(session.step).toBe('select_service'); // Permanece em select_service até CONTINUAR
+      expect(session.selectedServices).toBeDefined();
+      expect(session.selectedServices.length).toBe(1);
+      expect(session.selectedServices[0]).toEqual(mockServices[1]);
+      
+      // Agora simula CONTINUAR
+      await whatsappController.handleServiceSelection(
+        mockPhone,
+        'CONTINUAR',
+        whatsappController.getUserSession(mockPhone)
+      );
+      
+      const sessionAfterContinue = whatsappController.getUserSession(mockPhone);
+      expect(sessionAfterContinue.step).toBe('select_date');
+      expect(sessionAfterContinue.availableDates).toBeDefined();
     });
 
     test('deve rejeitar seleção inválida de serviço', async () => {
@@ -555,8 +696,8 @@ describe('Cadastro de Serviços via WhatsApp', () => {
       // Assert
       expect(mockWhatsAppService.sendTextMessage).toHaveBeenCalled();
       const sentMessage = mockWhatsAppService.sendTextMessage.mock.calls[0][1];
-      expect(sentMessage).toContain('Opção inválida');
-      expect(sentMessage).toContain('Digite o número do serviço desejado');
+      expect(sentMessage).toContain('inválido'); // Mensagem mais específica
+      expect(sentMessage).toContain('escolha um número entre');
 
       // Sessão deve permanecer no mesmo passo
       const session = whatsappController.getUserSession(mockPhone);
@@ -576,8 +717,20 @@ describe('Cadastro de Serviços via WhatsApp', () => {
 
       // Assert
       const session = whatsappController.getUserSession(mockPhone);
-      expect(session.selectedService).toEqual(mockServices[0]);
-      expect(session.step).toBe('select_date');
+      expect(session.selectedServices).toBeDefined();
+      expect(session.selectedServices.length).toBe(1);
+      expect(session.selectedServices[0]).toEqual(mockServices[0]);
+      expect(session.step).toBe('select_service'); // Permanece até CONTINUAR
+      
+      // Simula CONTINUAR
+      await whatsappController.handleServiceSelection(
+        mockPhone,
+        'CONTINUAR',
+        session
+      );
+      
+      const sessionAfterContinue = whatsappController.getUserSession(mockPhone);
+      expect(sessionAfterContinue.step).toBe('select_date');
     });
   });
 
@@ -610,11 +763,12 @@ describe('Cadastro de Serviços via WhatsApp', () => {
 
       whatsappController.setUserSession(mockPhone, {
         step: 'confirm_booking',
-        selectedService: selectedService,
+        selectedServices: [selectedService],
+        totalPrice: selectedService.price,
+        totalDuration: 60,
         clientId: mockClientId,
         clientName: mockClientName,
-        appointmentDateTime: appointmentDateTime,
-        duration: 60
+        appointmentDateTime: appointmentDateTime
       });
 
       // Act
@@ -660,11 +814,12 @@ describe('Cadastro de Serviços via WhatsApp', () => {
 
       whatsappController.setUserSession(mockPhone, {
         step: 'confirm_booking',
-        selectedService: selectedService,
+        selectedServices: [selectedService],
+        totalPrice: selectedService.price,
+        totalDuration: 60,
         clientId: mockClientId,
         clientName: mockClientName,
-        appointmentDateTime: appointmentDateTime,
-        duration: 60
+        appointmentDateTime: appointmentDateTime
       });
 
       // Act
@@ -708,11 +863,12 @@ describe('Cadastro de Serviços via WhatsApp', () => {
 
       whatsappController.setUserSession(mockPhone, {
         step: 'confirm_booking',
-        selectedService: selectedService,
+        selectedServices: [selectedService],
+        totalPrice: selectedService.price,
+        totalDuration: 60,
         clientId: mockClientId,
         clientName: mockClientName,
-        appointmentDateTime: appointmentDateTime,
-        duration: 60
+        appointmentDateTime: appointmentDateTime
       });
 
       // Act
@@ -740,7 +896,7 @@ describe('Cadastro de Serviços via WhatsApp', () => {
       // Arrange - Sessão sem serviço selecionado
       whatsappController.setUserSession(mockPhone, {
         step: 'confirm_booking',
-        selectedService: null, // Serviço ausente
+        selectedServices: [], // Serviços ausentes
         clientId: mockClientId,
         clientName: mockClientName,
         appointmentDateTime: moment('2024-12-25T10:00:00'),
@@ -769,11 +925,12 @@ describe('Cadastro de Serviços via WhatsApp', () => {
       // Arrange - Sessão sem data/horário
       whatsappController.setUserSession(mockPhone, {
         step: 'confirm_booking',
-        selectedService: mockServices[0],
+        selectedServices: [mockServices[0]],
+        totalPrice: mockServices[0].price,
+        totalDuration: 60,
         clientId: mockClientId,
         clientName: mockClientName,
         appointmentDateTime: null, // Data ausente
-        duration: 60
       });
 
       // Act
@@ -807,11 +964,12 @@ describe('Cadastro de Serviços via WhatsApp', () => {
 
       whatsappController.setUserSession(mockPhone, {
         step: 'confirm_booking',
-        selectedService: selectedService,
+        selectedServices: [selectedService],
+        totalPrice: selectedService.price,
+        totalDuration: 60,
         clientId: mockClientId,
         clientName: mockClientName,
-        appointmentDateTime: appointmentDateTime,
-        duration: 60
+        appointmentDateTime: appointmentDateTime
       });
 
       // Act
@@ -870,8 +1028,20 @@ describe('Cadastro de Serviços via WhatsApp', () => {
       );
 
       session = whatsappController.getUserSession(mockPhone);
+      expect(session.step).toBe('select_service'); // Permanece até CONTINUAR
+      expect(session.selectedServices).toBeDefined();
+      expect(session.selectedServices.length).toBe(1);
+      expect(session.selectedServices[0]).toEqual(mockServices[0]);
+      
+      // Passo 2.5: Continuar para seleção de data
+      await whatsappController.handleServiceSelection(
+        mockPhone,
+        'CONTINUAR',
+        session
+      );
+      
+      session = whatsappController.getUserSession(mockPhone);
       expect(session.step).toBe('select_date');
-      expect(session.selectedService).toEqual(mockServices[0]);
 
       // Passo 3: Selecionar data (simulado)
       const availableDates = whatsappController.getAvailableDates();
@@ -958,7 +1128,10 @@ describe('Cadastro de Serviços via WhatsApp', () => {
       const validServices = session.services.filter(s => s.service && s.price != null);
       
       expect(validServices).toHaveLength(1);
-      expect(validServices[0]).toEqual(validService);
+      // O código adiciona duration padrão (60) se não existir
+      expect(validServices[0].service).toEqual(validService.service);
+      expect(validServices[0].price).toEqual(validService.price);
+      expect(validServices[0].duration).toBe(60); // Duration padrão adicionado
     });
 
     test('deve formatar preços corretamente na mensagem do WhatsApp', async () => {
@@ -982,10 +1155,10 @@ describe('Cadastro de Serviços via WhatsApp', () => {
       // Assert
       const sentMessage = mockWhatsAppService.sendTextMessage.mock.calls[0][1];
       
-      // Verifica formatação de preços
-      expect(sentMessage).toContain('R$ 25.50');
-      expect(sentMessage).toContain('R$ 100.00');
-      expect(sentMessage).toContain('R$ 75.99');
+      // Verifica formatação de preços (formato brasileiro com vírgula)
+      expect(sentMessage).toContain('R$ 25,50');
+      expect(sentMessage).toContain('R$ 100,00');
+      expect(sentMessage).toContain('R$ 75,99');
     });
 
     test('deve lidar com serviços que têm preço zero', async () => {
@@ -1011,7 +1184,7 @@ describe('Cadastro de Serviços via WhatsApp', () => {
       
       // Serviços com preço zero devem aparecer (0 != null)
       expect(sentMessage).toContain('Serviço Grátis');
-      expect(sentMessage).toContain('R$ 0.00');
+      expect(sentMessage).toContain('R$ 0,00'); // Formato brasileiro com vírgula
       expect(session.services).toHaveLength(2);
     });
 
@@ -1163,8 +1336,20 @@ describe('Cadastro de Serviços via WhatsApp', () => {
       );
 
       session = whatsappController.getUserSession(mockPhone);
-      expect(session.selectedService.service).toBe('Novo Serviço Teste');
-      expect(session.selectedService.price).toBe(45.00);
+      expect(session.selectedServices).toBeDefined();
+      expect(session.selectedServices.length).toBe(1);
+      expect(session.selectedServices[0].service).toBe('Novo Serviço Teste');
+      expect(session.selectedServices[0].price).toBe(45.00);
+      
+      // Continuar para próxima etapa
+      await whatsappController.handleServiceSelection(
+        mockPhone,
+        'CONTINUAR',
+        session
+      );
+      
+      session = whatsappController.getUserSession(mockPhone);
+      expect(session.step).toBe('select_date');
 
       // Act - Passo 3: Selecionar data e horário
       const availableDates = whatsappController.getAvailableDates();
