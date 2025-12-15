@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist/estudio_style/browser",
   "installCommand": "npm install",
   "cleanUrls": true,
