@@ -11,6 +11,8 @@ export interface Service {
   price: number;
   // Comissão do colaborador para este serviço (0.0 - 1.0, ex: 0.5 = 50%)
   commission_rate?: number;
+  // Duração do serviço em minutos (padrão: 60 minutos)
+  duration?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -26,6 +28,7 @@ export interface CreateServiceRequest {
   additionalComments?: string;
   price: number;
   commission_rate?: number;
+  duration?: number;
 }
 
 export interface UpdateServiceRequest {
@@ -34,6 +37,7 @@ export interface UpdateServiceRequest {
   additionalComments?: string;
   price?: number;
   commission_rate?: number;
+  duration?: number;
 }
 
 @Injectable({

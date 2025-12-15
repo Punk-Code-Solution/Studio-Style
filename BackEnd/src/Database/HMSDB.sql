@@ -128,6 +128,7 @@ CREATE TABLE public."Services"(
   "additionalComments" VARCHAR(255),
   price FLOAT,
   commission_rate FLOAT,
+  duration INTEGER DEFAULT 60,
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );

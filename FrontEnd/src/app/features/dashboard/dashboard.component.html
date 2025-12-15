@@ -73,7 +73,7 @@
         </div>
       </div>
       <div class="appointments-list">
-        <div class="appointment-card" *ngFor="let appointment of appointments" (click)="navigateToConsultation(appointment)">
+        <div class="appointment-card" [ngClass]="getStatusCardClass(appointment)" [ngStyle]="getStatusStyles(appointment)" *ngFor="let appointment of appointments" (click)="navigateToConsultation(appointment)">
           <div class="appointment-info">
             <h3>{{ appointment.name_client || 'Cliente não informado' }}</h3>
             <p class="time">Horário: {{ formatTime(appointment.date_and_houres) }}</p>

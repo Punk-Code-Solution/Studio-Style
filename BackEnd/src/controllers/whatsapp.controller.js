@@ -1,6 +1,6 @@
 /* eslint-disable import/order */
 const WhatsAppService = require('../services/whatsapp.service');
-const { Schedules, Service, Account, Phone, TypeAccount } = require('../Database/models'); // Modelos do DB
+const { Schedules, Service, Account, Phone, TypeAccount, Conversation, Message } = require('../Database/models'); // Modelos do DB
 const moment = require('moment');
 const { Op } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
@@ -11,6 +11,7 @@ const TypeAccountRepository = require('../repositories/type_account.repository')
 const ServiceRepository = require('../repositories/service.repository');
 const SchedulesRepository = require('../repositories/schedules.repository');
 const SchedulesServiceRepository = require('../repositories/schedules_service.repository');
+const ConversationRepository = require('../repositories/conversation.repository');
 
 class WhatsAppController {
   constructor() {
@@ -24,6 +25,93 @@ class WhatsAppController {
     this.serviceRepo = new ServiceRepository();
     this.schedulesRepo = new SchedulesRepository();
     this.schedulesServiceRepo = new SchedulesServiceRepository();
+    this.conversationRepo = ConversationRepository;
+  }
+
+  /**
+   * Salva uma mensagem no banco de dados
+   * @param {string} from - Número de telefone do remetente
+   * @param {string} content - Conteúdo da mensagem
+   * @param {string} direction - Direção da mensagem ('incoming' ou 'outgoing')
+   * @param {string} whatsappMessageId - ID da mensagem do WhatsApp
+   * @param {string} messageType - Tipo da mensagem ('text', 'image', etc.)
+   * @param {string} status - Status da mensagem ('sent', 'delivered', 'read', 'failed')
+   */
+  async saveMessage(from, content, direction, whatsappMessageId, messageType = 'text', status = 'delivered') {
+    try {
+      // Busca ou cria a conta do cliente
+      const clientAccount = await this.getOrCreateClient(from, null);
+      const accountId = clientAccount ? clientAccount.id : null;
+
+      // Busca ou cria a conversa para este número de telefone
+      let conversation = await this.conversationRepo.findConversationByPhone(from);
+      
+      if (!conversation) {
+        // Cria uma nova conversa
+        conversation = await this.conversationRepo.createConversation({
+          phone_number: from,
+          contact_name: clientAccount ? clientAccount.name : null,
+          account_id: accountId,
+          last_message: content,
+          last_message_at: new Date(),
+          unread_count: direction === 'incoming' ? 1 : 0
+        });
+      } else {
+        // Atualiza a conversa se o account_id não estiver definido ou se mudou
+        // Isso garante que mensagens antigas também fiquem vinculadas ao usuário
+        if (accountId && (!conversation.account_id || conversation.account_id !== accountId)) {
+          await Conversation.update(
+            {
+              account_id: accountId,
+              contact_name: clientAccount ? clientAccount.name : conversation.contact_name
+            },
+            { where: { id: conversation.id } }
+          );
+          // Recarrega a conversa para ter os dados atualizados
+          conversation = await this.conversationRepo.findConversationByPhone(from);
+        }
+      }
+
+      // Obtém o número de telefone do negócio (destinatário para mensagens recebidas)
+      // Para mensagens recebidas, o "to" é o número do negócio
+      // Podemos usar o phoneNumberId do serviço ou um número padrão
+      const businessPhoneNumber = process.env.WHATSAPP_BUSINESS_PHONE_NUMBER || 
+                                   this.whatsappService.phoneNumberId || 
+                                   'business';
+
+      // Cria a mensagem
+      const message = await Message.create({
+        conversation_id: conversation.id,
+        whatsapp_message_id: whatsappMessageId,
+        from: from,
+        to: businessPhoneNumber,
+        direction: direction,
+        message_type: messageType,
+        content: content,
+        status: status,
+        timestamp: new Date()
+      });
+
+      // Atualiza a conversa com a última mensagem
+      const updateData = {
+        last_message: content,
+        last_message_at: new Date()
+      };
+      
+      if (direction === 'incoming') {
+        // Incrementa o contador de não lidas usando literal do Sequelize
+        updateData.unread_count = Conversation.sequelize.literal('unread_count + 1');
+      }
+      
+      await Conversation.update(updateData, { 
+        where: { id: conversation.id }
+      });
+
+      return message;
+    } catch (error) {
+      console.error('Erro ao salvar mensagem:', error);
+      throw error;
+    }
   }
 
   /**
@@ -97,7 +185,29 @@ class WhatsAppController {
         return res.status(200).json({ status: 'ok' });
       }
 
-      const { from, text, contact } = messageData;
+      const { from, text, contact, messageId } = messageData;
+
+      // Salvar mensagem recebida no banco de dados
+      try {
+        // Buscar account_id se o número estiver cadastrado
+        let accountId = null;
+        try {
+          const phoneRecord = await Phone.findOne({
+            where: { phone: from.replace(/\D/g, '') },
+            include: [{ model: Account }]
+          });
+          if (phoneRecord && phoneRecord.Account) {
+            accountId = phoneRecord.Account.id;
+          }
+        } catch (err) {
+          // Ignora erro ao buscar account
+        }
+
+        await this.saveMessage(from, text, 'incoming', messageId, 'text', 'delivered');
+      } catch (error) {
+        console.error('Erro ao salvar mensagem recebida:', error);
+        // Não interrompe o fluxo se falhar ao salvar
+      }
 
       // Processa a mensagem baseada no estado da sessao do usuario
       // Erros recuperáveis (como número não permitido) não quebram o webhook
@@ -181,11 +291,111 @@ class WhatsAppController {
   }
 
   /**
-   * Envia mensagem de boas-vindas ao usuário
+   * Busca histórico de conversas do usuário
    */
-  async sendWelcomeMessage(phone, clientName = '') {
-    const greeting = clientName ? `Olá, ${clientName}! 👋` : 'Olá! 👋';
-    const message = `${greeting}\n\n` +
+  async getConversationHistory(phone, limit = 10) {
+    try {
+      const conversation = await this.conversationRepo.findConversationByPhone(phone);
+      if (!conversation) {
+        return { messages: [], isNewUser: true };
+      }
+
+      const messagesResult = await this.conversationRepo.getMessages(conversation.id, 1, limit);
+      const messages = messagesResult.rows || messagesResult.rows || [];
+
+      return {
+        conversation,
+        messages: messages.reverse(), // Ordem cronológica (mais antiga primeiro)
+        isNewUser: messages.length === 0,
+        messageCount: messages.length
+      };
+    } catch (error) {
+      console.error('Erro ao buscar histórico de conversas:', error);
+      return { messages: [], isNewUser: true };
+    }
+  }
+
+  /**
+   * Analisa padrões do usuário baseado no histórico
+   */
+  async analyzeUserPatterns(clientId) {
+    try {
+      // Busca agendamentos do cliente
+      const schedules = await Schedules.findAll({
+        where: {
+          client_id_schedules: clientId,
+          finished: true
+        },
+        include: [{
+          model: Service,
+          as: 'Services',
+          through: { attributes: [] }
+        }],
+        order: [['date_and_houres', 'DESC']],
+        limit: 20
+      });
+
+      // Analisa serviços mais solicitados
+      const serviceFrequency = {};
+      schedules.forEach(schedule => {
+        if (schedule.Services) {
+          schedule.Services.forEach(service => {
+            serviceFrequency[service.id] = (serviceFrequency[service.id] || 0) + 1;
+          });
+        }
+      });
+
+      // Ordena serviços por frequência
+      const favoriteServices = Object.entries(serviceFrequency)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([serviceId]) => serviceId);
+
+      // Busca os serviços favoritos completos
+      const favoriteServicesData = await Service.findAll({
+        where: { id: { [Op.in]: favoriteServices } }
+      });
+
+      return {
+        totalAppointments: schedules.length,
+        favoriteServices: favoriteServicesData,
+        lastAppointment: schedules.length > 0 ? schedules[0].date_and_houres : null,
+        isRecurringClient: schedules.length > 0
+      };
+    } catch (error) {
+      console.error('Erro ao analisar padrões do usuário:', error);
+      return {
+        totalAppointments: 0,
+        favoriteServices: [],
+        lastAppointment: null,
+        isRecurringClient: false
+      };
+    }
+  }
+
+  /**
+   * Envia mensagem de boas-vindas ao usuário (melhorada com contexto)
+   */
+  async sendWelcomeMessage(phone, clientName = '', clientId = null) {
+    let greeting = clientName ? `Olá, ${clientName}! 👋` : 'Olá! 👋';
+    
+    // Busca padrões do usuário se tiver clientId
+    let personalization = '';
+    if (clientId) {
+      const patterns = await this.analyzeUserPatterns(clientId);
+      
+      if (patterns.isRecurringClient) {
+        greeting = clientName ? `Olá, ${clientName}! Que bom te ver novamente! 👋` : 'Olá! Que bom te ver novamente! 👋';
+        
+        if (patterns.favoriteServices.length > 0) {
+          const servicesList = patterns.favoriteServices.map(s => s.service).join(', ');
+          personalization = `\n\nVejo que você já agendou conosco ${patterns.totalAppointments} vez${patterns.totalAppointments > 1 ? 'es' : ''}! `;
+          personalization += `Seus serviços favoritos são: ${servicesList}.`;
+        }
+      }
+    }
+
+    const message = `${greeting}${personalization}\n\n` +
       'Bem-vindo ao *Salão Fio a Fio*! ✨\n\n' +
       'Estou aqui para ajudar você a agendar seus serviços de forma rápida e fácil.\n\n' +
       'Digite *MENU* para ver as opções disponíveis.';
@@ -196,15 +406,24 @@ class WhatsAppController {
   }
 
   /**
-   * Envia o menu principal para o usuário
+   * Envia o menu principal para o usuário (melhorado com contexto)
    */
-  async sendMainMenu(phone, clientName = '', showWelcome = false) {
+  async sendMainMenu(phone, clientName = '', showWelcome = false, clientId = null) {
     try {
       if (showWelcome) {
-        await this.sendWelcomeMessage(phone, clientName);
+        await this.sendWelcomeMessage(phone, clientName, clientId);
       }
 
-      const message = '📋 *MENU PRINCIPAL*\n\n' +
+      // Busca histórico e padrões para personalizar o menu
+      let menuPersonalization = '';
+      if (clientId) {
+        const patterns = await this.analyzeUserPatterns(clientId);
+        if (patterns.isRecurringClient && patterns.favoriteServices.length > 0) {
+          menuPersonalization = '\n\n💡 *Dica:* Você pode agendar seus serviços favoritos mais rapidamente!';
+        }
+      }
+
+      const message = '📋 *MENU PRINCIPAL*' + menuPersonalization + '\n\n' +
         'Escolha uma opção:\n\n' +
         '1️⃣ AGENDAR um serviço\n' +
         '2️⃣ MEUS AGENDAMENTOS\n' +
@@ -262,7 +481,7 @@ class WhatsAppController {
 
     // Comandos que sempre funcionam (MENU, CANCELAR)
     if (normalizedText === 'menu' || normalizedText === 'inicio' || normalizedText === 'comecar' || normalizedText === '0') {
-      await this.sendMainMenu(phone, clientName, isFirstInteraction);
+      await this.sendMainMenu(phone, clientName, isFirstInteraction, clientId);
       this.setUserSession(phone, { step: 'main_menu', clientId, clientName });
       return;
     }
@@ -288,7 +507,7 @@ class WhatsAppController {
     
     // VALIDAÇÃO 4: Se não reconheceu o comando e não está em um step específico
       if (isFirstInteraction) {
-        await this.sendMainMenu(phone, clientName, true);
+        await this.sendMainMenu(phone, clientName, true, clientId);
         this.setUserSession(phone, { step: 'main_menu', clientId, clientName });
     } else if (isInMainMenu) {
       // Se está no menu principal mas não reconheceu o comando
@@ -302,7 +521,7 @@ class WhatsAppController {
   }
 
   /**
-   * Inicia o processo de agendamento
+   * Inicia o processo de agendamento (melhorado com sugestões baseadas no histórico)
    */
   async startSchedulingProcess(phone, clientId, clientName) {
     try {
@@ -326,11 +545,34 @@ class WhatsAppController {
         return;
       }
 
-      const message = `Perfeito, ${clientName}! ✂️\n\n` +
+      // Busca padrões do usuário para sugerir serviços favoritos
+      let favoriteServicesIds = [];
+      let suggestionText = '';
+      if (clientId) {
+        const patterns = await this.analyzeUserPatterns(clientId);
+        if (patterns.favoriteServices.length > 0) {
+          favoriteServicesIds = patterns.favoriteServices.map(s => s.id);
+          const favoriteNames = patterns.favoriteServices.map(s => s.service).join(', ');
+          suggestionText = `\n\n💡 *Sugestão:* Baseado no seu histórico, você costuma agendar: ${favoriteNames}.`;
+        }
+      }
+
+      // Ordena serviços: favoritos primeiro, depois os demais
+      const sortedServices = [...validServices].sort((a, b) => {
+        const aIsFavorite = favoriteServicesIds.includes(a.id);
+        const bIsFavorite = favoriteServicesIds.includes(b.id);
+        if (aIsFavorite && !bIsFavorite) return -1;
+        if (!aIsFavorite && bIsFavorite) return 1;
+        return 0;
+      });
+
+      const message = `Perfeito, ${clientName}! ✂️${suggestionText}\n\n` +
         'Aqui estão nossos serviços disponíveis:\n\n' +
-        validServices.map((s, index) => 
-          `${index + 1}. ${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`
-        ).join('\n') +
+        sortedServices.map((s, index) => {
+          const isFavorite = favoriteServicesIds.includes(s.id);
+          const favoriteIcon = isFavorite ? '⭐ ' : '';
+          return `${index + 1}. ${favoriteIcon}${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`;
+        }).join('\n') +
         '\n\nVocê pode selecionar *um ou mais serviços*.\n' +
         'Digite o *número* do serviço (ex: 1) ou *vários números separados por vírgula* (ex: 1,2,3).\n\n' +
         'Quando terminar, digite *CONTINUAR* para escolher a data.';
@@ -338,7 +580,8 @@ class WhatsAppController {
       await this.sendMessageSafely(phone, message);
       
       // Cria uma cópia limpa dos serviços, removendo métodos e metadados do Sequelize
-      const cleanServices = validServices.map(service => ({
+      // Mantém a ordem (favoritos primeiro)
+      const cleanServices = sortedServices.map(service => ({
         id: service.id,
         service: service.service,
         price: service.price,
@@ -368,7 +611,8 @@ class WhatsAppController {
       // Busca o nome do cliente quando a sessão não existe
       const clientAccount = await this.getOrCreateClient(phone, null);
       const clientName = clientAccount ? clientAccount.name : '';
-      await this.sendMainMenu(phone, clientName, true);
+      const clientId = clientAccount ? clientAccount.id : null;
+      await this.sendMainMenu(phone, clientName, true, clientId);
       return;
     }
 
@@ -396,7 +640,7 @@ class WhatsAppController {
           const normalizedViewingOption = viewingOption.replace(/[^a-z0-9\s]/gi, '').toLowerCase();
           
           if (normalizedViewingOption === 'menu' || normalizedViewingOption === 'inicio' || normalizedViewingOption === 'comecar' || normalizedViewingOption === '0') {
-            await this.sendMainMenu(phone, session.clientName || '', false);
+            await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
             this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
           } else {
             await this.sendMessageSafely(phone,
@@ -417,7 +661,7 @@ class WhatsAppController {
         await this.handleBookingConfirmation(phone, text, session);
         break;
       default:
-          await this.sendMainMenu(phone, session?.clientName || '', false);
+          await this.sendMainMenu(phone, session?.clientName || '', false, session?.clientId);
       }
     } catch (error) {
       console.error('Erro ao processar etapa da sessão:', error);
@@ -425,7 +669,7 @@ class WhatsAppController {
         '❌ Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente.');
       
       // Volta para o menu principal em caso de erro
-        await this.sendMainMenu(phone, session?.clientName || '', false);
+        await this.sendMainMenu(phone, session?.clientName || '', false, session?.clientId);
     }
   }
 
@@ -446,7 +690,7 @@ class WhatsAppController {
       if (!session.services || session.services.length === 0) {
         await this.sendMessageSafely(phone,
           '❌ Não há serviços disponíveis. Por favor, tente novamente mais tarde.');
-        await this.sendMainMenu(phone, session.clientName || '', false);
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
         this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
       return;
     }
@@ -572,7 +816,7 @@ class WhatsAppController {
       if (servicesForDate.length === 0) {
       await this.sendMessageSafely(phone,
           '❌ Nenhum serviço selecionado. Por favor, inicie um novo agendamento.');
-        await this.sendMainMenu(phone, session.clientName || '', false);
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
         this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
       return;
     }
@@ -582,7 +826,7 @@ class WhatsAppController {
       // VALIDAÇÃO: Verifica se há datas disponíveis
       if (!session.availableDates || session.availableDates.length === 0) {
         await this.sendMessageSafely(phone, '❌ Não há datas disponíveis. Por favor, tente novamente mais tarde.');
-        await this.sendMainMenu(phone, session.clientName || '', false);
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
         this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
         return;
       }
@@ -646,7 +890,7 @@ class WhatsAppController {
       if (servicesToCheck.length === 0) {
       await this.sendMessageSafely(phone,
           '❌ Nenhum serviço selecionado. Por favor, inicie um novo agendamento.');
-        await this.sendMainMenu(phone, session.clientName || '', false);
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
         this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
       return;
     }
@@ -654,7 +898,7 @@ class WhatsAppController {
       if (!session.selectedDate) {
         await this.sendMessageSafely(phone,
           '❌ Data não encontrada. Por favor, inicie um novo agendamento.');
-        await this.sendMainMenu(phone, session.clientName || '', false);
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
         this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
         return;
       }
@@ -687,12 +931,12 @@ class WhatsAppController {
     }
 
       const selectedTime = session.availableTimes[timeIndex];
-      // O horário já está em UTC+3, mantemos assim para exibição
-      const appointmentDateTime = selectedTime.clone().utcOffset(3);
+      // O horário já está em UTC-3 (Horário de Brasília), mantemos assim para exibição
+      const appointmentDateTime = selectedTime.clone().utcOffset(-3);
       
       // Verifica se ainda há vagas disponíveis
       const duration = session.duration || session.selectedService?.duration || 60;
-      // Para verificação de disponibilidade, usamos o horário em UTC+3
+      // Para verificação de disponibilidade, usamos o horário em UTC-3 (Horário de Brasília)
       const timeForCheck = appointmentDateTime.clone();
       const isAvailable = await this.checkAvailability(timeForCheck, duration);
 
@@ -750,7 +994,7 @@ class WhatsAppController {
       if (servicesForValidation.length === 0) {
         await this.sendMessageSafely(phone,
           '❌ Nenhum serviço selecionado. Por favor, inicie um novo agendamento.');
-        await this.sendMainMenu(phone, session.clientName || '', false);
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
         this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
           return;
         }
@@ -758,7 +1002,7 @@ class WhatsAppController {
         if (!session.appointmentDateTime) {
           await this.sendMessageSafely(phone, 
           '❌ Data e horário não encontrados. Por favor, inicie um novo agendamento.');
-        await this.sendMainMenu(phone, session.clientName || '', false);
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
         this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
           return;
         }
@@ -812,7 +1056,7 @@ class WhatsAppController {
         '❌ Ocorreu um erro ao processar sua confirmação. Por favor, tente novamente.');
       
       // Volta para o menu principal em caso de erro
-      await this.sendMainMenu(phone, session?.clientName || '', false);
+      await this.sendMainMenu(phone, session?.clientName || '', false, session?.clientId);
     }
   }
 
@@ -851,8 +1095,8 @@ class WhatsAppController {
         let message = `📅 *Seus próximos agendamentos*\n\n`;
 
       schedules.forEach((schedule, index) => {
-          // Converte de UTC para UTC+3 para exibição
-          const date = moment(schedule.date_and_houres).utcOffset(3);
+          // Converte de UTC para UTC-3 (Horário de Brasília) para exibição
+          const date = moment(schedule.date_and_houres).utcOffset(-3);
           message += `*${index + 1}.* ${date.format('DD/MM/YYYY [às] HH:mm')}\n`;
           
           if (schedule.Services && schedule.Services.length > 0) {
@@ -905,13 +1149,13 @@ class WhatsAppController {
         throw new Error("Nenhum prestador de serviço disponível.");
     }
 
-      // O horário foi selecionado em UTC+3 (horário local do Brasil)
+      // O horário foi selecionado em UTC-3 (Horário de Brasília)
       // Para salvar no banco (que espera UTC), precisamos:
-      // - Se o usuário selecionou 8h UTC+3, queremos salvar como 11h UTC (8h + 3h = 11h)
-      // Isso garante que quando lermos do banco e convertermos para UTC+3, teremos 8h novamente
+      // - Se o usuário selecionou 8h UTC-3, queremos salvar como 11h UTC (8h + 3h = 11h)
+      // Isso garante que quando lermos do banco e convertermos para UTC-3, teremos 8h novamente
       const appointmentDate = session.appointmentDateTime.clone();
-      // Garante que está em UTC+3 primeiro
-      const dateInUTC3 = appointmentDate.utcOffset(3, true);
+      // Garante que está em UTC-3 (Horário de Brasília) primeiro
+      const dateInUTC3 = appointmentDate.utcOffset(-3, true);
       // Converte para UTC (adiciona 3 horas ao horário para compensar o timezone)
       const dateToSave = dateInUTC3.utc().toDate();
       
@@ -964,12 +1208,12 @@ class WhatsAppController {
 
   /**
    * Verifica disponibilidade de horário
-   * Usa timezone UTC+3 (Brasil)
+   * Usa timezone UTC-3 (Brasil - Horário de Brasília)
    */
   async checkAvailability(dateTime, duration) {
-    // Garante que está trabalhando com UTC+3
-    const startTime = moment(dateTime).utcOffset(3);
-    const endTime = moment(dateTime).utcOffset(3).add(duration, 'minutes');
+    // Garante que está trabalhando com UTC-3 (Horário de Brasília)
+    const startTime = moment(dateTime).utcOffset(-3);
+    const endTime = moment(dateTime).utcOffset(-3).add(duration, 'minutes');
     
     // Capacidade máxima de 3 agendamentos simultâneos
     const MAX_CAPACITY = 3;
@@ -991,13 +1235,13 @@ class WhatsAppController {
 
   /**
    * Obtém datas disponíveis para agendamento (próximos 30 dias)
-   * Usa timezone UTC+3 (Brasil)
+   * Usa timezone UTC-3 (Brasil - Horário de Brasília)
    */
   getAvailableDates() {
     const dates = [];
-    // Define timezone UTC+3 para o Brasil
-    const today = moment().utcOffset(3).startOf('day');
-    const endDate = moment().utcOffset(3).add(30, 'days');
+    // Define timezone UTC-3 para o Brasil (Horário de Brasília)
+    const today = moment().utcOffset(-3).startOf('day');
+    const endDate = moment().utcOffset(-3).add(30, 'days');
     
     for (let date = moment(today); date.isBefore(endDate); date.add(1, 'day')) {
       // Exclui domingos (0) e sábados (6)
@@ -1011,19 +1255,19 @@ class WhatsAppController {
 
   /**
    * Obtém horários disponíveis para uma data específica
-   * Usa timezone UTC+3 (Brasil)
+   * Usa timezone UTC-3 (Brasil - Horário de Brasília)
    */
   async getAvailableTimes(date, duration) {
     const times = [];
     const startHour = 8; // 8:00
     const endHour = 18;  // 18:00
-    // Define timezone UTC+3 para comparação
-    const now = moment().utcOffset(3);
+    // Define timezone UTC-3 para comparação (Horário de Brasília)
+    const now = moment().utcOffset(-3);
 
     // Para cada hora do dia
     for (let hour = startHour; hour < endHour; hour++) {
-      // Garante que a data está em UTC+3
-      const time = moment(date).utcOffset(3).hour(hour).minute(0).second(0);
+      // Garante que a data está em UTC-3 (Horário de Brasília)
+      const time = moment(date).utcOffset(-3).hour(hour).minute(0).second(0);
 
       // Não mostra horários que já passaram
       if (time.isAfter(now)) {

@@ -26,7 +26,7 @@ module.exports = class accountRepository{
       { model: Sale },
       { model: Purchase },
       { model: Purchase_Material },
-      { model: Phone },
+      { model: Phone, as: 'phones' },
       { model: Adress }
     ];
   }

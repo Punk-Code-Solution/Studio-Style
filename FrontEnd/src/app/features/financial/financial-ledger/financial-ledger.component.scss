@@ -1,5 +1,6 @@
 @use '../../../../styles/variables' as *;
 @use '../../../../styles/mixins' as *;
+@use 'sass:color';
 
 .financial-ledger {
   padding: $spacing-lg;
@@ -219,7 +220,7 @@
       transition: background-color 0.2s;
 
       &:hover {
-        background-color: darken($background-dark, 5%);
+        background-color: color.adjust($background-dark, $lightness: -5%);
       }
 
       i {
@@ -400,7 +401,7 @@
   color: $text-light;
 
   &:hover:not(:disabled) {
-    background-color: darken($error-color, 10%);
+    background-color: color.adjust($error-color, $lightness: -10%);
   }
 }
 
