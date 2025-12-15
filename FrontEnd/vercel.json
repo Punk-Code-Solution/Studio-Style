@@ -11,8 +11,8 @@
       "destination": "https://studio-style.vercel.app/api/$1"
     },
     {
-      "source": "/(.*\\.(js|css|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|json|webp))",
-      "destination": "/$1"
+      "source": "/.*\\.(js|css|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|json|webp)$",
+      "destination": "/$0"
     },
     {
       "source": "/((?!.*\\.).*)$",
@@ -38,7 +38,7 @@
       ]
     },
     {
-      "source": "/(.*\\.(js|css|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot))",
+      "source": "/.*\\.(js|css|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$",
       "headers": [
         {
           "key": "Cache-Control",
