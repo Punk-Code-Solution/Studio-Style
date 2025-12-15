@@ -2,7 +2,6 @@
   "version": 2,
   "outputDirectory": "dist/estudio_style/browser",
   "framework": "angular",
-  "frameworkVersion": "19.2.12",
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
