@@ -24,6 +24,8 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'Adress',
+    tableName: 'Addresses', // Nome correto da tabela no banco de dados
+    underscored: false
   });
   return Adress;
 };
