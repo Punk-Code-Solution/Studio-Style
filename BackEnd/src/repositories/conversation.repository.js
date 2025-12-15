@@ -40,7 +40,7 @@ class ConversationRepository {
               {
                 model: Phone,
                 as: 'phones',
-                attributes: ['id', 'number', 'type'],
+                attributes: ['id', 'phone', 'ddd', 'type'],
               },
             ],
           },
@@ -71,7 +71,7 @@ class ConversationRepository {
               {
                 model: Phone,
                 as: 'phones',
-                attributes: ['id', 'number', 'type'],
+                attributes: ['id', 'phone', 'ddd', 'type'],
               },
             ],
           },
@@ -99,7 +99,7 @@ class ConversationRepository {
               {
                 model: Phone,
                 as: 'phones',
-                attributes: ['id', 'number', 'type'],
+                attributes: ['id', 'phone', 'ddd', 'type'],
               },
             ],
           },
