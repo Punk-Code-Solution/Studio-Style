@@ -79,7 +79,7 @@ const swaggerOptions = {
     servers: [
       {
         url: process.env.NODE_ENV === 'production' 
-          ? 'https://studio-style-henna.vercel.app/api'
+          ? 'https://studio-style.vercel.app/api'
           : 'http://localhost:3001/api',
         description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server'
       }
