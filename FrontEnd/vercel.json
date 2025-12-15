@@ -1,16 +1,16 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist/estudio_style/browser",
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://studio-style.vercel.app/api/"
+      "destination": "https://studio-style.vercel.app/api/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!.*\\.).*)$",
       "destination": "/index.html"
     }
   ],
