@@ -931,12 +931,12 @@ class WhatsAppController {
     }
 
       const selectedTime = session.availableTimes[timeIndex];
-      // O horário já está em UTC+3, mantemos assim para exibição
-      const appointmentDateTime = selectedTime.clone().utcOffset(3);
+      // O horário já está em UTC-3 (Horário de Brasília), mantemos assim para exibição
+      const appointmentDateTime = selectedTime.clone().utcOffset(-3);
       
       // Verifica se ainda há vagas disponíveis
       const duration = session.duration || session.selectedService?.duration || 60;
-      // Para verificação de disponibilidade, usamos o horário em UTC+3
+      // Para verificação de disponibilidade, usamos o horário em UTC-3 (Horário de Brasília)
       const timeForCheck = appointmentDateTime.clone();
       const isAvailable = await this.checkAvailability(timeForCheck, duration);
 
@@ -1095,8 +1095,8 @@ class WhatsAppController {
         let message = `📅 *Seus próximos agendamentos*\n\n`;
 
       schedules.forEach((schedule, index) => {
-          // Converte de UTC para UTC+3 para exibição
-          const date = moment(schedule.date_and_houres).utcOffset(3);
+          // Converte de UTC para UTC-3 (Horário de Brasília) para exibição
+          const date = moment(schedule.date_and_houres).utcOffset(-3);
           message += `*${index + 1}.* ${date.format('DD/MM/YYYY [às] HH:mm')}\n`;
           
           if (schedule.Services && schedule.Services.length > 0) {
@@ -1149,13 +1149,13 @@ class WhatsAppController {
         throw new Error("Nenhum prestador de serviço disponível.");
     }
 
-      // O horário foi selecionado em UTC+3 (horário local do Brasil)
+      // O horário foi selecionado em UTC-3 (Horário de Brasília)
       // Para salvar no banco (que espera UTC), precisamos:
-      // - Se o usuário selecionou 8h UTC+3, queremos salvar como 11h UTC (8h + 3h = 11h)
-      // Isso garante que quando lermos do banco e convertermos para UTC+3, teremos 8h novamente
+      // - Se o usuário selecionou 8h UTC-3, queremos salvar como 11h UTC (8h + 3h = 11h)
+      // Isso garante que quando lermos do banco e convertermos para UTC-3, teremos 8h novamente
       const appointmentDate = session.appointmentDateTime.clone();
-      // Garante que está em UTC+3 primeiro
-      const dateInUTC3 = appointmentDate.utcOffset(3, true);
+      // Garante que está em UTC-3 (Horário de Brasília) primeiro
+      const dateInUTC3 = appointmentDate.utcOffset(-3, true);
       // Converte para UTC (adiciona 3 horas ao horário para compensar o timezone)
       const dateToSave = dateInUTC3.utc().toDate();
       
@@ -1208,12 +1208,12 @@ class WhatsAppController {
 
   /**
    * Verifica disponibilidade de horário
-   * Usa timezone UTC+3 (Brasil)
+   * Usa timezone UTC-3 (Brasil - Horário de Brasília)
    */
   async checkAvailability(dateTime, duration) {
-    // Garante que está trabalhando com UTC+3
-    const startTime = moment(dateTime).utcOffset(3);
-    const endTime = moment(dateTime).utcOffset(3).add(duration, 'minutes');
+    // Garante que está trabalhando com UTC-3 (Horário de Brasília)
+    const startTime = moment(dateTime).utcOffset(-3);
+    const endTime = moment(dateTime).utcOffset(-3).add(duration, 'minutes');
     
     // Capacidade máxima de 3 agendamentos simultâneos
     const MAX_CAPACITY = 3;
@@ -1235,13 +1235,13 @@ class WhatsAppController {
 
   /**
    * Obtém datas disponíveis para agendamento (próximos 30 dias)
-   * Usa timezone UTC+3 (Brasil)
+   * Usa timezone UTC-3 (Brasil - Horário de Brasília)
    */
   getAvailableDates() {
     const dates = [];
-    // Define timezone UTC+3 para o Brasil
-    const today = moment().utcOffset(3).startOf('day');
-    const endDate = moment().utcOffset(3).add(30, 'days');
+    // Define timezone UTC-3 para o Brasil (Horário de Brasília)
+    const today = moment().utcOffset(-3).startOf('day');
+    const endDate = moment().utcOffset(-3).add(30, 'days');
     
     for (let date = moment(today); date.isBefore(endDate); date.add(1, 'day')) {
       // Exclui domingos (0) e sábados (6)
@@ -1255,19 +1255,19 @@ class WhatsAppController {
 
   /**
    * Obtém horários disponíveis para uma data específica
-   * Usa timezone UTC+3 (Brasil)
+   * Usa timezone UTC-3 (Brasil - Horário de Brasília)
    */
   async getAvailableTimes(date, duration) {
     const times = [];
     const startHour = 8; // 8:00
     const endHour = 18;  // 18:00
-    // Define timezone UTC+3 para comparação
-    const now = moment().utcOffset(3);
+    // Define timezone UTC-3 para comparação (Horário de Brasília)
+    const now = moment().utcOffset(-3);
 
     // Para cada hora do dia
     for (let hour = startHour; hour < endHour; hour++) {
-      // Garante que a data está em UTC+3
-      const time = moment(date).utcOffset(3).hour(hour).minute(0).second(0);
+      // Garante que a data está em UTC-3 (Horário de Brasília)
+      const time = moment(date).utcOffset(-3).hour(hour).minute(0).second(0);
 
       // Não mostra horários que já passaram
       if (time.isAfter(now)) {
