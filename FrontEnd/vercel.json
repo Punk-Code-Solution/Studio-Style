@@ -1,7 +1,8 @@
 {
   "version": 2,
+  "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist/estudio_style/browser",
-  "framework": "angular",
+  "installCommand": "npm install",
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
