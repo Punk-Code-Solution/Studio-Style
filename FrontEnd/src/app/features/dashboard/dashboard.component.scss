@@ -211,19 +211,52 @@ h1 {
   &::-webkit-scrollbar-thumb:hover {
     background: #1565c0;
   }
-}
 
-.appointment-card {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 1rem;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  border: 1px solid #e9ecef;
+  .appointment-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s, border-color 0.2s;
+    border: 2px solid #e9ecef;
+    border-left: 2px solid #e9ecef;
 
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    // Status: Ativo - Verde
+    &.status-active {
+      border-left: 4px solid #4caf50 !important;
+      background: #f1f8f4 !important;
+      
+      .appointment-status {
+        border-top-color: #c8e6c9 !important;
+      }
+    }
+
+    // Status: Cancelado - Vermelho
+    &.status-cancelled {
+      border-left: 4px solid #f44336 !important;
+      background: #fff5f5 !important;
+      opacity: 0.85;
+      
+      .appointment-status {
+        border-top-color: #ffcdd2 !important;
+      }
+    }
+
+    // Status: Finalizado/Concluído - Azul
+    &.status-completed {
+      border-left: 4px solid #2196f3 !important;
+      background: #f3f8ff !important;
+      
+      .appointment-status {
+        border-top-color: #bbdefb !important;
+      }
+    }
+  }
 }
 
 .appointment-info {
@@ -267,7 +300,6 @@ select {
       }
     }
   }
-}
 
 .quick-actions {
   background: white;

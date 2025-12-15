@@ -1,5 +1,6 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
+@use 'sass:color';
 
 .schedules {
   padding: $spacing-lg;
@@ -220,7 +221,7 @@
       transition: background-color 0.2s;
       
       &:hover {
-        background-color: darken($background-dark, 5%);
+        background-color: color.adjust($background-dark, $lightness: -5%);
       }
       
       i {
@@ -308,19 +309,53 @@
     color: $primary-color;
   }
 
+  // Status: Finalizado/Concluído - Azul
   &.completed {
-    background-color: rgba($success-color, 0.1);
-    color: $success-color;
+    background-color: rgba(33, 150, 243, 0.15);
+    color: #1976d2;
+    border: 1px solid rgba(33, 150, 243, 0.3);
   }
 
+  // Status: Cancelado - Vermelho
   &.cancelled {
-    background-color: rgba($error-color, 0.1);
-    color: $error-color;
+    background-color: rgba(244, 67, 54, 0.15);
+    color: #d32f2f;
+    border: 1px solid rgba(244, 67, 54, 0.3);
   }
 
+  // Status: Ativo - Verde
   &.active {
-    background-color: rgba($info-color, 0.1);
-    color: $info-color;
+    background-color: rgba(76, 175, 80, 0.15);
+    color: #388e3c;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+  }
+}
+
+// Cores para as linhas da tabela baseadas no status
+tr {
+  &.status-active {
+    background-color: rgba(76, 175, 80, 0.05);
+    
+    &:hover {
+      background-color: rgba(76, 175, 80, 0.1);
+    }
+  }
+
+  &.status-cancelled {
+    background-color: rgba(244, 67, 54, 0.05);
+    opacity: 0.9;
+    
+    &:hover {
+      background-color: rgba(244, 67, 54, 0.1);
+    }
+  }
+
+  &.status-completed {
+    background-color: rgba(33, 150, 243, 0.05);
+    
+    &:hover {
+      background-color: rgba(33, 150, 243, 0.1);
+    }
   }
 }
 

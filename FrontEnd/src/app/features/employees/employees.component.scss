@@ -1,5 +1,6 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
+@use 'sass:color';
 
 .page-container {
   padding: $spacing-lg;
@@ -209,7 +210,7 @@
       transition: background-color 0.2s;
 
       &:hover {
-        background-color: darken($background-dark, 5%);
+        background-color: color.adjust($background-dark, $lightness: -5%);
       }
 
       i {

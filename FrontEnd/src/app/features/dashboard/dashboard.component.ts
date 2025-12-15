@@ -296,6 +296,38 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return roles[role] || role;
   }
 
+  getStatusCardClass(schedule: Schedule): string {
+    // Verifica o status e retorna a classe correspondente
+    if (schedule.finished) {
+      return 'status-completed';
+    }
+    if (!schedule.active) {
+      return 'status-cancelled';
+    }
+    return 'status-active';
+  }
+
+  getStatusStyles(schedule: Schedule): { [key: string]: string } {
+    // Aplica estilos inline para garantir que sejam aplicados
+    if (schedule.finished) {
+      return {
+        'border-left': '4px solid #2196f3',
+        'background': '#f3f8ff'
+      };
+    }
+    if (!schedule.active) {
+      return {
+        'border-left': '4px solid #f44336',
+        'background': '#fff5f5',
+        'opacity': '0.85'
+      };
+    }
+    return {
+      'border-left': '4px solid #4caf50',
+      'background': '#f1f8f4'
+    };
+  }
+
   getStatusValue(schedule: Schedule): string {
     if (schedule.finished) {
       if (schedule.active) {
