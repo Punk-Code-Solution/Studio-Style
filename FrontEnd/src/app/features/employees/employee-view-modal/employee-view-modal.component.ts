@@ -97,7 +97,7 @@ import { Employee } from '../../../core/services/employee.service';
               </div>
             </div>
 
-            <div class="detail-section" *ngIf="employee.address">
+            <div class="detail-section" *ngIf="hasAddress(employee)">
               <h4>Endereço</h4>
               <div class="detail-grid">
                 <div class="detail-item" style="grid-column: 1 / -1;">
@@ -105,7 +105,7 @@ import { Employee } from '../../../core/services/employee.service';
                     <i class="fas fa-map-marker-alt"></i>
                     Endereço
                   </label>
-                  <span>{{ employee.address }}</span>
+                  <span>{{ getFormattedAddress(employee.address || employee.Adress) }}</span>
                 </div>
               </div>
             </div>
@@ -413,5 +413,78 @@ export class EmployeeViewModalComponent {
     }
     
     return null;
+  }
+
+  hasAddress(employee: Employee): boolean {
+    // Verificar se tem address mapeado
+    if (employee.address) {
+      if (typeof employee.address === 'string' && employee.address.trim()) {
+        return true;
+      }
+      if (typeof employee.address === 'object' && !Array.isArray(employee.address)) {
+        const addr = employee.address as any;
+        return !!(addr.road || addr.neighborhood || addr.city);
+      }
+    }
+    
+    // Verificar se tem Adress original
+    if (employee.Adress) {
+      if (typeof employee.Adress === 'object' && !Array.isArray(employee.Adress)) {
+        const addr = employee.Adress as any;
+        return !!(addr.road || addr.neighborhood || addr.city);
+      }
+    }
+    
+    return false;
+  }
+
+  getFormattedAddress(address: any): string {
+    // Se address é null ou undefined
+    if (!address) {
+      return 'N/A';
+    }
+    
+    // Se address é uma string, retornar diretamente
+    if (typeof address === 'string') {
+      return address.trim() || 'N/A';
+    }
+    
+    // Se address é um array, pegar o primeiro elemento
+    if (Array.isArray(address)) {
+      if (address.length === 0) {
+        return 'N/A';
+      }
+      address = address[0];
+    }
+    
+    // Se address é um objeto, formatar as propriedades
+    if (address && typeof address === 'object') {
+      const parts: string[] = [];
+      
+      // Adicionar rua/road
+      if (address.road && address.road.trim()) {
+        parts.push(address.road.trim());
+      }
+      
+      // Adicionar bairro/neighborhood
+      if (address.neighborhood && address.neighborhood.trim()) {
+        parts.push(address.neighborhood.trim());
+      }
+      
+      // Adicionar cidade/city
+      if (address.city && address.city.trim()) {
+        parts.push(address.city.trim());
+      }
+      
+      // Se tem CEP
+      if (address.cep) {
+        parts.push(`CEP: ${address.cep}`);
+      }
+      
+      // Retornar endereço formatado ou 'N/A' se vazio
+      return parts.length > 0 ? parts.join(', ') : 'N/A';
+    }
+    
+    return 'N/A';
   }
 }

@@ -414,9 +414,59 @@ export class EmployeeFormModalComponent implements OnInit {
         password: '',
         phone: this.employee.phone || '',
         role: this.employee.role || '',
-        address: this.employee.address || ''
+        address: this.getAddressString(this.employee.address || this.employee.Adress)
       };
     }
+  }
+
+  private getAddressString(address: any): string {
+    // Se address é null ou undefined
+    if (!address) {
+      return '';
+    }
+    
+    // Se address é uma string, retornar diretamente
+    if (typeof address === 'string') {
+      return address.trim();
+    }
+    
+    // Se address é um array, pegar o primeiro elemento
+    if (Array.isArray(address)) {
+      if (address.length === 0) {
+        return '';
+      }
+      address = address[0];
+    }
+    
+    // Se address é um objeto, formatar as propriedades
+    if (address && typeof address === 'object') {
+      const parts: string[] = [];
+      
+      // Adicionar rua/road
+      if (address.road && address.road.trim()) {
+        parts.push(address.road.trim());
+      }
+      
+      // Adicionar bairro/neighborhood
+      if (address.neighborhood && address.neighborhood.trim()) {
+        parts.push(address.neighborhood.trim());
+      }
+      
+      // Adicionar cidade/city
+      if (address.city && address.city.trim()) {
+        parts.push(address.city.trim());
+      }
+      
+      // Se tem CEP
+      if (address.cep) {
+        parts.push(`CEP: ${address.cep}`);
+      }
+      
+      // Retornar endereço formatado
+      return parts.join(', ');
+    }
+    
+    return '';
   }
 
   closeModal(): void {
@@ -437,9 +487,39 @@ export class EmployeeFormModalComponent implements OnInit {
       lastname: this.employeeData.lastname,
       email: this.employeeData.email,
       phone: this.employeeData.phone || undefined,
-      role: this.employeeData.role as any,
-      address: this.employeeData.address || undefined
+      role: this.employeeData.role as any
     };
+
+    // Processar endereço: se for string, tentar parsear ou enviar como objeto
+    if (this.employeeData.address && this.employeeData.address.trim()) {
+      // Se o endereço original do employee era um objeto, tentar preservar a estrutura
+      if (this.employee && (this.employee.address || this.employee.Adress)) {
+        const originalAddress = this.employee.address || this.employee.Adress;
+        if (originalAddress && typeof originalAddress === 'object' && !Array.isArray(originalAddress)) {
+          // Se o usuário editou, tentar extrair partes da string ou manter estrutura original
+          // Por enquanto, vamos enviar como objeto com a string no campo road
+          (dataToSend as any).address = {
+            road: this.employeeData.address.trim(),
+            city: (originalAddress as any).city || null,
+            neighborhood: (originalAddress as any).neighborhood || null
+          };
+        } else {
+          // Se não tinha estrutura original, enviar como string simples no campo road
+          (dataToSend as any).address = {
+            road: this.employeeData.address.trim(),
+            city: null,
+            neighborhood: null
+          };
+        }
+      } else {
+        // Se não há endereço original, enviar como objeto simples
+        (dataToSend as any).address = {
+          road: this.employeeData.address.trim(),
+          city: null,
+          neighborhood: null
+        };
+      }
+    }
 
     if (this.employeeData.password && this.employeeData.password.trim()) {
       (dataToSend as any).password = this.employeeData.password;

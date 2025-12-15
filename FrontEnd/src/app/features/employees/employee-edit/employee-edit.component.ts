@@ -49,7 +49,19 @@ export class EmployeeEditComponent implements OnInit {
 
     this.employeeService.getEmployeeById(id).subscribe({
       next: (employee: Employee) => {
-        this.employeeForm.patchValue(employee);
+        // Preparar dados do funcionário para o formulário
+        const formData = {
+          name: employee.name || '',
+          lastname: employee.lastname || '',
+          email: employee.email || '',
+          role: employee.role || '',
+          department: employee.department || '',
+          phone: employee.phone || '',
+          address: this.getAddressString(employee.address || employee.Adress),
+          status: employee.status || 'active'
+        };
+        
+        this.employeeForm.patchValue(formData);
         this.isLoading = false;
       },
       error: (error: Error) => {
@@ -58,6 +70,56 @@ export class EmployeeEditComponent implements OnInit {
         console.error('Error loading employee:', error);
       }
     });
+  }
+
+  private getAddressString(address: any): string {
+    // Se address é null ou undefined
+    if (!address) {
+      return '';
+    }
+    
+    // Se address é uma string, retornar diretamente
+    if (typeof address === 'string') {
+      return address.trim();
+    }
+    
+    // Se address é um array, pegar o primeiro elemento
+    if (Array.isArray(address)) {
+      if (address.length === 0) {
+        return '';
+      }
+      address = address[0];
+    }
+    
+    // Se address é um objeto, formatar as propriedades
+    if (address && typeof address === 'object') {
+      const parts: string[] = [];
+      
+      // Adicionar rua/road
+      if (address.road && address.road.trim()) {
+        parts.push(address.road.trim());
+      }
+      
+      // Adicionar bairro/neighborhood
+      if (address.neighborhood && address.neighborhood.trim()) {
+        parts.push(address.neighborhood.trim());
+      }
+      
+      // Adicionar cidade/city
+      if (address.city && address.city.trim()) {
+        parts.push(address.city.trim());
+      }
+      
+      // Se tem CEP
+      if (address.cep) {
+        parts.push(`CEP: ${address.cep}`);
+      }
+      
+      // Retornar endereço formatado
+      return parts.join(', ');
+    }
+    
+    return '';
   }
 
   onSubmit(): void {
