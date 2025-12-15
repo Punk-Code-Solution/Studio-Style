@@ -1,6 +1,6 @@
 /* eslint-disable import/order */
 const WhatsAppService = require('../services/whatsapp.service');
-const { Schedules, Service, Account, Phone, TypeAccount } = require('../Database/models'); // Modelos do DB
+const { Schedules, Service, Account, Phone, TypeAccount, Conversation, Message } = require('../Database/models'); // Modelos do DB
 const moment = require('moment');
 const { Op } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
@@ -97,7 +97,29 @@ class WhatsAppController {
         return res.status(200).json({ status: 'ok' });
       }
 
-      const { from, text, contact } = messageData;
+      const { from, text, contact, messageId } = messageData;
+
+      // Salvar mensagem recebida no banco de dados
+      try {
+        // Buscar account_id se o número estiver cadastrado
+        let accountId = null;
+        try {
+          const phoneRecord = await Phone.findOne({
+            where: { phone: from.replace(/\D/g, '') },
+            include: [{ model: Account }]
+          });
+          if (phoneRecord && phoneRecord.Account) {
+            accountId = phoneRecord.Account.id;
+          }
+        } catch (err) {
+          // Ignora erro ao buscar account
+        }
+
+        await this.saveMessage(from, text, 'incoming', messageId, 'text', 'delivered');
+      } catch (error) {
+        console.error('Erro ao salvar mensagem recebida:', error);
+        // Não interrompe o fluxo se falhar ao salvar
+      }
 
       // Processa a mensagem baseada no estado da sessao do usuario
       // Erros recuperáveis (como número não permitido) não quebram o webhook

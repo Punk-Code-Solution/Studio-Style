@@ -112,7 +112,8 @@ class WhatsAppService {
         contact: {
           name: contact?.profile?.name || '',
           phone: message.from
-        }
+        },
+        whatsappMessageId: message.id // Para salvar no banco
       };
     } catch (error) {
       console.error('Erro ao processar mensagem:', error);
