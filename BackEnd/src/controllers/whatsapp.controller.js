@@ -6,7 +6,6 @@ const { Op } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
 
 // Repositórios para interagir com o DB
-const { ConversationService } = require('../services/conversation.service');
 const AccountRepository = require('../repositories/account.repository');
 const TypeAccountRepository = require('../repositories/type_account.repository');
 const ServiceRepository = require('../repositories/service.repository');
@@ -16,7 +15,6 @@ const SchedulesServiceRepository = require('../repositories/schedules_service.re
 class WhatsAppController {
   constructor() {
     this.whatsappService = new WhatsAppService();
-    this.conversationService = ConversationService;
     this.userSessions = new Map(); // Armazena sessoes de usuarios
     this.SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutos de inatividade
 
@@ -31,73 +29,44 @@ class WhatsAppController {
   /**
    * Método auxiliar para enviar mensagens com tratamento de erros
    */
-  async sendMessageSafely(phone, message, options = {}) {
-    const { contactName, messageId } = options;
-    let result;
-
-    try {
-      // Envia a mensagem pelo WhatsApp
-      result = await this.whatsappService.sendTextMessage(phone, message);
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Erro ao enviar mensagem');
-      }
-      
-      // Se chegou aqui, a mensagem foi enviada com sucesso
-      try {
-        // Salva a mensagem na conversa
-        await this.conversationService.sendMessage(phone, message, {
-          contactName,
-          messageId: messageId || result.data?.messages?.[0]?.id || `temp-${Date.now()}`,
-          status: 'sent',
-        });
-      } catch (saveError) {
-        console.error('Erro ao salvar mensagem enviada na conversa:', saveError);
-        // Não interrompe o fluxo por erros de salvamento
-      }
-      
-      return true;
-    } catch (error) {
-      // Tratamento de erros
-      const isRecoverable = error.isRecoverable || (result?.recoverable === true);
-      const isAuthError = error.isAuthError || (result?.isAuthError === true);
-      
-      if (isRecoverable) {
+  async sendMessageSafely(phone, message) {
+    if (!this.whatsappService) {
+      console.error('❌ WhatsAppService não está inicializado em sendMessageSafely');
+      return false;
+    }
+    
+    const result = await this.whatsappService.sendTextMessage(phone, message);
+    
+    if (!result.success) {
+      if (result.recoverable) {
         // Erro conhecido e recuperável (ex: número não permitido, token expirado)
-        if (isAuthError) {
+        if (result.isAuthError) {
           // Erro de autenticação - loga como erro mas não quebra o webhook
           console.error(`❌ ERRO DE AUTENTICAÇÃO: Não foi possível enviar mensagem para ${phone}`);
           console.error(`❌ Token do WhatsApp expirado ou inválido. Verifique a variável WHATSAPP_ACCESS_TOKEN.`);
         } else {
           // Outros erros recuperáveis
-          console.warn(`Não foi possível enviar mensagem para ${phone}: ${error.message || error}`);
+          console.warn(`Não foi possível enviar mensagem para ${phone}: ${result.error}`);
         }
-        
-        // Tenta salvar a mensagem como falha
-        try {
-          await this.conversationService.sendMessage(phone, message, {
-            contactName,
-            messageId: messageId || `error-${Date.now()}`,
-            status: 'failed',
-            error: error.message || 'Erro desconhecido',
-          });
-        } catch (saveError) {
-          console.error('Erro ao salvar mensagem com falha:', saveError);
-        }
-        
         return false;
       } else {
         // Erro crítico - lança exceção para ser tratado no catch
-        console.error(`❌ ERRO CRÍTICO ao enviar mensagem para ${phone}:`, error);
-        throw error;
+        throw new Error(result.error || 'Erro ao enviar mensagem');
       }
     }
+    
+    return true;
   }
 
   /**
    * Verifica webhook do WhatsApp
    */
   verifyWebhook(req, res) {
+    if (!this.whatsappService) {
+      console.error('❌ WhatsAppService não está inicializado em verifyWebhook');
+      return res.status(500).json({ error: 'Service not initialized' });
+    }
+
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
@@ -116,28 +85,19 @@ class WhatsAppController {
    */
   async handleWebhook(req, res) {
     try {
+      // Verifica se o serviço está inicializado
+      if (!this.whatsappService) {
+        console.error('❌ WhatsAppService não está inicializado');
+        return res.status(500).json({ error: 'Service not initialized' });
+      }
+
       const messageData = this.whatsappService.processIncomingMessage(req.body);
 
       if (!messageData) {
         return res.status(200).json({ status: 'ok' });
       }
 
-      const { from, text, contact, id: messageId, type: messageType, mediaUrl } = messageData;
-
-      try {
-        // Salva a mensagem recebida na conversa
-        await this.conversationService.processIncomingMessage({
-          from,
-          text,
-          contact,
-          id: messageId,
-          type: messageType,
-          mediaUrl,
-        });
-      } catch (conversationError) {
-        console.error('Erro ao salvar mensagem na conversa:', conversationError);
-        // Não interrompe o fluxo principal por erros de salvamento
-      }
+      const { from, text, contact } = messageData;
 
       // Processa a mensagem baseada no estado da sessao do usuario
       // Erros recuperáveis (como número não permitido) não quebram o webhook

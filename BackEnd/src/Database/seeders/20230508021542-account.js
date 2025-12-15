@@ -1,5 +1,7 @@
 'use strict';
 
+// 1. CARREGAR O DOTENV NO INÍCIO DO ARQUIVO
+require('dotenv').config();
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 
