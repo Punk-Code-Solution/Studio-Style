@@ -39,6 +39,12 @@ module.exports = (sequelize, DataTypes) => {
     commission_rate: {
       type: DataTypes.FLOAT,
       allowNull: true
+    },
+    // Duração do serviço em minutos (padrão: 60 minutos)
+    duration: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 60
     }
   }, {
     sequelize,

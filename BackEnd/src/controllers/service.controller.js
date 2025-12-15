@@ -87,6 +87,14 @@ module.exports = class serviceController{
                 }
             }
             
+            if (serviceData.duration !== undefined) {
+                if (typeof serviceData.duration !== 'number' || 
+                    serviceData.duration < 1 || 
+                    !Number.isInteger(serviceData.duration)) {
+                    return ResponseHandler.validationError(response, 'Duration must be a positive integer (in minutes)');
+                }
+            }
+            
             const result = await serviceRespo.addService(serviceData);
             
             if (!result) {
@@ -138,6 +146,14 @@ module.exports = class serviceController{
                     serviceData.commission_rate < 0 || 
                     serviceData.commission_rate > 1) {
                     return ResponseHandler.validationError(response, 'Commission rate must be a number between 0 and 1');
+                }
+            }
+            
+            if (serviceData.duration !== undefined) {
+                if (typeof serviceData.duration !== 'number' || 
+                    serviceData.duration < 1 || 
+                    !Number.isInteger(serviceData.duration)) {
+                    return ResponseHandler.validationError(response, 'Duration must be a positive integer (in minutes)');
                 }
             }
             

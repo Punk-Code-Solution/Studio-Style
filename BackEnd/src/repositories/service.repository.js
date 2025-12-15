@@ -36,7 +36,8 @@ class serviceRepository{
         service,
         additionalComments,
         price,
-        commission_rate
+        commission_rate,
+        duration
       } = services;
 
       const result = await Service.create({
@@ -44,7 +45,8 @@ class serviceRepository{
         service,
         additionalComments,
         price,
-        commission_rate
+        commission_rate,
+        duration: duration || 60 // Valor padrão de 60 minutos
       }, { transaction });
 
       if (!result) {
@@ -74,6 +76,9 @@ class serviceRepository{
       }
       if (service.commission_rate !== undefined) {
         updateData.commission_rate = service.commission_rate;
+      }
+      if (service.duration !== undefined) {
+        updateData.duration = service.duration;
       }
 
       const [affectedRows] = await Service.update(

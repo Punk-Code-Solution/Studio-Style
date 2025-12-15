@@ -14,7 +14,7 @@ class ConversationRepository {
         id: require('uuid').v4(),
         ...conversationData,
         status: 'active',
-        unreadCount: 0,
+        unread_count: 0,
       });
     } catch (error) {
       console.error('Error creating conversation:', error);
@@ -56,7 +56,7 @@ class ConversationRepository {
   async findConversationByPhone(phoneNumber) {
     try {
       return await this.Conversation.findOne({
-        where: { phoneNumber },
+        where: { phone_number: phoneNumber },
         include: [
           {
             model: Message,
@@ -89,7 +89,7 @@ class ConversationRepository {
       const offset = (page - 1) * limit;
       
       return await this.Conversation.findAndCountAll({
-        order: [['lastMessageAt', 'DESC']],
+        order: [['last_message_at', 'DESC']],
         include: [
           {
             model: Account,
@@ -136,7 +136,7 @@ class ConversationRepository {
       // Cria a mensagem
       const message = await this.Message.create({
         id: require('uuid').v4(),
-        conversationId,
+        conversation_id: conversationId,
         ...messageData,
         timestamp: new Date(),
       }, { transaction });
@@ -144,10 +144,10 @@ class ConversationRepository {
       // Atualiza a conversa com a última mensagem e data
       await this.Conversation.update(
         {
-          lastMessage: messageData.content,
-          lastMessageAt: new Date(),
-          unreadCount: messageData.direction === 'incoming' 
-            ? this.sequelize.literal('unread_count + 1')
+          last_message: messageData.content,
+          last_message_at: new Date(),
+          unread_count: messageData.direction === 'incoming' 
+            ? this.Conversation.sequelize.literal('unread_count + 1')
             : 0,
         },
         { 
@@ -170,7 +170,7 @@ class ConversationRepository {
     try {
       // Atualiza a contagem de não lidas para zero
       await this.Conversation.update(
-        { unreadCount: 0 },
+        { unread_count: 0 },
         { where: { id: conversationId } }
       );
 
@@ -179,7 +179,7 @@ class ConversationRepository {
         { status: 'read' },
         { 
           where: { 
-            conversationId,
+            conversation_id: conversationId,
             status: { [Op.ne]: 'read' },
             direction: 'incoming',
           } 
@@ -199,7 +199,7 @@ class ConversationRepository {
       const offset = (page - 1) * limit;
       
       return await this.Message.findAndCountAll({
-        where: { conversationId },
+        where: { conversation_id: conversationId },
         order: [['timestamp', 'DESC']],
         limit,
         offset,
@@ -215,9 +215,9 @@ class ConversationRepository {
     try {
       return await this.Conversation.findAll({
         where: {
-          unreadCount: { [Op.gt]: 0 }
+          unread_count: { [Op.gt]: 0 }
         },
-        order: [['lastMessageAt', 'DESC']],
+        order: [['last_message_at', 'DESC']],
         include: [
           {
             model: Account,
