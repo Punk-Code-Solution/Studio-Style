@@ -72,7 +72,7 @@ CREATE TABLE public."Products"(
 );
 
 -- Create Address Table
-CREATE TABLE public."Adresses"(
+CREATE TABLE public."Addresses"(
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   city VARCHAR(100),
   neighborhood VARCHAR(100),
@@ -308,9 +308,6 @@ CREATE INDEX idx_messages_from ON public."Messages" ("from");
 CREATE INDEX idx_messages_to ON public."Messages" ("to");
 CREATE INDEX idx_messages_direction ON public."Messages" ("direction");
 CREATE INDEX idx_messages_timestamp ON public."Messages" ("timestamp");
-
--- 1. Corrigir nome da tabela Adresses para Addresses
-ALTER TABLE IF EXISTS public."Adresses" RENAME TO "Addresses";
 
 -- 2. Adicionar restrição de chave estrangeira para Conversations
 ALTER TABLE public."Conversations" 

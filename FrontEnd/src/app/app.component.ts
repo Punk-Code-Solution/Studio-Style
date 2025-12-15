@@ -42,11 +42,18 @@ export class AppComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    console.log('🔵 [APP] AppComponent inicializado');
+    console.log('🔵 [APP] URL atual do router:', this.router.url);
+    console.log('🔵 [APP] URL completa do navegador:', window.location.href);
+    console.log('🔵 [APP] Pathname:', window.location.pathname);
+    console.log('🔵 [APP] Base href:', document.querySelector('base')?.getAttribute('href'));
+    
     // Atualiza o estado inicial
     this.updateSidebarVisibility();
 
     // Escuta mudanças no estado de autenticação
     const authSub = this.authService.authState$.subscribe(() => {
+      console.log('🔵 [APP] Estado de autenticação mudou');
       this.updateSidebarVisibility();
     });
     this.subscriptions.add(authSub);
@@ -56,12 +63,25 @@ export class AppComponent implements OnInit, OnDestroy {
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
         this.currentRoute = event.urlAfterRedirects || event.url;
+        console.log('🔵 [APP] Navegação concluída:', {
+          url: event.url,
+          urlAfterRedirects: event.urlAfterRedirects,
+          currentRoute: this.currentRoute
+        });
         this.updateSidebarVisibility();
       });
     this.subscriptions.add(routerSub);
 
+    // Log de erros de navegação
+    this.router.events.subscribe(event => {
+      if (event.type === 0) { // NavigationError
+        console.error('❌ [APP] Erro de navegação:', event);
+      }
+    });
+
     // Atualiza a rota inicial
     this.currentRoute = this.router.url;
+    console.log('🔵 [APP] Rota inicial:', this.currentRoute);
     this.updateSidebarVisibility();
   }
 
