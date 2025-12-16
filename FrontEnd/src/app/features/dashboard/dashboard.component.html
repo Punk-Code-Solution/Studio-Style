@@ -102,4 +102,12 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal de Visualização do Agendamento (somente visualização) -->
+  <app-schedule-view-modal
+    *ngIf="showViewModal && selectedSchedule"
+    [schedule]="selectedSchedule"
+    [viewOnly]="true"
+    (close)="closeViewModal()"
+  ></app-schedule-view-modal>
 </div>

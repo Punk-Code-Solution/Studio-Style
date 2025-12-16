@@ -6,6 +6,7 @@ import { User, UserService } from '../../core/services/user.service';
 import { SchedulesService, Schedule } from '../../core/services/schedules.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoggingService } from '../../core/services/logging.service';
+import { ScheduleViewModalComponent } from '../schedules/schedule-view-modal/schedule-view-modal.component';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -15,7 +16,8 @@ import { environment } from '../../../environments/environment';
   standalone: true,
   imports: [
     CommonModule,
-    RouterModule
+    RouterModule,
+    ScheduleViewModalComponent
   ]
 })
 export class DashboardComponent implements OnInit, OnDestroy {
@@ -30,6 +32,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private pollingInterval: any = null;
   private lastPollingTimestamp: Date | null = null;
   private readonly POLLING_INTERVAL = 30000; // 30 segundos
+  
+  // Modal de visualização
+  showViewModal = false;
+  selectedSchedule: Schedule | null = null;
 
   get completedAppointmentsToday(): number {
     return this.appointments.filter(a => !!a.finished).length;
@@ -374,7 +380,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   navigateToConsultation(appointment: Schedule) {
-    this.router.navigate(['/services'], { queryParams: { id: appointment.id } });
+    // Abrir modal de visualização ao invés de navegar
+    this.selectedSchedule = appointment;
+    this.showViewModal = true;
+  }
+
+  closeViewModal() {
+    this.showViewModal = false;
+    this.selectedSchedule = null;
   }
 
   navigateToNewConsultation() {
