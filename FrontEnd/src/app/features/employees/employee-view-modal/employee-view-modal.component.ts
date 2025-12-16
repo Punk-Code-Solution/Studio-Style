@@ -390,9 +390,10 @@ export class EmployeeViewModalComponent {
       return employee.phone;
     }
     
-    // Caso contrário, tentar extrair do array Phones
-    if (employee.Phones && employee.Phones.length > 0) {
-      const phoneObj = employee.Phones[0];
+    // Caso contrário, tentar extrair do array Phones (aceita tanto Phones quanto phones)
+    const phonesArray = (employee as any).Phones || (employee as any).phones || [];
+    if (phonesArray && phonesArray.length > 0) {
+      const phoneObj = phonesArray[0];
       
       // Se phoneObj já é uma string, usar diretamente
       if (typeof phoneObj === 'string') {

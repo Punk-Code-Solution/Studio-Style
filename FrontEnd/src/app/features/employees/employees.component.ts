@@ -442,9 +442,10 @@ export class EmployeesComponent implements OnInit {
       return employee.phone;
     }
     
-    // Caso contrário, tentar extrair do array Phones
-    if (employee.Phones && employee.Phones.length > 0) {
-      const phoneObj = employee.Phones[0];
+    // Caso contrário, tentar extrair do array Phones (aceita tanto Phones quanto phones)
+    const phonesArray = (employee as any).Phones || (employee as any).phones || [];
+    if (phonesArray && phonesArray.length > 0) {
+      const phoneObj = phonesArray[0];
       
       // Se phoneObj já é uma string, usar diretamente
       if (typeof phoneObj === 'string') {
@@ -522,8 +523,12 @@ export class EmployeesComponent implements OnInit {
   }
 
   onEditFromViewModal(): void {
-    this.onCloseViewModal();
-    this.isModalOpen = true;
+    // Garantir que o selectedEmployee está definido antes de abrir o modal de edição
+    if (this.selectedEmployee) {
+      this.onCloseViewModal();
+      // Abrir modal de edição com o colaborador selecionado
+      this.openEditModal(this.selectedEmployee);
+    }
   }
 
   openEditModal(employee: Employee): void {

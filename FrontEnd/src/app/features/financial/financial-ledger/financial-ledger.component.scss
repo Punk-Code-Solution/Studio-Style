@@ -376,6 +376,12 @@
 .actions {
   @include flex(row, flex-start, center);
   gap: $spacing-sm;
+
+  .no-actions-text {
+    color: $text-secondary;
+    @include typography($font-size-sm);
+    font-style: italic;
+  }
 }
 
 .action-btn {
@@ -383,16 +389,23 @@
   padding: $spacing-xs;
   font-size: $font-size-base;
 
-  &:hover {
+  &:hover:not(:disabled):not(.disabled) {
     color: $primary-color;
     background-color: rgba($primary-color, 0.1);
     box-shadow: $shadow-sm;
     transform: translateY(-1px);
   }
 
-  &.delete-btn:hover {
+  &.delete-btn:hover:not(:disabled):not(.disabled) {
     color: $error-color;
     background-color: rgba($error-color, 0.1);
+  }
+
+  &:disabled,
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
   }
 }
 

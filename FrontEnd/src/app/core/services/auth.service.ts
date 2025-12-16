@@ -48,7 +48,7 @@ export class AuthService {
       // Rotas principais
       dashboard: ['admin', 'provider'],
       patients: ['admin'],
-      financial: ['admin'],
+      financial: ['admin', 'provider'],
       employees: ['admin'],
       feedbacks: ['ninguem'],
       services: ['admin', 'provider'],
