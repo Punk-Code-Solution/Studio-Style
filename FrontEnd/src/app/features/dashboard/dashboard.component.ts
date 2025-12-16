@@ -6,8 +6,8 @@ import { User, UserService } from '../../core/services/user.service';
 import { SchedulesService, Schedule } from '../../core/services/schedules.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoggingService } from '../../core/services/logging.service';
-import { SocketService } from '../../core/services/socket.service';
-import { Subscription } from 'rxjs';
+import { AudioService } from '../../core/services/audio.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-dashboard',
@@ -28,7 +28,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   completedAppointmentsThisMonth = 0;
   totalClients = 0;
   newClientsThisMonth = 0;
-  private socketSubscriptions: Subscription[] = [];
+  private pollingInterval: any = null;
+  private lastPollingTimestamp: Date | null = null;
+  private readonly POLLING_INTERVAL = 30000; // 30 segundos
 
   get completedAppointmentsToday(): number {
     return this.appointments.filter(a => !!a.finished).length;
@@ -41,7 +43,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private userService: UserService,
     private notificationService: NotificationService,
     private loggingService: LoggingService,
-    private socketService: SocketService
+    private audioService: AudioService
   ) {
     this.currentUser = this.authService.currentUser;
   }
@@ -52,50 +54,153 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
     this.loadData();
-    this.setupSocketListeners();
+    
+    // Iniciar polling automático para atualizações
+    this.startPolling();
   }
 
   ngOnDestroy(): void {
-    // Limpar todas as subscrições do Socket.IO
-    this.socketSubscriptions.forEach(sub => sub.unsubscribe());
+    // Parar polling se estiver ativo
+    this.stopPolling();
   }
 
   /**
-   * Configura os listeners do Socket.IO para atualização automática
+   * Inicia polling automático para verificar novos agendamentos (usado em produção)
    */
-  private setupSocketListeners(): void {
-    // Listener para quando um novo agendamento é criado
-    const createdSub = this.socketService.onScheduleCreated.subscribe((event) => {
-      console.log('Novo agendamento recebido via Socket.IO:', event);
-      
-      // Verificar se o agendamento é de hoje
-      const scheduleDate = new Date(event.schedule.date_and_houres);
-      const today = new Date();
-      const isToday = scheduleDate.toDateString() === today.toDateString();
-      
-      if (isToday) {
-        // Recarregar dados do dashboard
-        this.loadData();
-        this.notificationService.info('Novo agendamento adicionado!', 'Dashboard atualizado');
-      } else {
-        // Apenas atualizar estatísticas do mês
-        this.loadAppointments();
+  private startPolling(): void {
+    // Armazenar timestamp inicial
+    this.lastPollingTimestamp = new Date();
+    
+    // Polling imediato na primeira vez
+    this.performPolling();
+    
+    // Configurar polling periódico
+    this.pollingInterval = setInterval(() => {
+      this.performPolling();
+    }, this.POLLING_INTERVAL);
+    
+    if (!environment.production) {
+      console.log('🔄 [Dashboard] Polling automático iniciado (intervalo: 30s)');
+    }
+  }
+
+  /**
+   * Para o polling automático
+   */
+  private stopPolling(): void {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+      if (!environment.production) {
+        console.log('🛑 [Dashboard] Polling automático parado');
       }
-    });
+    }
+  }
 
-    // Listener para quando um agendamento é atualizado
-    const updatedSub = this.socketService.onScheduleUpdated.subscribe((event) => {
-      console.log('Agendamento atualizado via Socket.IO:', event);
-      this.loadData();
-    });
+  /**
+   * Executa uma verificação de polling para novos agendamentos
+   */
+  private async performPolling(): Promise<void> {
+    try {
+      // Buscar todos os agendamentos e filtrar apenas os de hoje
+      const schedules = await this.schedulesService.getAllSchedules().toPromise();
 
-    // Listener para quando um agendamento é deletado
-    const deletedSub = this.socketService.onScheduleDeleted.subscribe((event) => {
-      console.log('Agendamento deletado via Socket.IO:', event);
-      this.loadData();
-    });
+      if (schedules && Array.isArray(schedules)) {
+        // Filtrar apenas agendamentos de hoje
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        const todayStr = today.toISOString().split('T')[0];
+        const currentAppointments = schedules.filter(schedule => {
+          if (!schedule || !schedule.date_and_houres) return false;
+          try {
+            const scheduleDateStr = new Date(schedule.date_and_houres).toISOString().split('T')[0];
+            return scheduleDateStr === todayStr;
+          } catch (e) {
+            return false;
+          }
+        });
+        
+        // Comparar com os agendamentos atuais para detectar mudanças
+        const changeInfo = this.detectChanges(currentAppointments);
+        
+        if (changeInfo.hasChanges) {
+          if (!environment.production) {
+            console.log('🔄 [Dashboard] Mudanças detectadas via polling, atualizando...');
+          }
+          
+          // Se for um novo agendamento, tocar som e mostrar notificação
+          if (changeInfo.isNewAppointment) {
+            this.audioService.playDoubleBeep();
+            this.notificationService.info('Novo agendamento adicionado!', 'Dashboard atualizado');
+          }
+          
+          await this.loadData();
+        }
+      }
+    } catch (error) {
+      // Silenciar erros de polling para não poluir o console
+      if (!environment.production) {
+        console.error('Erro no polling:', error);
+      }
+    }
+  }
 
-    this.socketSubscriptions.push(createdSub, updatedSub, deletedSub);
+  /**
+   * Detecta se houve mudanças nos agendamentos
+   * Retorna objeto com informações sobre o tipo de mudança
+   */
+  private detectChanges(newAppointments: Schedule[]): { hasChanges: boolean; isNewAppointment: boolean } {
+    // Se não há timestamp anterior, sempre atualizar na primeira vez (mas não é novo agendamento)
+    if (!this.lastPollingTimestamp) {
+      this.lastPollingTimestamp = new Date();
+      return { hasChanges: true, isNewAppointment: false };
+    }
+
+    // Comparar IDs dos agendamentos para detectar novos
+    const currentIds = new Set(this.appointments.map(a => a.id));
+    const newIds = new Set(newAppointments.map(a => a.id));
+    
+    // Verificar se há novos agendamentos (IDs que não existiam antes)
+    let hasNewAppointment = false;
+    for (const id of newIds) {
+      if (!currentIds.has(id)) {
+        hasNewAppointment = true;
+        break;
+      }
+    }
+
+    // Se há novo agendamento, retornar imediatamente
+    if (hasNewAppointment) {
+      return { hasChanges: true, isNewAppointment: true };
+    }
+
+    // Comparar quantidade de agendamentos (pode ter sido removido)
+    if (newAppointments.length !== this.appointments.length) {
+      return { hasChanges: true, isNewAppointment: false };
+    }
+
+    // Verificar se algum agendamento foi atualizado (comparar updatedAt)
+    for (const newAppointment of newAppointments) {
+      const currentAppointment = this.appointments.find(a => a.id === newAppointment.id);
+      if (currentAppointment) {
+        const newUpdatedAt = newAppointment.updatedAt ? new Date(newAppointment.updatedAt) : null;
+        const currentUpdatedAt = currentAppointment.updatedAt ? new Date(currentAppointment.updatedAt) : null;
+        
+        if (newUpdatedAt && currentUpdatedAt && newUpdatedAt.getTime() > currentUpdatedAt.getTime()) {
+          return { hasChanges: true, isNewAppointment: false };
+        }
+        
+        // Verificar mudança no status finished
+        if (newAppointment.finished !== currentAppointment.finished) {
+          return { hasChanges: true, isNewAppointment: false };
+        }
+      }
+    }
+
+    return { hasChanges: false, isNewAppointment: false };
   }
 
   async loadData() {

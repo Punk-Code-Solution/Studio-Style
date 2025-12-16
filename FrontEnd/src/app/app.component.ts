@@ -5,6 +5,7 @@ import { SidebarComponent } from './layout/sidebar/sidebar.component';
 import { AuthService } from './core/services/auth.service';
 import { NotificationsComponent } from './shared/components/notifications/notifications.component';
 import { Subscription, filter } from 'rxjs';
+import { environment } from '../environments/environment';
 
 // Rotas públicas onde a sidebar não deve aparecer
 const PUBLIC_ROUTES = ['/login', '/reset-password', '/unauthorized'];
@@ -72,12 +73,14 @@ export class AppComponent implements OnInit, OnDestroy {
       });
     this.subscriptions.add(routerSub);
 
-    // Log de erros de navegação
-    this.router.events.subscribe(event => {
-      if (event.type === 0) { // NavigationError
-        console.error('❌ [APP] Erro de navegação:', event);
-      }
-    });
+    // Log de erros de navegação (apenas em desenvolvimento)
+    if (!environment.production) {
+      this.router.events.subscribe(event => {
+        if (event.type === 0) { // NavigationError
+          console.error('❌ [APP] Erro de navegação:', event);
+        }
+      });
+    }
 
     // Atualiza a rota inicial
     this.currentRoute = this.router.url;
