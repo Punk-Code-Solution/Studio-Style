@@ -124,7 +124,7 @@ import { Schedule } from '../../../core/services/schedules.service';
             <i class="fas fa-times"></i>
             Fechar
           </button>
-          <button class="btn-primary" (click)="editSchedule()">
+          <button class="btn-primary" (click)="editSchedule()" *ngIf="!viewOnly">
             <i class="fas fa-edit"></i>
             Editar
           </button>
@@ -363,6 +363,7 @@ import { Schedule } from '../../../core/services/schedules.service';
 })
 export class ScheduleViewModalComponent {
   @Input() schedule: Schedule | null = null;
+  @Input() viewOnly: boolean = false; // Se true, oculta o botão de editar
   @Output() close = new EventEmitter<void>();
   @Output() edit = new EventEmitter<Schedule>();
 
