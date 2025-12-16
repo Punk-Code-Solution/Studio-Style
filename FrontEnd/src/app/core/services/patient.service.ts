@@ -73,8 +73,10 @@ export class PatientService {
     }
     
     // Mapear telefone da array Phones para propriedade phone
-    if (patient.Phones && patient.Phones.length > 0) {
-      const phoneObj = patient.Phones[0];
+    // Aceita tanto Phones (maiúsculo) quanto phones (minúsculo) do backend
+    const phonesArray = (patient as any).Phones || (patient as any).phones || [];
+    if (phonesArray && phonesArray.length > 0) {
+      const phoneObj = phonesArray[0];
       
       // Se phoneObj já é uma string, usar diretamente
       if (typeof phoneObj === 'string') {

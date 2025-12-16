@@ -17,7 +17,11 @@ import { TableUtilsService, TableSort } from '../../../core/services/table-utils
           <h1>Controle de Entradas e Saídas</h1>
         </div>
         <div class="header-right">
-          <button class="add-btn" (click)="openCreateModal()">
+          <button 
+            class="add-btn" 
+            (click)="openCreateModal()"
+            *ngIf="isAdmin()"
+            [title]="'Apenas administradores podem criar entradas'">
             <i class="fas fa-plus"></i>
             Nova Entrada/Saída
           </button>
@@ -131,13 +135,26 @@ import { TableUtilsService, TableSort } from '../../../core/services/table-utils
                 {{ entry.transaction_type === 'INCOME' ? '+' : '-' }}{{ (entry.amount / 100) | currency:'BRL' }}
               </td>
               <td>
-                <div class="actions">
-                  <button class="action-btn" (click)="openEditModal(entry)" title="Editar entrada">
+                <div class="actions" *ngIf="isAdmin()">
+                  <button 
+                    class="action-btn" 
+                    (click)="openEditModal(entry)" 
+                    [disabled]="isVirtualEntry(entry)"
+                    [title]="isVirtualEntry(entry) ? 'Entradas virtuais não podem ser editadas' : 'Editar entrada'"
+                    [class.disabled]="isVirtualEntry(entry)">
                     <i class="fas fa-edit"></i>
                   </button>
-                  <button class="action-btn delete-btn" (click)="confirmDelete(entry)" title="Excluir entrada">
+                  <button 
+                    class="action-btn delete-btn" 
+                    (click)="confirmDelete(entry)" 
+                    [disabled]="isVirtualEntry(entry)"
+                    [title]="isVirtualEntry(entry) ? 'Entradas virtuais não podem ser excluídas' : 'Excluir entrada'"
+                    [class.disabled]="isVirtualEntry(entry)">
                     <i class="fas fa-trash"></i>
                   </button>
+                </div>
+                <div class="actions" *ngIf="!isAdmin()">
+                  <span class="no-actions-text">Apenas administradores podem editar</span>
                 </div>
               </td>
             </tr>
@@ -407,6 +424,15 @@ export class FinancialLedgerComponent implements OnInit {
   }
 
   openEditModal(entry: FinancialLedgerEntry) {
+    // Verificar se é uma entrada virtual
+    if (this.isVirtualEntry(entry)) {
+      this.notificationService.warning(
+        'Entradas virtuais não podem ser editadas. Elas são geradas automaticamente a partir de agendamentos finalizados.',
+        'Atenção'
+      );
+      return;
+    }
+    
     this.editingEntry = entry;
     this.formData = {
       transactionType: entry.transaction_type,
@@ -453,7 +479,8 @@ export class FinancialLedgerComponent implements OnInit {
           this.saving = false;
         },
         error: (err) => {
-          this.notificationService.error('Erro ao atualizar entrada.');
+          const errorMsg = err?.error?.message || err?.message || 'Erro ao atualizar entrada. Por favor, tente novamente.';
+          this.notificationService.error(errorMsg);
           console.error('Error updating entry:', err);
           this.saving = false;
         }
@@ -477,7 +504,8 @@ export class FinancialLedgerComponent implements OnInit {
           this.saving = false;
         },
         error: (err) => {
-          this.notificationService.error('Erro ao criar entrada.');
+          const errorMsg = err?.error?.message || err?.message || 'Erro ao criar entrada. Por favor, tente novamente.';
+          this.notificationService.error(errorMsg);
           console.error('Error creating entry:', err);
           this.saving = false;
         }
@@ -486,6 +514,15 @@ export class FinancialLedgerComponent implements OnInit {
   }
 
   confirmDelete(entry: FinancialLedgerEntry) {
+    // Verificar se é uma entrada virtual
+    if (this.isVirtualEntry(entry)) {
+      this.notificationService.warning(
+        'Entradas virtuais não podem ser excluídas. Elas são geradas automaticamente a partir de agendamentos finalizados.',
+        'Atenção'
+      );
+      return;
+    }
+    
     this.entryToDelete = entry;
     this.showDeleteModal = true;
   }
@@ -543,6 +580,24 @@ export class FinancialLedgerComponent implements OnInit {
       'OTHER': 'Outros'
     };
     return labels[category] || category;
+  }
+
+  /**
+   * Verifica se uma entrada é virtual (gerada automaticamente)
+   */
+  isVirtualEntry(entry: FinancialLedgerEntry): boolean {
+    if (!entry || !entry.id) {
+      return false;
+    }
+    const id = String(entry.id);
+    return id.startsWith('virtual-income-') || id.startsWith('virtual-expense-') || entry.isVirtual === true;
+  }
+
+  /**
+   * Verifica se o usuário atual é administrador
+   */
+  isAdmin(): boolean {
+    return this.authService.hasRole('admin');
   }
 }
 

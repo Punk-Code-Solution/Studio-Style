@@ -104,33 +104,34 @@ class PaymentCalculationService {
     const operationalCosts = gatewayFee + productCost + taxCalculation.totalTax;
 
     // 8. Retornar objeto detalhado
+    // Todos os valores já estão em centavos (inteiros), garantimos apenas que sejam inteiros
     return {
-      // Valores brutos
-      grossAmount: this._toCents(grossAmount),
-      amountAfterGatewayFee: this._toCents(amountAfterGatewayFee),
+      // Valores brutos (já em centavos)
+      grossAmount: Math.round(grossAmount),
+      amountAfterGatewayFee: Math.round(amountAfterGatewayFee),
 
-      // Divisão básica
-      salonShare: this._toCents(salonShare),
-      professionalCommission: this._toCents(professionalCommission),
+      // Divisão básica (já em centavos)
+      salonShare: Math.round(salonShare),
+      professionalCommission: Math.round(professionalCommission),
 
-      // Valores líquidos finais
-      salonNetAmount: this._toCents(salonNetAmount),
-      professionalNetAmount: this._toCents(professionalNetAmount),
+      // Valores líquidos finais (já em centavos)
+      salonNetAmount: Math.round(salonNetAmount),
+      professionalNetAmount: Math.round(professionalNetAmount),
 
-      // Impostos
+      // Impostos (já em centavos)
       taxes: {
-        salonTax: this._toCents(taxCalculation.salonTax),
-        professionalTax: this._toCents(taxCalculation.professionalTax),
-        totalTax: this._toCents(taxCalculation.totalTax),
+        salonTax: Math.round(taxCalculation.salonTax),
+        professionalTax: Math.round(taxCalculation.professionalTax),
+        totalTax: Math.round(taxCalculation.totalTax),
         taxRegime: companySettings.tax_regime,
         isPartnerSalon: companySettings.is_partner_salon
       },
 
-      // Custos operacionais
+      // Custos operacionais (já em centavos)
       operationalCosts: {
-        gatewayFee: this._toCents(gatewayFee),
-        productCost: this._toCents(productCost),
-        total: this._toCents(operationalCosts)
+        gatewayFee: Math.round(gatewayFee),
+        productCost: Math.round(productCost),
+        total: Math.round(operationalCosts)
       },
 
       // Metadados
@@ -209,7 +210,8 @@ class PaymentCalculationService {
   }
 
   /**
-   * Converte para centavos (garante precisão)
+   * Garante que o valor seja um inteiro (valores já estão em centavos)
+   * @deprecated Use Math.round() diretamente, valores já estão em centavos
    */
   _toCents(value) {
     return Math.round(value);
