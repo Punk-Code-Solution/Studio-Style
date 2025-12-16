@@ -6,7 +6,6 @@ import { User, UserService } from '../../core/services/user.service';
 import { SchedulesService, Schedule } from '../../core/services/schedules.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoggingService } from '../../core/services/logging.service';
-import { AudioService } from '../../core/services/audio.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -42,8 +41,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private schedulesService: SchedulesService,
     private userService: UserService,
     private notificationService: NotificationService,
-    private loggingService: LoggingService,
-    private audioService: AudioService
+    private loggingService: LoggingService
   ) {
     this.currentUser = this.authService.currentUser;
   }
@@ -55,7 +53,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
     this.loadData();
     
-    // Iniciar polling automático para atualizações
+    // O monitoramento global de novos agendamentos é feito pelo ScheduleMonitorService no AppComponent
+    // Aqui mantemos apenas o polling para atualizar a tela do dashboard
     this.startPolling();
   }
 
@@ -124,19 +123,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
         });
         
         // Comparar com os agendamentos atuais para detectar mudanças
-        const changeInfo = this.detectChanges(currentAppointments);
+        // Nota: O aviso sonoro é gerenciado globalmente pelo ScheduleMonitorService
+        const hasChanges = this.detectChanges(currentAppointments);
         
-        if (changeInfo.hasChanges) {
+        if (hasChanges) {
           if (!environment.production) {
             console.log('🔄 [Dashboard] Mudanças detectadas via polling, atualizando...');
           }
-          
-          // Se for um novo agendamento, tocar som e mostrar notificação
-          if (changeInfo.isNewAppointment) {
-            this.audioService.playDoubleBeep();
-            this.notificationService.info('Novo agendamento adicionado!', 'Dashboard atualizado');
-          }
-          
           await this.loadData();
         }
       }
@@ -150,36 +143,34 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /**
    * Detecta se houve mudanças nos agendamentos
-   * Retorna objeto com informações sobre o tipo de mudança
+   * Retorna true se houver mudanças (novos, atualizados ou removidos)
+   * Nota: O aviso sonoro é gerenciado globalmente pelo ScheduleMonitorService
    */
-  private detectChanges(newAppointments: Schedule[]): { hasChanges: boolean; isNewAppointment: boolean } {
-    // Se não há timestamp anterior, sempre atualizar na primeira vez (mas não é novo agendamento)
+  private detectChanges(newAppointments: Schedule[]): boolean {
+    // Se não há timestamp anterior, sempre atualizar na primeira vez
     if (!this.lastPollingTimestamp) {
       this.lastPollingTimestamp = new Date();
-      return { hasChanges: true, isNewAppointment: false };
+      return true;
     }
 
-    // Comparar IDs dos agendamentos para detectar novos
+    // Comparar quantidade de agendamentos
+    if (newAppointments.length !== this.appointments.length) {
+      return true;
+    }
+
+    // Comparar IDs dos agendamentos
     const currentIds = new Set(this.appointments.map(a => a.id));
     const newIds = new Set(newAppointments.map(a => a.id));
     
-    // Verificar se há novos agendamentos (IDs que não existiam antes)
-    let hasNewAppointment = false;
+    if (currentIds.size !== newIds.size) {
+      return true;
+    }
+
+    // Verificar se algum ID mudou
     for (const id of newIds) {
       if (!currentIds.has(id)) {
-        hasNewAppointment = true;
-        break;
+        return true;
       }
-    }
-
-    // Se há novo agendamento, retornar imediatamente
-    if (hasNewAppointment) {
-      return { hasChanges: true, isNewAppointment: true };
-    }
-
-    // Comparar quantidade de agendamentos (pode ter sido removido)
-    if (newAppointments.length !== this.appointments.length) {
-      return { hasChanges: true, isNewAppointment: false };
     }
 
     // Verificar se algum agendamento foi atualizado (comparar updatedAt)
@@ -190,17 +181,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const currentUpdatedAt = currentAppointment.updatedAt ? new Date(currentAppointment.updatedAt) : null;
         
         if (newUpdatedAt && currentUpdatedAt && newUpdatedAt.getTime() > currentUpdatedAt.getTime()) {
-          return { hasChanges: true, isNewAppointment: false };
+          return true;
         }
         
         // Verificar mudança no status finished
         if (newAppointment.finished !== currentAppointment.finished) {
-          return { hasChanges: true, isNewAppointment: false };
+          return true;
         }
       }
     }
 
-    return { hasChanges: false, isNewAppointment: false };
+    return false;
   }
 
   async loadData() {
@@ -487,3 +478,5 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 }
+
+

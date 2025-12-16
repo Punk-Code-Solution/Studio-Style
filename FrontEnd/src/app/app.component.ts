@@ -4,6 +4,7 @@ import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { SidebarComponent } from './layout/sidebar/sidebar.component';
 import { AuthService } from './core/services/auth.service';
 import { NotificationsComponent } from './shared/components/notifications/notifications.component';
+import { ScheduleMonitorService } from './core/services/schedule-monitor.service';
 import { Subscription, filter } from 'rxjs';
 import { environment } from '../environments/environment';
 
@@ -39,7 +40,8 @@ export class AppComponent implements OnInit, OnDestroy {
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private scheduleMonitorService: ScheduleMonitorService
   ) {}
 
   ngOnInit(): void {
@@ -53,11 +55,23 @@ export class AppComponent implements OnInit, OnDestroy {
     this.updateSidebarVisibility();
 
     // Escuta mudanças no estado de autenticação
-    const authSub = this.authService.authState$.subscribe(() => {
+    const authSub = this.authService.authState$.subscribe((authState) => {
       console.log('🔵 [APP] Estado de autenticação mudou');
       this.updateSidebarVisibility();
+      
+      // Iniciar monitoramento de agendamentos quando usuário estiver autenticado
+      if (authState.isAuthenticated && authState.user) {
+        this.scheduleMonitorService.startMonitoring();
+      } else {
+        this.scheduleMonitorService.stopMonitoring();
+      }
     });
     this.subscriptions.add(authSub);
+    
+    // Iniciar monitoramento se já estiver autenticado
+    if (this.authService.isAuthenticated()) {
+      this.scheduleMonitorService.startMonitoring();
+    }
 
     // Escuta mudanças de rota para garantir que o estado seja atualizado
     const routerSub = this.router.events
@@ -90,6 +104,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+    this.scheduleMonitorService.stopMonitoring();
   }
 
   private updateSidebarVisibility(): void {
