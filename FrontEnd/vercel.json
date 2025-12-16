@@ -10,7 +10,7 @@
       "destination": "https://studio-style.vercel.app/api/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!.*\\.).*)$",
       "destination": "/index.html"
     }
   ],
