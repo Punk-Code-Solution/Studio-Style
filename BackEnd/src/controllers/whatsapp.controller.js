@@ -36,11 +36,12 @@ class WhatsAppController {
    * @param {string} whatsappMessageId - ID da mensagem do WhatsApp
    * @param {string} messageType - Tipo da mensagem ('text', 'image', etc.)
    * @param {string} status - Status da mensagem ('sent', 'delivered', 'read', 'failed')
+   * @param {string} contactName - Nome do contato do WhatsApp (opcional)
    */
-  async saveMessage(from, content, direction, whatsappMessageId, messageType = 'text', status = 'delivered') {
+  async saveMessage(from, content, direction, whatsappMessageId, messageType = 'text', status = 'delivered', contactName = null) {
     try {
-      // Busca ou cria a conta do cliente
-      const clientAccount = await this.getOrCreateClient(from, null);
+      // Busca ou cria a conta do cliente usando o nome do contato se disponível
+      const clientAccount = await this.getOrCreateClient(from, contactName);
       const accountId = clientAccount ? clientAccount.id : null;
 
       // Busca ou cria a conversa para este número de telefone
@@ -235,7 +236,7 @@ class WhatsAppController {
           // Ignora erro ao buscar account
         }
 
-        await this.saveMessage(from, text, 'incoming', messageId, 'text', 'delivered');
+        await this.saveMessage(from, text, 'incoming', messageId, 'text', 'delivered', contact?.name);
       } catch (error) {
         console.error('Erro ao salvar mensagem recebida:', error);
         // Não interrompe o fluxo se falhar ao salvar
@@ -262,6 +263,18 @@ class WhatsAppController {
       let account = await this.accountRepo.findAccountByPhone(phone);
 
       if (account) {
+        // Se o contato tem nome e o account não tem ou tem apenas o nome padrão, atualiza
+        if (contactName && contactName.trim() && 
+            (!account.name || account.name === 'Cliente WhatsApp' || account.name.trim() === '')) {
+          try {
+            await this.accountRepo.updateAccount({ id: account.id, name: contactName.trim() });
+            // Recarrega o account para ter o nome atualizado
+            account = await this.accountRepo.findAccountByPhone(phone);
+          } catch (error) {
+            console.error('Erro ao atualizar nome do cliente:', error);
+            // Não falha se não conseguir atualizar o nome
+          }
+        }
         return account;
       }
 
