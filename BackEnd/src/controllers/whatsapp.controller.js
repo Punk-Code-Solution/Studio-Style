@@ -698,7 +698,7 @@ class WhatsAppController {
       const cleanText = text.trim().toLowerCase();
       
       // Verifica se o usuário quer continuar
-      if (cleanText === 'continuar' || cleanText === 'continuar' || cleanText === 'pronto') {
+      if (cleanText === 'continuar' || cleanText === 'pronto') {
         const selectedServices = session.selectedServices || [];
         
         if (selectedServices.length === 0) {
@@ -777,6 +777,7 @@ class WhatsAppController {
       
       const updatedSelected = [...currentSelected, ...newServices];
       const totalPrice = updatedSelected.reduce((sum, s) => sum + s.price, 0);
+      const totalDuration = updatedSelected.reduce((sum, s) => sum + (s.duration || 60), 0);
       
       const servicesList = updatedSelected.map(s => `   • ${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`).join('\n');
       const message = `✅ Serviços selecionados:\n\n${servicesList}\n\n` +
@@ -788,7 +789,9 @@ class WhatsAppController {
       
     this.setUserSession(phone, {
       ...session,
-        selectedServices: updatedSelected
+        selectedServices: updatedSelected,
+        totalPrice: totalPrice,
+        totalDuration: totalDuration
       });
       
     } catch (error) {
