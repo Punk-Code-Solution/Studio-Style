@@ -54,6 +54,18 @@ import { Service } from '../../../core/services/services.service';
                 <span class="value">{{ formatCommission(service.commission_rate) }}</span>
               </div>
 
+              <div class="detail-item">
+                <label>
+                  <i class="fas fa-clock"></i>
+                  Limite por Hora
+                </label>
+                <span class="value">
+                  <span class="badge" [class.badge-warning]="service.single_per_hour" [class.badge-info]="!service.single_per_hour">
+                    {{ service.single_per_hour ? '1 agendamento por hora' : '3 agendamentos por hora' }}
+                  </span>
+                </span>
+              </div>
+
               <div class="detail-item" *ngIf="service.additionalComments">
                 <label>
                   <i class="fas fa-comment"></i>
@@ -212,6 +224,26 @@ import { Service } from '../../../core/services/services.service';
       color: #555;
       line-height: 1.5;
       white-space: pre-wrap;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-warning {
+      background-color: #ff9800;
+      color: white;
+    }
+
+    .badge-info {
+      background-color: #2196f3;
+      color: white;
     }
 
     .modal-footer {

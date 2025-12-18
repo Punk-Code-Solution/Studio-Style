@@ -45,6 +45,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: 60
+    },
+    // Indica se o serviço só pode ter 1 agendamento por hora (ex: manicure, pedicure)
+    single_per_hour: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false
     }
   }, {
     sequelize,

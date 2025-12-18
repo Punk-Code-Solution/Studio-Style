@@ -11,6 +11,8 @@ interface ServiceFormData {
   commissionPercent: number | null;
   // Duração do serviço em minutos
   duration: number | null;
+  // Indica se o serviço só pode ter 1 agendamento por hora
+  single_per_hour: boolean;
 }
 
 @Component({
@@ -137,6 +139,24 @@ interface ServiceFormData {
                 placeholder="Digite comentários adicionais sobre o serviço (opcional)"
               ></textarea>
             </div>
+
+            <div class="form-group">
+              <label for="single_per_hour" class="checkbox-label">
+                <input
+                  type="checkbox"
+                  id="single_per_hour"
+                  [(ngModel)]="serviceData.single_per_hour"
+                  name="single_per_hour"
+                >
+                <span>
+                  <i class="fas fa-clock"></i>
+                  Limitar a 1 agendamento por hora
+                </span>
+              </label>
+              <small style="color: #666; font-size: 0.875rem; margin-top: 0.25rem; display: block; margin-left: 1.75rem;">
+                Marque esta opção para serviços como manicure e pedicure que só podem ter 1 agendamento por hora
+              </small>
+            </div>
           </form>
         </div>
 
@@ -234,6 +254,26 @@ interface ServiceFormData {
     .form-group i {
       color: #1976d2;
       width: 16px;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .checkbox-label span {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
     input, textarea {
@@ -336,7 +376,8 @@ export class ServiceFormModalComponent implements OnInit {
     additionalComments: '',
     price: null,
     commissionPercent: null,
-    duration: null
+    duration: null,
+    single_per_hour: false
   };
 
   constructor() {}
@@ -349,7 +390,8 @@ export class ServiceFormModalComponent implements OnInit {
         additionalComments: this.service.additionalComments || '',
         price: this.service.price || null,
         commissionPercent: this.service.commission_rate != null ? this.service.commission_rate * 100 : null,
-        duration: this.service.duration || 60
+        duration: this.service.duration || 60,
+        single_per_hour: this.service.single_per_hour !== undefined && this.service.single_per_hour !== null ? this.service.single_per_hour : false
       };
     } else {
       // Valores padrão para novos serviços
@@ -374,7 +416,8 @@ export class ServiceFormModalComponent implements OnInit {
       additionalComments: this.serviceData.additionalComments || undefined,
       price: this.serviceData.price || 0,
       commission_rate: commissionRate,
-      duration: this.serviceData.duration || 60
+      duration: this.serviceData.duration || 60,
+      single_per_hour: this.serviceData.single_per_hour === true
     };
 
     this.save.emit(dataToSend);

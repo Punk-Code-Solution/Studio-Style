@@ -72,6 +72,7 @@ import { TableUtilsService, TableSort } from '../../core/services/table-utils.se
                   Duração
                   <i class="fas" [ngClass]="getSortIcon('duration')"></i>
                 </th>
+                <th>Limite por Hora</th>
                 <th>Comentários</th>
                 <th>Ações</th>
               </tr>
@@ -84,6 +85,11 @@ import { TableUtilsService, TableSort } from '../../core/services/table-utils.se
                   {{ formatCommission(service.commission_rate) }}
                 </td>
                 <td>{{ formatDuration(service.duration) }}</td>
+                <td>
+                  <span class="badge" [class.badge-warning]="service.single_per_hour" [class.badge-info]="!service.single_per_hour">
+                    {{ service.single_per_hour ? '1 por hora' : '3 por hora' }}
+                  </span>
+                </td>
                 <td>{{ service.additionalComments || '-' }}</td>
                 <td>
                   <div class="actions">
@@ -100,7 +106,7 @@ import { TableUtilsService, TableSort } from '../../core/services/table-utils.se
                 </td>
               </tr>
               <tr *ngIf="filteredServices.length === 0">
-                <td [attr.colspan]="6" class="empty-state">
+                <td [attr.colspan]="7" class="empty-state">
                   <p>Nenhum serviço encontrado</p>
                 </td>
               </tr>
@@ -359,6 +365,26 @@ import { TableUtilsService, TableSort } from '../../core/services/table-utils.se
       text-align: center;
       padding: 2rem;
       color: #666;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-warning {
+      background-color: #ff9800;
+      color: white;
+    }
+
+    .badge-info {
+      background-color: #2196f3;
+      color: white;
     }
 
     .pagination {
@@ -659,7 +685,8 @@ export class ServicesComponent implements OnInit {
       additionalComments: serviceData.additionalComments,
       price: serviceData.price,
       commission_rate: serviceData.commission_rate,
-      duration: serviceData.duration || 60
+      duration: serviceData.duration || 60,
+      single_per_hour: serviceData.single_per_hour || false
     };
 
     if (this.selectedService?.id) {
@@ -670,7 +697,8 @@ export class ServicesComponent implements OnInit {
         additionalComments: serviceData.additionalComments,
         price: serviceData.price,
         commission_rate: serviceData.commission_rate,
-        duration: serviceData.duration || 60
+        duration: serviceData.duration || 60,
+        single_per_hour: serviceData.single_per_hour !== undefined ? serviceData.single_per_hour : false
       };
       this.servicesService.updateService(updateRequest).subscribe({
         next: () => {

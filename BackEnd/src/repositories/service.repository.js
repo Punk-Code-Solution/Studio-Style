@@ -37,7 +37,8 @@ class serviceRepository{
         additionalComments,
         price,
         commission_rate,
-        duration
+        duration,
+        single_per_hour
       } = services;
 
       const result = await Service.create({
@@ -46,7 +47,8 @@ class serviceRepository{
         additionalComments,
         price,
         commission_rate,
-        duration: duration || 60 // Valor padrão de 60 minutos
+        duration: duration || 60, // Valor padrão de 60 minutos
+        single_per_hour: single_per_hour !== undefined && single_per_hour !== null ? single_per_hour : false // Valor padrão false
       }, { transaction });
 
       if (!result) {
@@ -79,6 +81,9 @@ class serviceRepository{
       }
       if (service.duration !== undefined) {
         updateData.duration = service.duration;
+      }
+      if (service.single_per_hour !== undefined) {
+        updateData.single_per_hour = service.single_per_hour;
       }
 
       const [affectedRows] = await Service.update(
