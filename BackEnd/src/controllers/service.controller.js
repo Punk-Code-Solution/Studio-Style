@@ -95,6 +95,12 @@ module.exports = class serviceController{
                 }
             }
             
+            if (serviceData.single_per_hour !== undefined) {
+                if (typeof serviceData.single_per_hour !== 'boolean') {
+                    return ResponseHandler.validationError(response, 'single_per_hour must be a boolean value');
+                }
+            }
+            
             const result = await serviceRespo.addService(serviceData);
             
             if (!result) {
@@ -154,6 +160,12 @@ module.exports = class serviceController{
                     serviceData.duration < 1 || 
                     !Number.isInteger(serviceData.duration)) {
                     return ResponseHandler.validationError(response, 'Duration must be a positive integer (in minutes)');
+                }
+            }
+            
+            if (serviceData.single_per_hour !== undefined) {
+                if (typeof serviceData.single_per_hour !== 'boolean') {
+                    return ResponseHandler.validationError(response, 'single_per_hour must be a boolean value');
                 }
             }
             

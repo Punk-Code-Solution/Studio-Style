@@ -129,6 +129,7 @@ CREATE TABLE public."Services"(
   price FLOAT,
   commission_rate FLOAT,
   duration INTEGER DEFAULT 60,
+  single_per_hour BOOLEAN DEFAULT false,
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );

@@ -826,7 +826,7 @@ class WhatsAppController {
       }
 
       const duration = session.totalDuration || selectedServices.reduce((sum, s) => sum + (s.duration || 60), 0);
-      const availableTimes = await this.getAvailableTimes(session.selectedDate, duration);
+      const availableTimes = await this.getAvailableTimes(session.selectedDate, duration, selectedServices);
       
       if (!availableTimes || availableTimes.length === 0) {
         await this.sendMessageSafely(phone, '❌ Não há horários disponíveis para a data selecionada. Por favor, escolha outra data.');
@@ -1046,7 +1046,7 @@ class WhatsAppController {
       const selectedDate = session.availableDates[dateIndex];
       // Usa a duração total dos serviços selecionados
       const duration = session.totalDuration || servicesForDate.reduce((sum, s) => sum + (s.duration || 60), 0);
-      const availableTimes = await this.getAvailableTimes(selectedDate, duration);
+      const availableTimes = await this.getAvailableTimes(selectedDate, duration, servicesForDate);
       
       if (!availableTimes || availableTimes.length === 0) {
         await this.sendMessageSafely(phone, '❌ Não há horários disponíveis para a data selecionada. Por favor, escolha outra data.');
@@ -1155,7 +1155,7 @@ class WhatsAppController {
       const duration = session.duration || session.selectedService?.duration || 60;
       // Para verificação de disponibilidade, usamos o horário em UTC-3 (Horário de Brasília)
       const timeForCheck = appointmentDateTime.clone();
-      const isAvailable = await this.checkAvailability(timeForCheck, duration);
+      const isAvailable = await this.checkAvailability(timeForCheck, duration, servicesToCheck);
 
       if (!isAvailable) {
         await this.sendMessageSafely(phone,
@@ -1433,14 +1433,30 @@ class WhatsAppController {
   /**
    * Verifica disponibilidade de horário
    * Usa timezone UTC-3 (Brasil - Horário de Brasília)
+   * @param {moment.Moment} dateTime - Data e horário a verificar
+   * @param {number} duration - Duração em minutos
+   * @param {Array} selectedServices - Array de serviços selecionados (opcional)
+   * @returns {Promise<boolean>} - true se há disponibilidade, false caso contrário
    */
-  async checkAvailability(dateTime, duration) {
+  async checkAvailability(dateTime, duration, selectedServices = []) {
     // Garante que está trabalhando com UTC-3 (Horário de Brasília)
     const startTime = moment(dateTime).utcOffset(-3);
     const endTime = moment(dateTime).utcOffset(-3).add(duration, 'minutes');
     
-    // Capacidade máxima de 3 agendamentos simultâneos
-    const MAX_CAPACITY = 3;
+    // Verifica se algum serviço selecionado tem limite de 1 por hora
+    let hasSinglePerHourService = false;
+    if (selectedServices && selectedServices.length > 0) {
+      // Busca os serviços completos do banco para verificar o campo single_per_hour
+      const serviceIds = selectedServices.map(s => s.id || s);
+      const services = await Service.findAll({
+        where: { id: { [Op.in]: serviceIds } }
+      });
+      
+      hasSinglePerHourService = services.some(s => s.single_per_hour === true);
+    }
+    
+    // Capacidade máxima: 1 para serviços single_per_hour, 3 para outros
+    const MAX_CAPACITY = hasSinglePerHourService ? 1 : 3;
 
     // Conta quantos agendamentos existem no mesmo horário
     // Converte para UTC para comparar com o banco (que salva em UTC)
@@ -1451,8 +1467,43 @@ class WhatsAppController {
           [Op.gte]: startTime.utc().toDate(),
           [Op.lt]: endTime.utc().toDate()
         }
-      }
+      },
+      include: [{
+        model: Service,
+        as: 'Services',
+        through: { attributes: [] },
+        required: false
+      }]
     });
+    
+    // Se há serviço single_per_hour, verifica se já existe algum agendamento com esse tipo de serviço no horário
+    if (hasSinglePerHourService && count > 0) {
+      // Busca agendamentos no horário para verificar se algum tem serviço single_per_hour
+      const schedulesInTime = await Schedules.findAll({
+        where: {
+          active: true,
+          date_and_houres: {
+            [Op.gte]: startTime.utc().toDate(),
+            [Op.lt]: endTime.utc().toDate()
+          }
+        },
+        include: [{
+          model: Service,
+          as: 'Services',
+          through: { attributes: [] },
+          required: false
+        }]
+      });
+      
+      // Verifica se algum agendamento existente tem serviço single_per_hour
+      const hasSinglePerHourInTime = schedulesInTime.some(schedule => 
+        schedule.Services && schedule.Services.some(service => service.single_per_hour === true)
+      );
+      
+      if (hasSinglePerHourInTime) {
+        return false; // Já existe um agendamento com serviço single_per_hour neste horário
+      }
+    }
     
     return count < MAX_CAPACITY;
   }
@@ -1480,11 +1531,15 @@ class WhatsAppController {
   /**
    * Obtém horários disponíveis para uma data específica
    * Usa timezone UTC-3 (Brasil - Horário de Brasília)
+   * @param {moment.Moment} date - Data para verificar horários
+   * @param {number} duration - Duração em minutos
+   * @param {Array} selectedServices - Array de serviços selecionados (opcional)
+   * @returns {Promise<Array>} - Array de horários disponíveis
    */
-  async getAvailableTimes(date, duration) {
+  async getAvailableTimes(date, duration, selectedServices = []) {
     const times = [];
-    const startHour = 8; // 8:00
-    const endHour = 18;  // 18:00
+    const startHour = 9; // 9:00
+    const endHour = 17;  // 17:00
     // Define timezone UTC-3 para comparação (Horário de Brasília)
     const now = moment().utcOffset(-3);
 
@@ -1495,8 +1550,9 @@ class WhatsAppController {
 
       // Não mostra horários que já passaram
       if (time.isAfter(now)) {
-        const isAvailable = await this.checkAvailability(time, duration);
+        const isAvailable = await this.checkAvailability(time, duration, selectedServices);
         
+        // Só adiciona se estiver disponível (não mostra horários completos)
         if (isAvailable) {
           times.push(time.clone());
         }
