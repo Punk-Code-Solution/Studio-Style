@@ -102,8 +102,10 @@ export class EmployeeService {
     }
     
     // Mapear telefone da array Phones para propriedade phone
-    if (emp.Phones && emp.Phones.length > 0) {
-      const phoneObj = emp.Phones[0];
+    // Aceita tanto Phones (maiúsculo) quanto phones (minúsculo) do backend
+    const phonesArray = (emp as any).Phones || (emp as any).phones || [];
+    if (phonesArray && phonesArray.length > 0) {
+      const phoneObj = phonesArray[0];
       
       // Se phoneObj já é uma string, usar diretamente
       if (typeof phoneObj === 'string') {
@@ -124,8 +126,13 @@ export class EmployeeService {
     }
     
     // Mapear endereço de Adress para address
+    // Adress pode ser um array ou um objeto único
     if (emp.Adress) {
-      emp.address = emp.Adress;
+      if (Array.isArray(emp.Adress) && emp.Adress.length > 0) {
+        emp.address = emp.Adress[0];
+      } else if (typeof emp.Adress === 'object') {
+        emp.address = emp.Adress;
+      }
     }
     
     // Mapear role do TypeAccount

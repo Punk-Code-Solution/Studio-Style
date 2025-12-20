@@ -916,9 +916,10 @@ export class PatientsComponent implements OnInit {
       return patient.phone;
     }
     
-    // Caso contrário, tentar extrair do array Phones
-    if (patient.Phones && patient.Phones.length > 0) {
-      const phoneObj = patient.Phones[0];
+    // Caso contrário, tentar extrair do array Phones (aceita tanto Phones quanto phones)
+    const phonesArray = (patient as any).Phones || (patient as any).phones || [];
+    if (phonesArray && phonesArray.length > 0) {
+      const phoneObj = phonesArray[0];
       
       // Se phoneObj já é uma string, usar diretamente
       if (typeof phoneObj === 'string') {

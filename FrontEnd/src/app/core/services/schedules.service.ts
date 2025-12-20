@@ -33,6 +33,8 @@ export interface Service {
   service: string;
   additionalComments?: string;
   price: number;
+  // Duração do serviço em minutos (padrão: 60 minutos)
+  duration?: number;
   createdAt?: string;
   updatedAt?: string;
 }

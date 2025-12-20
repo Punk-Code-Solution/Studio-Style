@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
       this.belongsTo( models.Hair, { foreignKey: { name: "type_hair_id" }, constraints: false } ),
       this.hasOne( models.Adress, { foreignKey: "account_id_adress",constraints: false, onDelete: 'CASCADE' } ),
       this.hasMany( models.Email, { foreignKey: "account_id_email", constraints: false, onDelete: 'CASCADE' } ),
-      this.hasMany( models.Phone, { foreignKey: "account_id_phone", constraints: false, onDelete: 'CASCADE' } ),
+      this.hasMany( models.Phone, { foreignKey: "account_id_phone", constraints: false, onDelete: 'CASCADE', as: 'phones' } ),
       this.hasMany( models.Purchase_Material, { foreignKey: "account_id_purchase_material", constraints: false } ),
       this.hasMany( models.Purchase, { foreignKey: "account_id_purchase", constraints: false } ),
       this.hasMany( models.Sale, { foreignKey: "account_id_sale", constraints: false } )

@@ -6,12 +6,13 @@ import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ServiceFormModalComponent } from './service-form-modal/service-form-modal.component';
 import { ServiceDeleteModalComponent } from './service-delete-modal/service-delete-modal.component';
+import { ServiceViewModalComponent } from './service-view-modal/service-view-modal.component';
 import { TableUtilsService, TableSort } from '../../core/services/table-utils.service';
 
 @Component({
   selector: 'app-services',
   standalone: true,
-  imports: [CommonModule, FormsModule, ServiceFormModalComponent, ServiceDeleteModalComponent],
+  imports: [CommonModule, FormsModule, ServiceFormModalComponent, ServiceDeleteModalComponent, ServiceViewModalComponent],
   template: `
     <div class="page-container">
       <!-- Loading State -->
@@ -67,8 +68,13 @@ import { TableUtilsService, TableSort } from '../../core/services/table-utils.se
                   Comissão Colaborador
                   <i class="fas" [ngClass]="getSortIcon('commission_rate')"></i>
                 </th>
+                <th (click)="onSort('duration')" class="sortable">
+                  Duração
+                  <i class="fas" [ngClass]="getSortIcon('duration')"></i>
+                </th>
+                <th>Limite por Hora</th>
                 <th>Comentários</th>
-                <th *ngIf="isAdmin">Ações</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -78,20 +84,29 @@ import { TableUtilsService, TableSort } from '../../core/services/table-utils.se
                 <td>
                   {{ formatCommission(service.commission_rate) }}
                 </td>
+                <td>{{ formatDuration(service.duration) }}</td>
+                <td>
+                  <span class="badge" [class.badge-warning]="service.single_per_hour" [class.badge-info]="!service.single_per_hour">
+                    {{ service.single_per_hour ? '1 por hora' : '3 por hora' }}
+                  </span>
+                </td>
                 <td>{{ service.additionalComments || '-' }}</td>
-                <td *ngIf="isAdmin">
+                <td>
                   <div class="actions">
-                    <button class="action-btn" (click)="openEditModal(service)" title="Editar serviço">
+                    <button class="action-btn view-btn" (click)="openViewModal(service)" title="Visualizar serviço">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="action-btn" (click)="openEditModal(service)" title="Editar serviço" *ngIf="isAdmin">
                       <i class="fas fa-edit"></i>
                     </button>
-                    <button class="action-btn" (click)="confirmDelete(service)" title="Excluir serviço">
+                    <button class="action-btn delete-btn" (click)="confirmDelete(service)" title="Excluir serviço" *ngIf="isAdmin">
                       <i class="fas fa-trash"></i>
                     </button>
                   </div>
                 </td>
               </tr>
               <tr *ngIf="filteredServices.length === 0">
-                <td [attr.colspan]="isAdmin ? 4 : 3" class="empty-state">
+                <td [attr.colspan]="7" class="empty-state">
                   <p>Nenhum serviço encontrado</p>
                 </td>
               </tr>
@@ -150,6 +165,15 @@ import { TableUtilsService, TableSort } from '../../core/services/table-utils.se
         (close)="onCloseDeleteModal()"
         (confirm)="onConfirmDelete()"
       ></app-service-delete-modal>
+
+      <!-- Service View Modal -->
+      <app-service-view-modal
+        *ngIf="isViewModalOpen"
+        [service]="selectedService"
+        [canEdit]="isAdmin"
+        (close)="onCloseViewModal()"
+        (edit)="onEditFromView($event)"
+      ></app-service-view-modal>
     </div>
   `,
   styles: [`
@@ -310,16 +334,57 @@ import { TableUtilsService, TableSort } from '../../core/services/table-utils.se
     }
 
     .action-btn:hover {
-      color: #1976d2;
       background-color: rgba(25, 118, 210, 0.1);
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       transform: translateY(-1px);
+    }
+
+    .action-btn.view-btn {
+      color: #1976d2;
+    }
+
+    .action-btn.view-btn:hover {
+      color: #1565c0;
+      background-color: rgba(25, 118, 210, 0.15);
+    }
+
+    .action-btn.delete-btn {
+      color: #f44336;
+    }
+
+    .action-btn.delete-btn:hover {
+      color: #d32f2f;
+      background-color: rgba(244, 67, 54, 0.1);
+    }
+
+    .action-btn:not(.view-btn):not(.delete-btn):hover {
+      color: #1976d2;
     }
 
     .empty-state {
       text-align: center;
       padding: 2rem;
       color: #666;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-warning {
+      background-color: #ff9800;
+      color: white;
+    }
+
+    .badge-info {
+      background-color: #2196f3;
+      color: white;
     }
 
     .pagination {
@@ -433,6 +498,7 @@ export class ServicesComponent implements OnInit {
   selectedService: Service | null = null;
   isDeleteModalOpen = false;
   isDeleteLoading = false;
+  isViewModalOpen = false;
   isAdmin = false;
   sortConfig: TableSort = { column: '', direction: '' };
   Math = Math;
@@ -521,9 +587,39 @@ export class ServicesComponent implements OnInit {
     return `${value.toFixed(2).replace('.', ',')} %`;
   }
 
+  formatDuration(duration?: number): string {
+    if (!duration) {
+      return '60 min';
+    }
+    if (duration < 60) {
+      return `${duration} min`;
+    }
+    const hours = Math.floor(duration / 60);
+    const minutes = duration % 60;
+    if (minutes === 0) {
+      return `${hours}h`;
+    }
+    return `${hours}h ${minutes}min`;
+  }
+
   openCreateModal(): void {
     this.selectedService = null;
     this.isModalOpen = true;
+  }
+
+  openViewModal(service: Service): void {
+    this.selectedService = service;
+    this.isViewModalOpen = true;
+  }
+
+  onCloseViewModal(): void {
+    this.isViewModalOpen = false;
+    this.selectedService = null;
+  }
+
+  onEditFromView(service: Service): void {
+    this.isViewModalOpen = false;
+    this.openEditModal(service);
   }
 
   openEditModal(service: Service): void {
@@ -588,7 +684,9 @@ export class ServicesComponent implements OnInit {
       service: serviceData.service,
       additionalComments: serviceData.additionalComments,
       price: serviceData.price,
-      commission_rate: serviceData.commission_rate
+      commission_rate: serviceData.commission_rate,
+      duration: serviceData.duration || 60,
+      single_per_hour: serviceData.single_per_hour || false
     };
 
     if (this.selectedService?.id) {
@@ -598,7 +696,9 @@ export class ServicesComponent implements OnInit {
         service: serviceData.service,
         additionalComments: serviceData.additionalComments,
         price: serviceData.price,
-        commission_rate: serviceData.commission_rate
+        commission_rate: serviceData.commission_rate,
+        duration: serviceData.duration || 60,
+        single_per_hour: serviceData.single_per_hour !== undefined ? serviceData.single_per_hour : false
       };
       this.servicesService.updateService(updateRequest).subscribe({
         next: () => {

@@ -11,6 +11,10 @@ export interface Service {
   price: number;
   // Comissão do colaborador para este serviço (0.0 - 1.0, ex: 0.5 = 50%)
   commission_rate?: number;
+  // Duração do serviço em minutos (padrão: 60 minutos)
+  duration?: number;
+  // Indica se o serviço só pode ter 1 agendamento por hora (ex: manicure, pedicure)
+  single_per_hour?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -26,6 +30,8 @@ export interface CreateServiceRequest {
   additionalComments?: string;
   price: number;
   commission_rate?: number;
+  duration?: number;
+  single_per_hour?: boolean;
 }
 
 export interface UpdateServiceRequest {
@@ -34,6 +40,8 @@ export interface UpdateServiceRequest {
   additionalComments?: string;
   price?: number;
   commission_rate?: number;
+  duration?: number;
+  single_per_hour?: boolean;
 }
 
 @Injectable({

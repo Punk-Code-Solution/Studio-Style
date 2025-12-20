@@ -16,6 +16,11 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Adress.init({
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
+    },
     city: DataTypes.STRING,
     neighborhood: DataTypes.STRING,
     road: DataTypes.STRING,
@@ -24,6 +29,8 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'Adress',
+    tableName: 'Addresses', // Nome correto da tabela no banco de dados
+    underscored: false
   });
   return Adress;
 };

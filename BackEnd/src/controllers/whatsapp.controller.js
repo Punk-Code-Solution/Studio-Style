@@ -1,6 +1,10 @@
 /* eslint-disable import/order */
 const WhatsAppService = require('../services/whatsapp.service');
+<<<<<<< HEAD
 const { Schedules, Service, Account, Phone, TypeAccount, sequelize } = require('../Database/models'); // Modelos do DB
+=======
+const { Schedules, Service, Account, Phone, TypeAccount, Conversation, Message } = require('../Database/models'); // Modelos do DB
+>>>>>>> 99e07ce56e3878ea2ac09af32bf150460a3da422
 const moment = require('moment');
 const { Op } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
@@ -11,12 +15,13 @@ const TypeAccountRepository = require('../repositories/type_account.repository')
 const ServiceRepository = require('../repositories/service.repository');
 const SchedulesRepository = require('../repositories/schedules.repository');
 const SchedulesServiceRepository = require('../repositories/schedules_service.repository');
+const ConversationRepository = require('../repositories/conversation.repository');
 
 class WhatsAppController {
   constructor() {
     this.whatsappService = new WhatsAppService();
     this.userSessions = new Map(); // Armazena sessoes de usuarios
-    this.SESSION_TIMEOUT = 15 * 60 * 1000; // 15 minutos de inatividade
+    this.SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutos de inatividade
 
     // Instanciando os repositórios
     this.accountRepo = new AccountRepository();
@@ -24,12 +29,137 @@ class WhatsAppController {
     this.serviceRepo = new ServiceRepository();
     this.schedulesRepo = new SchedulesRepository();
     this.schedulesServiceRepo = new SchedulesServiceRepository();
+    this.conversationRepo = ConversationRepository;
+  }
+
+  /**
+   * Salva uma mensagem no banco de dados
+   * @param {string} from - Número de telefone do remetente
+   * @param {string} content - Conteúdo da mensagem
+   * @param {string} direction - Direção da mensagem ('incoming' ou 'outgoing')
+   * @param {string} whatsappMessageId - ID da mensagem do WhatsApp
+   * @param {string} messageType - Tipo da mensagem ('text', 'image', etc.)
+   * @param {string} status - Status da mensagem ('sent', 'delivered', 'read', 'failed')
+   * @param {string} contactName - Nome do contato do WhatsApp (opcional)
+   */
+  async saveMessage(from, content, direction, whatsappMessageId, messageType = 'text', status = 'delivered', contactName = null) {
+    try {
+      // Busca ou cria a conta do cliente usando o nome do contato se disponível
+      const clientAccount = await this.getOrCreateClient(from, contactName);
+      const accountId = clientAccount ? clientAccount.id : null;
+
+      // Busca ou cria a conversa para este número de telefone
+      let conversation = await this.conversationRepo.findConversationByPhone(from);
+      
+      if (!conversation) {
+        // Cria uma nova conversa
+        conversation = await this.conversationRepo.createConversation({
+          phone_number: from,
+          contact_name: clientAccount ? clientAccount.name : null,
+          account_id: accountId,
+          last_message: content,
+          last_message_at: new Date(),
+          unread_count: direction === 'incoming' ? 1 : 0
+        });
+      } else {
+        // Atualiza a conversa se o account_id não estiver definido ou se mudou
+        // Isso garante que mensagens antigas também fiquem vinculadas ao usuário
+        if (accountId && (!conversation.account_id || conversation.account_id !== accountId)) {
+          await Conversation.update(
+            {
+              account_id: accountId,
+              contact_name: clientAccount ? clientAccount.name : conversation.contact_name
+            },
+            { where: { id: conversation.id } }
+          );
+          // Recarrega a conversa para ter os dados atualizados
+          conversation = await this.conversationRepo.findConversationByPhone(from);
+        }
+      }
+
+      // Obtém o número de telefone do negócio (destinatário para mensagens recebidas)
+      // Para mensagens recebidas, o "to" é o número do negócio
+      // Podemos usar o phoneNumberId do serviço ou um número padrão
+      const businessPhoneNumber = process.env.WHATSAPP_BUSINESS_PHONE_NUMBER || 
+                                   this.whatsappService.phoneNumberId || 
+                                   'business';
+
+      // Cria a mensagem
+      const message = await Message.create({
+        conversation_id: conversation.id,
+        whatsapp_message_id: whatsappMessageId,
+        from: from,
+        to: businessPhoneNumber,
+        direction: direction,
+        message_type: messageType,
+        content: content,
+        status: status,
+        timestamp: new Date()
+      });
+
+      // Atualiza a conversa com a última mensagem
+      const updateData = {
+        last_message: content,
+        last_message_at: new Date()
+      };
+      
+      if (direction === 'incoming') {
+        // Incrementa o contador de não lidas usando literal do Sequelize
+        updateData.unread_count = Conversation.sequelize.literal('unread_count + 1');
+      }
+      
+      await Conversation.update(updateData, { 
+        where: { id: conversation.id }
+      });
+
+      return message;
+    } catch (error) {
+      console.error('Erro ao salvar mensagem:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Normaliza texto de comando para comparação (remove acentos, espaços, converte para minúsculas)
+   * @param {string} text - Texto a ser normalizado
+   * @returns {string} - Texto normalizado
+   */
+  normalizeCommand(text) {
+    if (!text) return '';
+    return text.trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/\s+/g, ''); // Remove todos os espaços
+  }
+
+  /**
+   * Retorna o nome do dia da semana em português
+   * @param {moment.Moment} date - Data do moment
+   * @returns {string} - Nome do dia da semana em português
+   */
+  getDayNameInPortuguese(date) {
+    const daysOfWeek = {
+      0: 'Domingo',
+      1: 'Segunda-feira',
+      2: 'Terça-feira',
+      3: 'Quarta-feira',
+      4: 'Quinta-feira',
+      5: 'Sexta-feira',
+      6: 'Sábado'
+    };
+    return daysOfWeek[date.day()] || '';
   }
 
   /**
    * Método auxiliar para enviar mensagens com tratamento de erros
    */
   async sendMessageSafely(phone, message) {
+    if (!this.whatsappService) {
+      console.error('❌ WhatsAppService não está inicializado em sendMessageSafely');
+      return false;
+    }
+    
     const result = await this.whatsappService.sendTextMessage(phone, message);
     
     if (!result.success) {
@@ -57,6 +187,11 @@ class WhatsAppController {
    * Verifica webhook do WhatsApp
    */
   verifyWebhook(req, res) {
+    if (!this.whatsappService) {
+      console.error('❌ WhatsAppService não está inicializado em verifyWebhook');
+      return res.status(500).json({ error: 'Service not initialized' });
+    }
+
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
@@ -75,13 +210,41 @@ class WhatsAppController {
    */
   async handleWebhook(req, res) {
     try {
+      // Verifica se o serviço está inicializado
+      if (!this.whatsappService) {
+        console.error('❌ WhatsAppService não está inicializado');
+        return res.status(500).json({ error: 'Service not initialized' });
+      }
+
       const messageData = this.whatsappService.processIncomingMessage(req.body);
 
       if (!messageData) {
         return res.status(200).json({ status: 'ok' });
       }
 
-      const { from, text, contact } = messageData;
+      const { from, text, contact, messageId } = messageData;
+
+      // Salvar mensagem recebida no banco de dados
+      try {
+        // Buscar account_id se o número estiver cadastrado
+        let accountId = null;
+        try {
+          const phoneRecord = await Phone.findOne({
+            where: { phone: from.replace(/\D/g, '') },
+            include: [{ model: Account }]
+          });
+          if (phoneRecord && phoneRecord.Account) {
+            accountId = phoneRecord.Account.id;
+          }
+        } catch (err) {
+          // Ignora erro ao buscar account
+        }
+
+        await this.saveMessage(from, text, 'incoming', messageId, 'text', 'delivered', contact?.name);
+      } catch (error) {
+        console.error('Erro ao salvar mensagem recebida:', error);
+        // Não interrompe o fluxo se falhar ao salvar
+      }
 
       // Processa a mensagem baseada no estado da sessao do usuario
       // Erros recuperáveis (como número não permitido) não quebram o webhook
@@ -104,6 +267,18 @@ class WhatsAppController {
       let account = await this.accountRepo.findAccountByPhone(phone);
 
       if (account) {
+        // Se o contato tem nome e o account não tem ou tem apenas o nome padrão, atualiza
+        if (contactName && contactName.trim() && 
+            (!account.name || account.name === 'Cliente WhatsApp' || account.name.trim() === '')) {
+          try {
+            await this.accountRepo.updateAccount({ id: account.id, name: contactName.trim() });
+            // Recarrega o account para ter o nome atualizado
+            account = await this.accountRepo.findAccountByPhone(phone);
+          } catch (error) {
+            console.error('Erro ao atualizar nome do cliente:', error);
+            // Não falha se não conseguir atualizar o nome
+          }
+        }
         return account;
       }
 
@@ -131,9 +306,24 @@ class WhatsAppController {
       }
       
       // 2c. Associa o número de telefone à nova conta
+      // O número do WhatsApp vem no formato: 5511999999999 (55 + DDD + número)
+      const cleanPhone = phone.replace(/\D/g, ''); // Remove caracteres não numéricos
+      let phoneWithoutCountryCode = cleanPhone;
+      let ddd = null;
+      
+      // Se começa com 55 (código do Brasil), remove e extrai DDD
+      if (cleanPhone.startsWith('55') && cleanPhone.length >= 12) {
+        phoneWithoutCountryCode = cleanPhone.substring(2); // Remove "55"
+        ddd = cleanPhone.substring(2, 4); // Extrai DDD (posições 2-4 do número original)
+      } else if (cleanPhone.length >= 10) {
+        // Se não tem código do país, assume que os 2 primeiros dígitos são o DDD
+        ddd = cleanPhone.substring(0, 2);
+        phoneWithoutCountryCode = cleanPhone;
+      }
+      
       const phoneData = {
-        phone: phone, // Número completo
-        ddd: phone.substring(2, 4), // Extrai DDD (Ex: 55[11]9...
+        phone: phoneWithoutCountryCode, // Número sem código do país
+        ddd: ddd,
         type: 'whatsapp',
         account_id_phone: newAccount.id
       };
@@ -150,33 +340,143 @@ class WhatsAppController {
   }
 
   /**
-   * Envia mensagem de boas-vindas ao usuário
+   * Busca histórico de conversas do usuário
    */
-  async sendWelcomeMessage(phone, clientName = '') {
-    const greeting = clientName ? `Olá, ${clientName}!` : 'Olá!';
-    const message = `${greeting} Eu sou o assistente virtual do *Salão Fio a Fio*.\n\n` +
-      'Como posso te ajudar hoje?\n' +
+  async getConversationHistory(phone, limit = 10) {
+    try {
+      const conversation = await this.conversationRepo.findConversationByPhone(phone);
+      if (!conversation) {
+        return { messages: [], isNewUser: true };
+      }
+
+      const messagesResult = await this.conversationRepo.getMessages(conversation.id, 1, limit);
+      const messages = messagesResult.rows || messagesResult.rows || [];
+
+      return {
+        conversation,
+        messages: messages.reverse(), // Ordem cronológica (mais antiga primeiro)
+        isNewUser: messages.length === 0,
+        messageCount: messages.length
+      };
+    } catch (error) {
+      console.error('Erro ao buscar histórico de conversas:', error);
+      return { messages: [], isNewUser: true };
+    }
+  }
+
+  /**
+   * Analisa padrões do usuário baseado no histórico
+   */
+  async analyzeUserPatterns(clientId) {
+    try {
+      // Busca agendamentos do cliente
+      const schedules = await Schedules.findAll({
+        where: {
+          client_id_schedules: clientId,
+          finished: true
+        },
+        include: [{
+          model: Service,
+          as: 'Services',
+          through: { attributes: [] }
+        }],
+        order: [['date_and_houres', 'DESC']],
+        limit: 20
+      });
+
+      // Analisa serviços mais solicitados
+      const serviceFrequency = {};
+      schedules.forEach(schedule => {
+        if (schedule.Services) {
+          schedule.Services.forEach(service => {
+            serviceFrequency[service.id] = (serviceFrequency[service.id] || 0) + 1;
+          });
+        }
+      });
+
+      // Ordena serviços por frequência
+      const favoriteServices = Object.entries(serviceFrequency)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([serviceId]) => serviceId);
+
+      // Busca os serviços favoritos completos
+      const favoriteServicesData = await Service.findAll({
+        where: { id: { [Op.in]: favoriteServices } }
+      });
+
+      return {
+        totalAppointments: schedules.length,
+        favoriteServices: favoriteServicesData,
+        lastAppointment: schedules.length > 0 ? schedules[0].date_and_houres : null,
+        isRecurringClient: schedules.length > 0
+      };
+    } catch (error) {
+      console.error('Erro ao analisar padrões do usuário:', error);
+      return {
+        totalAppointments: 0,
+        favoriteServices: [],
+        lastAppointment: null,
+        isRecurringClient: false
+      };
+    }
+  }
+
+  /**
+   * Envia mensagem de boas-vindas ao usuário (melhorada com contexto)
+   */
+  async sendWelcomeMessage(phone, clientName = '', clientId = null) {
+    let greeting = clientName ? `Olá, ${clientName}! 👋` : 'Olá! 👋';
+    
+    // Busca padrões do usuário se tiver clientId
+    let personalization = '';
+    if (clientId) {
+      const patterns = await this.analyzeUserPatterns(clientId);
+      
+      if (patterns.isRecurringClient) {
+        greeting = clientName ? `Olá, ${clientName}! Que bom te ver novamente! 👋` : 'Olá! Que bom te ver novamente! 👋';
+        
+        if (patterns.favoriteServices.length > 0) {
+          const servicesList = patterns.favoriteServices.map(s => s.service).join(', ');
+          personalization = `\n\nVejo que você já agendou conosco ${patterns.totalAppointments} vez${patterns.totalAppointments > 1 ? 'es' : ''}! `;
+          personalization += `Seus serviços favoritos são: ${servicesList}.`;
+        }
+      }
+    }
+
+    const message = `${greeting}${personalization}\n\n` +
+      'Bem-vindo ao *Salão Fio a Fio*! ✨\n\n' +
+      'Estou aqui para ajudar você a agendar seus serviços de forma rápida e fácil.\n\n' +
       'Digite *MENU* para ver as opções disponíveis.';
     
     // Pequeno delay para melhorar a experiência do usuário
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1500));
     return this.sendMessageSafely(phone, message);
   }
 
   /**
-   * Envia o menu principal para o usuário
+   * Envia o menu principal para o usuário (melhorado com contexto)
    */
-  async sendMainMenu(phone, clientName = '', showWelcome = false) {
+  async sendMainMenu(phone, clientName = '', showWelcome = false, clientId = null) {
     try {
       if (showWelcome) {
-        await this.sendWelcomeMessage(phone, clientName);
+        await this.sendWelcomeMessage(phone, clientName, clientId);
       }
 
-      const message = '📋 *MENU PRINCIPAL*\n\n' +
+      // Busca histórico e padrões para personalizar o menu
+      let menuPersonalization = '';
+      if (clientId) {
+        const patterns = await this.analyzeUserPatterns(clientId);
+        if (patterns.isRecurringClient && patterns.favoriteServices.length > 0) {
+          menuPersonalization = '\n\n💡 *Dica:* Você pode agendar seus serviços favoritos mais rapidamente!';
+        }
+      }
+
+      const message = '📋 *MENU PRINCIPAL*' + menuPersonalization + '\n\n' +
         'Escolha uma opção:\n\n' +
         '1️⃣ AGENDAR um serviço\n' +
         '2️⃣ MEUS AGENDAMENTOS\n' +
-        '9️⃣ CANCELAR\n\n' +
+        '3️⃣ FINALIZAR SESSÃO\n\n' +
         'Digite o *número* ou a *palavra* da opção desejada.';
 
       await this.sendMessageSafely(phone, message);
@@ -192,11 +492,9 @@ class WhatsAppController {
    * Processa mensagem do usuario
    */
   async processMessage(phone, text, contact) {
-    // Remove o prefixo +55 do telefone para armazenamento
-    const cleanPhone = phone.startsWith('55') ? phone.substring(2) : phone;
-    
     // 1. Identifica o cliente (Account UUID) antes de qualquer ação
-    const clientAccount = await this.getOrCreateClient(cleanPhone, contact.name);
+    // O getOrCreateClient normaliza o telefone internamente
+    const clientAccount = await this.getOrCreateClient(phone, contact.name);
 
     if (!clientAccount) {
       await this.sendMessageSafely(phone,
@@ -209,41 +507,69 @@ class WhatsAppController {
     const clientName = clientAccount.name;
 
     const session = this.getUserSession(phone);
-    const cleanText = text.toLowerCase().trim();
+    const normalizedText = this.normalizeCommand(text);
 
-    // Se não há sessão ativa, trata como primeira interação
+    // VALIDAÇÃO 1: Se há uma sessão ativa com um step específico, processa baseado no step
+    // Isso evita que números sejam interpretados como comandos principais
+    if (session && session.step && 
+        (session.step === 'select_service' || 
+         session.step === 'select_date' || 
+         session.step === 'select_time' || 
+         session.step === 'confirm_booking' ||
+         session.step === 'viewing_schedules')) {
+      console.log(`[processMessage] Processando step: ${session.step}, Telefone: ${phone}, Texto: ${text}`);
+      await this.processSessionStep(phone, text, session);
+      return;
+    }
+
+    // VALIDAÇÃO 2: Comandos principais só são aceitos se não estiver em um fluxo ativo
+    // Se está no menu principal, processa comandos normalmente
     const isFirstInteraction = !session || !session.step;
+    const isInMainMenu = session && session.step === 'main_menu';
 
-    // Comandos principais - agora aceita números também
-    const normalizedText = cleanText.replace(/[^a-z0-9\s]/gi, '').toLowerCase();
-    
+    // Comandos que sempre funcionam (MENU, CANCELAR)
     if (normalizedText === 'menu' || normalizedText === 'inicio' || normalizedText === 'comecar' || normalizedText === '0') {
-      await this.sendMainMenu(phone, clientName, isFirstInteraction);
+      await this.sendMainMenu(phone, clientName, isFirstInteraction, clientId);
       this.setUserSession(phone, { step: 'main_menu', clientId, clientName });
+      return;
     }
-    else if (normalizedText === 'agendar' || normalizedText === 'marcar' || normalizedText === '1') {
-      await this.startSchedulingProcess(phone, clientId, clientName);
-    }
-    else if (normalizedText === 'meus agendamentos' || normalizedText === 'agendamentos' || normalizedText === '2') {
-      await this.showUserSchedules(phone, clientId, clientName);
-    }
-    else if (normalizedText === 'cancelar' || normalizedText === 'sair' || normalizedText === '9') {
+    
+    if (normalizedText === 'cancelar' || normalizedText === 'sair' || normalizedText === 'finalizar' || normalizedText === '3') {
       await this.cancelProcess(phone);
+      return;
     }
-    else {
-      // Se é primeira interação, mostra boas-vindas e menu
+    
+    // VALIDAÇÃO 3: Comandos numéricos só funcionam no menu principal ou primeira interação
+    // Isso evita que números sejam interpretados incorretamente após mostrar agendamentos
+    if (isFirstInteraction || isInMainMenu) {
+      if (normalizedText === 'agendar' || normalizedText === 'marcar' || normalizedText === '1') {
+      await this.startSchedulingProcess(phone, clientId, clientName);
+        return;
+    }
+      
+      if (normalizedText === 'meusagendamentos' || normalizedText === 'agendamentos' || normalizedText === '2') {
+      await this.showUserSchedules(phone, clientId, clientName);
+        return;
+    }
+    }
+    
+    // VALIDAÇÃO 4: Se não reconheceu o comando e não está em um step específico
       if (isFirstInteraction) {
-        await this.sendMainMenu(phone, clientName, true);
+        await this.sendMainMenu(phone, clientName, true, clientId);
         this.setUserSession(phone, { step: 'main_menu', clientId, clientName });
+    } else if (isInMainMenu) {
+      // Se está no menu principal mas não reconheceu o comando
+      await this.sendMessageSafely(phone,
+        '❌ Opção inválida. Por favor, digite o *número* (1, 2 ou 3) ou o *nome* da opção desejada.\n\n' +
+        'Digite *MENU* para ver as opções novamente.');
       } else {
-        // Processa baseado no estado da sessao
+      // Processa baseado no estado da sessao (menu principal)
         await this.processSessionStep(phone, text, session);
       }
-    }
   }
 
   /**
-   * Inicia o processo de agendamento
+   * Inicia o processo de agendamento (melhorado com sugestões baseadas no histórico)
    */
   async startSchedulingProcess(phone, clientId, clientName) {
     try {
@@ -267,16 +593,44 @@ class WhatsAppController {
         return;
       }
 
-      const message = `Olá ${clientName}! \n\nEscolha o serviço que deseja agendar:\n\n` +
-        validServices.map((s, index) => 
-          `${index + 1}. ${s.service} (R$ ${s.price.toFixed(2)})`
-        ).join('\n') +
-        '\n\nDigite o número do serviço desejado.';
+      // Busca padrões do usuário para sugerir serviços favoritos
+      let favoriteServicesIds = [];
+      let suggestionText = '';
+      if (clientId) {
+        const patterns = await this.analyzeUserPatterns(clientId);
+        if (patterns.favoriteServices.length > 0) {
+          favoriteServicesIds = patterns.favoriteServices.map(s => s.id);
+          const favoriteNames = patterns.favoriteServices.map(s => s.service).join(', ');
+          suggestionText = `\n\n💡 *Sugestão:* Baseado no seu histórico, você costuma agendar: ${favoriteNames}.`;
+        }
+      }
+
+      // Ordena serviços: favoritos primeiro, depois os demais
+      const sortedServices = [...validServices].sort((a, b) => {
+        const aIsFavorite = favoriteServicesIds.includes(a.id);
+        const bIsFavorite = favoriteServicesIds.includes(b.id);
+        if (aIsFavorite && !bIsFavorite) return -1;
+        if (!aIsFavorite && bIsFavorite) return 1;
+        return 0;
+      });
+
+      const message = `Perfeito, ${clientName}! ✂️${suggestionText}\n\n` +
+        'Aqui estão nossos serviços disponíveis:\n\n' +
+        sortedServices.map((s, index) => {
+          const isFavorite = favoriteServicesIds.includes(s.id);
+          const favoriteIcon = isFavorite ? '⭐ ' : '';
+          return `${index + 1}. ${favoriteIcon}${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`;
+        }).join('\n') +
+        '\n\nVocê pode selecionar *um ou mais serviços*.\n' +
+        'Digite o *número* do serviço (ex: 1) ou *vários números separados por vírgula* (ex: 1,2,3).\n\n' +
+        'Quando terminar, digite *CONTINUAR* para escolher a data.\n' +
+        'Ou digite *VOLTAR* para retornar ao menu principal.';
 
       await this.sendMessageSafely(phone, message);
       
       // Cria uma cópia limpa dos serviços, removendo métodos e metadados do Sequelize
-      const cleanServices = validServices.map(service => ({
+      // Mantém a ordem (favoritos primeiro)
+      const cleanServices = sortedServices.map(service => ({
         id: service.id,
         service: service.service,
         price: service.price,
@@ -287,6 +641,7 @@ class WhatsAppController {
       this.setUserSession(phone, {
         step: 'select_service',
         services: cleanServices,
+        selectedServices: [], // Array para armazenar múltiplos serviços selecionados
         clientId: clientId,
         clientName: clientName
       });
@@ -305,26 +660,55 @@ class WhatsAppController {
       // Busca o nome do cliente quando a sessão não existe
       const clientAccount = await this.getOrCreateClient(phone, null);
       const clientName = clientAccount ? clientAccount.name : '';
-      await this.sendMainMenu(phone, clientName, true);
+      const clientId = clientAccount ? clientAccount.id : null;
+      await this.sendMainMenu(phone, clientName, true, clientId);
       return;
     }
 
     try {
-      switch (session.step) {
-        case 'select_service':
-          await this.handleServiceSelection(phone, text, session);
+    switch (session.step) {
+        case 'main_menu':
+          // Trata números no menu principal
+          const normalizedMenuOption = this.normalizeCommand(text);
+          
+          if (normalizedMenuOption === '1' || normalizedMenuOption === 'agendar' || normalizedMenuOption === 'marcar') {
+            await this.startSchedulingProcess(phone, session.clientId, session.clientName);
+          } else if (normalizedMenuOption === '2' || normalizedMenuOption === 'meusagendamentos' || normalizedMenuOption === 'agendamentos') {
+            await this.showUserSchedules(phone, session.clientId, session.clientName);
+          } else if (normalizedMenuOption === '3' || normalizedMenuOption === 'cancelar' || normalizedMenuOption === 'sair' || normalizedMenuOption === 'finalizar') {
+            await this.cancelProcess(phone);
+          } else {
+            await this.sendMessageSafely(phone,
+              '❌ Opção inválida. Digite o *número* (1, 2 ou 3) ou o *nome* da opção desejada.');
+          }
           break;
-        case 'select_date':
-          await this.handleDateSelection(phone, text, session);
+        case 'viewing_schedules':
+          // VALIDAÇÃO: Após ver agendamentos, apenas MENU ou comandos específicos são aceitos
+          const normalizedViewingOption = this.normalizeCommand(text);
+          
+          if (normalizedViewingOption === 'menu' || normalizedViewingOption === 'inicio' || normalizedViewingOption === 'comecar' || normalizedViewingOption === '0') {
+            await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
+            this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+          } else {
+            await this.sendMessageSafely(phone,
+              '⚠️ Você está visualizando seus agendamentos.\n\n' +
+              'Digite *MENU* para voltar ao início e escolher outra opção.');
+          }
           break;
-        case 'select_time':
-          await this.handleTimeSelection(phone, text, session);
-          break;
-        case 'confirm_booking':
-          await this.handleBookingConfirmation(phone, text, session);
-          break;
-        default:
-          await this.sendMainMenu(phone, session?.clientName || '', false);
+      case 'select_service':
+        await this.handleServiceSelection(phone, text, session);
+        break;
+      case 'select_date':
+        await this.handleDateSelection(phone, text, session);
+        break;
+      case 'select_time':
+        await this.handleTimeSelection(phone, text, session);
+        break;
+      case 'confirm_booking':
+        await this.handleBookingConfirmation(phone, text, session);
+        break;
+      default:
+          await this.sendMainMenu(phone, session?.clientName || '', false, session?.clientId);
       }
     } catch (error) {
       console.error('Erro ao processar etapa da sessão:', error);
@@ -332,7 +716,161 @@ class WhatsAppController {
         '❌ Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente.');
       
       // Volta para o menu principal em caso de erro
-      await this.sendMainMenu(phone, session?.clientName || '', false);
+        await this.sendMainMenu(phone, session?.clientName || '', false, session?.clientId);
+    }
+  }
+
+  /**
+   * Volta para seleção de serviços
+   */
+  async goBackToServiceSelection(phone, session) {
+    try {
+      // Busca serviços da sessão ou do banco de dados
+      let services = session.services;
+      if (!services || services.length === 0) {
+        services = await this.serviceRepo.findAll();
+      }
+      
+      const validServices = services.filter(s => s && s.service && s.price != null);
+      
+      if (validServices.length === 0) {
+        await this.sendMessageSafely(phone,
+          '❌ Não há serviços disponíveis. Por favor, tente novamente mais tarde.');
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+        return;
+      }
+
+      const selectedServices = session.selectedServices || [];
+      const servicesList = selectedServices.length > 0 
+        ? selectedServices.map(s => `   • ${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`).join('\n')
+        : 'Nenhum serviço selecionado ainda.';
+
+      const message = `🔄 Voltando para seleção de serviços...\n\n` +
+        `*Serviços disponíveis:*\n\n` +
+        validServices.map((s, index) => {
+          const isSelected = selectedServices.some(sel => sel.id === s.id);
+          const selectedIcon = isSelected ? '✅ ' : '';
+          return `${index + 1}. ${selectedIcon}${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`;
+        }).join('\n') +
+        (selectedServices.length > 0 ? `\n\n*Serviços já selecionados:*\n${servicesList}\n\n💰 *Total:* R$ ${selectedServices.reduce((sum, s) => sum + s.price, 0).toFixed(2).replace('.', ',')}` : '') +
+        '\n\nDigite o *número* do serviço (ex: 1) ou vários números separados por vírgula (ex: 1,2,3).\n' +
+        'Quando terminar, digite *CONTINUAR* para escolher a data.\n' +
+        'Ou digite *VOLTAR* para o menu principal.';
+
+      await this.sendMessageSafely(phone, message);
+      
+      const cleanServices = validServices.map(service => ({
+        id: service.id,
+        service: service.service,
+        price: service.price,
+        duration: service.duration || 60
+      }));
+      
+      this.setUserSession(phone, {
+        ...session,
+        step: 'select_service',
+        services: cleanServices,
+        selectedServices: selectedServices, // Mantém os serviços já selecionados
+        totalPrice: selectedServices.reduce((sum, s) => sum + s.price, 0),
+        totalDuration: selectedServices.reduce((sum, s) => sum + (s.duration || 60), 0)
+      });
+    } catch (error) {
+      console.error('Erro ao voltar para seleção de serviços:', error);
+      await this.sendMessageSafely(phone,
+        '❌ Ocorreu um erro. Por favor, tente novamente.');
+    }
+  }
+
+  /**
+   * Volta para seleção de data
+   */
+  async goBackToDateSelection(phone, session) {
+    try {
+      const selectedServices = session.selectedServices || [];
+      if (selectedServices.length === 0) {
+        await this.goBackToServiceSelection(phone, session);
+        return;
+      }
+
+      const availableDates = this.getAvailableDates();
+      if (!availableDates || availableDates.length === 0) {
+        await this.sendMessageSafely(phone, '❌ Não há datas disponíveis para agendamento no momento.');
+        return;
+      }
+
+      const servicesList = selectedServices.map(s => `   • ${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`).join('\n');
+      const totalPrice = session.totalPrice || selectedServices.reduce((sum, s) => sum + s.price, 0);
+      
+      const message = `🔄 Voltando para seleção de data...\n\n` +
+        `*Serviços selecionados:*\n${servicesList}\n\n` +
+        `*Valor total:* R$ ${totalPrice.toFixed(2).replace('.', ',')}\n\n` +
+        'Agora, escolha uma data para seu agendamento:\n\n' +
+        availableDates.map((date, index) => 
+          `${index + 1}. ${date.format('DD/MM/YYYY')} (${this.getDayNameInPortuguese(date)})`
+        ).join('\n') +
+        '\n\nDigite o *número* da data desejada.\n' +
+        'Ou digite *VOLTAR* para escolher os serviços novamente.';
+
+      await this.sendMessageSafely(phone, message);
+      
+      this.setUserSession(phone, {
+        ...session,
+        step: 'select_date',
+        availableDates: availableDates
+      });
+    } catch (error) {
+      console.error('Erro ao voltar para seleção de data:', error);
+      await this.sendMessageSafely(phone,
+        '❌ Ocorreu um erro. Por favor, tente novamente.');
+    }
+  }
+
+  /**
+   * Volta para seleção de horário
+   */
+  async goBackToTimeSelection(phone, session) {
+    try {
+      const selectedServices = session.selectedServices || [];
+      if (selectedServices.length === 0) {
+        await this.goBackToServiceSelection(phone, session);
+        return;
+      }
+
+      if (!session.selectedDate) {
+        await this.goBackToDateSelection(phone, session);
+        return;
+      }
+
+      const duration = session.totalDuration || selectedServices.reduce((sum, s) => sum + (s.duration || 60), 0);
+      const availableTimes = await this.getAvailableTimes(session.selectedDate, duration, selectedServices);
+      
+      if (!availableTimes || availableTimes.length === 0) {
+        await this.sendMessageSafely(phone, '❌ Não há horários disponíveis para a data selecionada. Por favor, escolha outra data.');
+        await this.goBackToDateSelection(phone, session);
+        return;
+      }
+      
+      const message = `🔄 Voltando para seleção de horário...\n\n` +
+        `*Data selecionada:* ${session.selectedDate.format('DD/MM/YYYY')}\n\n` +
+        'Agora, escolha um horário disponível:\n\n' +
+        availableTimes.map((time, index) =>
+          `${index + 1}. ${time.format('HH:mm')}h`
+        ).join('\n') +
+        '\n\nDigite o *número* do horário desejado.\n' +
+        'Ou digite *VOLTAR* para escolher outra data.';
+
+      await this.sendMessageSafely(phone, message);
+      
+      this.setUserSession(phone, {
+        ...session,
+        step: 'select_time',
+        availableTimes: availableTimes
+      });
+    } catch (error) {
+      console.error('Erro ao voltar para seleção de horário:', error);
+      await this.sendMessageSafely(phone,
+        '❌ Ocorreu um erro. Por favor, tente novamente.');
     }
   }
 
@@ -341,35 +879,129 @@ class WhatsAppController {
    */
   async handleServiceSelection(phone, text, session) {
     try {
-      const serviceIndex = parseInt(text.trim(), 10) - 1;
-      
-      if (isNaN(serviceIndex) || serviceIndex < 0 || !session.services || serviceIndex >= session.services.length) {
-        await this.sendMessageSafely(phone, '❌ Serviço inválido. Por favor, escolha um serviço da lista.');
+      // VALIDAÇÃO: Verifica se está no step correto
+      if (!session || session.step !== 'select_service') {
+        await this.sendMessageSafely(phone,
+          '⚠️ Você não está no processo de seleção de serviço.\n\n' +
+          'Digite *MENU* para começar um novo agendamento.');
         return;
       }
       
-      const selectedService = session.services[serviceIndex];
-      const availableDates = this.getAvailableDates();
+      // VALIDAÇÃO: Verifica se há serviços disponíveis
+      if (!session.services || session.services.length === 0) {
+        await this.sendMessageSafely(phone,
+          '❌ Não há serviços disponíveis. Por favor, tente novamente mais tarde.');
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+      return;
+    }
+
+      // Normaliza o comando para aceitar qualquer variação
+      const normalizedText = this.normalizeCommand(text);
       
-      if (!availableDates || availableDates.length === 0) {
-        await this.sendMessageSafely(phone, '❌ Não há datas disponíveis para agendamento no momento.');
+      // Verifica se o usuário quer voltar ao menu principal
+      if (normalizedText === 'voltar' || normalizedText === 'anterior' || normalizedText === 'atras' || normalizedText === 'menu') {
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
         return;
       }
       
-      const message = `Serviço selecionado: ${selectedService.service}\n\n` +
-        'Escolha uma data para o agendamento:\n\n' +
-        availableDates.map((date, index) => 
-          `${index + 1}. ${date.format('DD/MM/YYYY')}`
-        ).join('\n') +
-        '\n\nDigite o número da data desejada.';
+      // Verifica se o usuário quer continuar (aceita qualquer variação: continuar, CONTINUAR, Continuar, continu, etc.)
+      if (normalizedText === 'continuar' || normalizedText === 'pronto' || normalizedText.startsWith('continu')) {
+        const selectedServices = session.selectedServices || [];
         
-      await this.sendMessageSafely(phone, message);
+        if (selectedServices.length === 0) {
+          await this.sendMessageSafely(phone,
+            '❌ Você precisa selecionar pelo menos um serviço antes de continuar.\n\n' +
+            'Digite o *número* do serviço desejado.');
+          return;
+        }
+        
+        // Calcula o valor total
+        const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+        const totalDuration = selectedServices.reduce((sum, s) => sum + (s.duration || 60), 0);
+        
+        const availableDates = this.getAvailableDates();
+        
+        if (!availableDates || availableDates.length === 0) {
+          await this.sendMessageSafely(phone, '❌ Não há datas disponíveis para agendamento no momento.');
+          return;
+        }
+        
+        const servicesList = selectedServices.map(s => `   • ${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`).join('\n');
+        const message = `Ótima escolha! ✨\n\n` +
+          `*Serviços selecionados:*\n${servicesList}\n\n` +
+          `*Valor total:* R$ ${totalPrice.toFixed(2).replace('.', ',')}\n\n` +
+          'Agora, escolha uma data para seu agendamento:\n\n' +
+          availableDates.map((date, index) => 
+            `${index + 1}. ${date.format('DD/MM/YYYY')} (${this.getDayNameInPortuguese(date)})`
+      ).join('\n') +
+          '\n\nDigite o *número* da data desejada.\n' +
+          'Ou digite *VOLTAR* para escolher os serviços novamente.';
+
+    await this.sendMessageSafely(phone, message);
+        
+        const updatedSession = {
+          ...session,
+          step: 'select_date',
+          selectedServices: selectedServices, // Mantém o array de serviços
+          totalPrice: totalPrice,
+          totalDuration: totalDuration,
+          availableDates: availableDates
+        };
+        
+        this.setUserSession(phone, updatedSession);
+        return;
+      }
       
-      this.setUserSession(phone, {
-        ...session,
-        step: 'select_date',
-        selectedService: selectedService,
-        availableDates: availableDates
+      // Processa seleção de serviços (pode ser um número ou vários separados por vírgula/espaço)
+      const serviceNumbers = text.split(/[,\s]+/).map(n => parseInt(n.trim(), 10) - 1).filter(n => !isNaN(n) && n >= 0);
+      
+      if (serviceNumbers.length === 0) {
+      await this.sendMessageSafely(phone,
+          `❌ Formato inválido. Digite o *número* do serviço (1 a ${session.services.length}) ou vários números separados por vírgula.\n\n` +
+          'Exemplo: 1 ou 1,2,3');
+      return;
+    }
+
+      // Valida os índices
+      const invalidIndices = serviceNumbers.filter(idx => idx >= session.services.length);
+      if (invalidIndices.length > 0) {
+        await this.sendMessageSafely(phone, 
+          `❌ Alguns números são inválidos. Escolha números entre 1 e ${session.services.length}.`);
+        return;
+      }
+      
+      // Adiciona os serviços selecionados (evita duplicatas)
+      const currentSelected = session.selectedServices || [];
+      const newServices = serviceNumbers
+        .map(idx => session.services[idx])
+        .filter(service => !currentSelected.some(s => s.id === service.id));
+      
+      if (newServices.length === 0) {
+        await this.sendMessageSafely(phone,
+          '⚠️ Esses serviços já foram selecionados.\n\n' +
+          'Digite outros números ou *CONTINUAR* para prosseguir.');
+        return;
+      }
+      
+      const updatedSelected = [...currentSelected, ...newServices];
+      const totalPrice = updatedSelected.reduce((sum, s) => sum + s.price, 0);
+      const totalDuration = updatedSelected.reduce((sum, s) => sum + (s.duration || 60), 0);
+      
+      const servicesList = updatedSelected.map(s => `   • ${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`).join('\n');
+      const message = `✅ Serviços selecionados:\n\n${servicesList}\n\n` +
+        `💰 *Total:* R$ ${totalPrice.toFixed(2).replace('.', ',')}\n\n` +
+        'Deseja adicionar mais serviços?\n' +
+        'Digite o *número* de outro serviço, *CONTINUAR* para escolher a data ou *VOLTAR* para o menu.';
+
+    await this.sendMessageSafely(phone, message);
+      
+    this.setUserSession(phone, {
+      ...session,
+        selectedServices: updatedSelected,
+        totalPrice: totalPrice,
+        totalDuration: totalDuration
       });
       
     } catch (error) {
@@ -384,35 +1016,77 @@ class WhatsAppController {
    */
   async handleDateSelection(phone, text, session) {
     try {
-      const dateIndex = parseInt(text.trim(), 10) - 1;
-      
-      if (isNaN(dateIndex) || dateIndex < 0 || !session.availableDates || dateIndex >= session.availableDates.length) {
-        await this.sendMessageSafely(phone, '❌ Data inválida. Por favor, escolha uma data da lista.');
+      // VALIDAÇÃO: Verifica se está no step correto
+      if (!session || session.step !== 'select_date') {
+        await this.sendMessageSafely(phone,
+          '⚠️ Você não está no processo de seleção de data.\n\n' +
+          'Digite *MENU* para começar um novo agendamento.');
         return;
       }
       
+      // VALIDAÇÃO: Verifica se há serviços selecionados
+      const servicesForDate = session.selectedServices || (session.selectedService ? [session.selectedService] : []);
+      if (servicesForDate.length === 0) {
+      await this.sendMessageSafely(phone,
+          '❌ Nenhum serviço selecionado. Por favor, inicie um novo agendamento.');
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+      return;
+    }
+
+      // Normaliza o comando para aceitar qualquer variação
+      const normalizedText = this.normalizeCommand(text);
+      
+      // Verifica se o usuário quer voltar para seleção de serviços
+      if (normalizedText === 'voltar' || normalizedText === 'anterior' || normalizedText === 'atras') {
+        await this.goBackToServiceSelection(phone, session);
+        return;
+      }
+
+      const dateIndex = parseInt(text.trim(), 10) - 1;
+      
+      // VALIDAÇÃO: Verifica se há datas disponíveis
+      if (!session.availableDates || session.availableDates.length === 0) {
+        await this.sendMessageSafely(phone, '❌ Não há datas disponíveis. Por favor, tente novamente mais tarde.');
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+        return;
+      }
+      
+      if (isNaN(dateIndex) || dateIndex < 0 || dateIndex >= session.availableDates.length) {
+      await this.sendMessageSafely(phone,
+          `❌ Data inválida. Por favor, escolha um número entre 1 e ${session.availableDates.length}.\n\n` +
+          'Ou digite *VOLTAR* para escolher os serviços novamente.');
+      return;
+    }
+
       const selectedDate = session.availableDates[dateIndex];
-      const availableTimes = await this.getAvailableTimes(selectedDate, session.selectedService.duration || 60);
+      // Usa a duração total dos serviços selecionados
+      const duration = session.totalDuration || servicesForDate.reduce((sum, s) => sum + (s.duration || 60), 0);
+      const availableTimes = await this.getAvailableTimes(selectedDate, duration, servicesForDate);
       
       if (!availableTimes || availableTimes.length === 0) {
         await this.sendMessageSafely(phone, '❌ Não há horários disponíveis para a data selecionada. Por favor, escolha outra data.');
         return;
       }
       
-      const message = `Data selecionada: ${selectedDate.format('DD/MM/YYYY')}\n\n` +
-        'Escolha um horário:\n\n' +
-        availableTimes.map((time, index) => 
-          `${index + 1}. ${time.format('HH:mm')}`
-        ).join('\n') +
-        '\n\nDigite o número do horário desejado.';
-        
-      await this.sendMessageSafely(phone, message);
+      const message = `Perfeito! 📅\n\n` +
+        `*Data selecionada:* ${selectedDate.format('DD/MM/YYYY')}\n\n` +
+        'Agora, escolha um horário disponível:\n\n' +
+      availableTimes.map((time, index) =>
+          `${index + 1}. ${time.format('HH:mm')}h`
+      ).join('\n') +
+        '\n\nDigite o *número* do horário desejado.\n' +
+        'Ou digite *VOLTAR* para escolher outra data.';
+
+    await this.sendMessageSafely(phone, message);
       
-      this.setUserSession(phone, {
-        ...session,
-        step: 'select_time',
-        selectedDate: selectedDate,
-        availableTimes: availableTimes
+    this.setUserSession(phone, {
+      ...session,
+      step: 'select_time',
+      selectedDate: selectedDate,
+      availableTimes: availableTimes,
+        duration: duration
       });
       
     } catch (error) {
@@ -427,29 +1101,105 @@ class WhatsAppController {
    */
   async handleTimeSelection(phone, text, session) {
     try {
-      const timeIndex = parseInt(text.trim(), 10) - 1;
-      
-      if (isNaN(timeIndex) || timeIndex < 0 || !session.availableTimes || timeIndex >= session.availableTimes.length) {
-        await this.sendMessageSafely(phone, '❌ Horário inválido. Por favor, escolha um horário da lista.');
+      // VALIDAÇÃO: Verifica se está no step correto
+      if (!session || session.step !== 'select_time') {
+        await this.sendMessageSafely(phone,
+          '⚠️ Você não está no processo de seleção de horário.\n\n' +
+          'Digite *MENU* para começar um novo agendamento.');
         return;
       }
       
+      // VALIDAÇÃO: Verifica se há serviços e data selecionados
+      const servicesToCheck = session.selectedServices || (session.selectedService ? [session.selectedService] : []);
+      if (servicesToCheck.length === 0) {
+      await this.sendMessageSafely(phone,
+          '❌ Nenhum serviço selecionado. Por favor, inicie um novo agendamento.');
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+      return;
+    }
+
+      if (!session.selectedDate) {
+        await this.sendMessageSafely(phone,
+          '❌ Data não encontrada. Por favor, inicie um novo agendamento.');
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+        return;
+      }
+      
+      // Normaliza o comando para aceitar qualquer variação
+      const normalizedText = this.normalizeCommand(text);
+      
+      // Verifica se o usuário quer voltar para seleção de data
+      if (normalizedText === 'voltar' || normalizedText === 'anterior' || normalizedText === 'atras') {
+        await this.goBackToDateSelection(phone, session);
+        return;
+      }
+      
+      const timeIndex = parseInt(text.trim(), 10) - 1;
+      
+      // VALIDAÇÃO: Verifica se há horários disponíveis
+      if (!session.availableTimes || session.availableTimes.length === 0) {
+        await this.sendMessageSafely(phone, '❌ Não há horários disponíveis. Por favor, escolha outra data.');
+        // Volta para seleção de data
+        const availableDates = this.getAvailableDates();
+        const message = `Escolha uma data para o agendamento:\n\n` +
+          availableDates.map((date, index) => 
+            `${index + 1}. ${date.format('DD/MM/YYYY')}`
+          ).join('\n') +
+          '\n\nDigite o *número* da data desejada.';
+        await this.sendMessageSafely(phone, message);
+        this.setUserSession(phone, {
+          ...session,
+          step: 'select_date',
+          availableDates: availableDates
+        });
+        return;
+      }
+      
+      if (isNaN(timeIndex) || timeIndex < 0 || timeIndex >= session.availableTimes.length) {
+      await this.sendMessageSafely(phone,
+          `❌ Horário inválido. Por favor, escolha um número entre 1 e ${session.availableTimes.length}.\n\n` +
+          'Ou digite *VOLTAR* para escolher outra data.');
+      return;
+    }
+
       const selectedTime = session.availableTimes[timeIndex];
-      const appointmentDateTime = selectedTime.clone();
+      // O horário já está em UTC-3 (Horário de Brasília), mantemos assim para exibição
+      const appointmentDateTime = selectedTime.clone().utcOffset(-3);
+      
+      // Verifica se ainda há vagas disponíveis
+      const duration = session.duration || session.selectedService?.duration || 60;
+      // Para verificação de disponibilidade, usamos o horário em UTC-3 (Horário de Brasília)
+      const timeForCheck = appointmentDateTime.clone();
+      const isAvailable = await this.checkAvailability(timeForCheck, duration, servicesToCheck);
+
+      if (!isAvailable) {
+        await this.sendMessageSafely(phone,
+          '❌ Este horário não está mais disponível. Escolha outro horário.');
+        return;
+      }
       
       // Atualiza a sessão com os dados do agendamento
-      this.setUserSession(phone, {
-        ...session,
-        step: 'confirm_booking',
-        appointmentDateTime: appointmentDateTime
-      });
+    this.setUserSession(phone, {
+      ...session,
+      step: 'confirm_booking',
+      appointmentDateTime: appointmentDateTime
+    });
+      
+      // Prepara lista de serviços para exibição
+      const selectedServices = session.selectedServices || (session.selectedService ? [session.selectedService] : []);
+      const servicesList = selectedServices.map(s => `   • ${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`).join('\n');
+      const totalPrice = session.totalPrice || selectedServices.reduce((sum, s) => sum + s.price, 0);
       
       // Envia mensagem de confirmação
-      const message = `📅 *Confirme seu agendamento*\n\n` +
-        `📌 Serviço: ${session.selectedService.service}\n` +
-        `📅 Data: ${appointmentDateTime.format('DD/MM/YYYY')}\n` +
-        `⏰ Horário: ${appointmentDateTime.format('HH:mm')}\n\n` +
-        'Digite *CONFIRMAR* para confirmar ou *CANCELAR* para cancelar.';
+      const message = `📋 *Resumo do Agendamento*\n\n` +
+        `✂️ *Serviços:*\n${servicesList}\n\n` +
+        `💰 *Valor total:* R$ ${totalPrice.toFixed(2).replace('.', ',')}\n` +
+        `📅 *Data:* ${appointmentDateTime.format('DD/MM/YYYY')}\n` +
+        `⏰ *Horário:* ${appointmentDateTime.format('HH:mm')}h\n\n` +
+        'Está tudo correto?\n\n' +
+        'Digite *CONFIRMAR* para finalizar, *VOLTAR* para escolher outro horário ou *CANCELAR* para voltar ao início.';
         
       await this.sendMessageSafely(phone, message);
       
@@ -464,43 +1214,90 @@ class WhatsAppController {
    * Processa confirmação de agendamento
    */
   async handleBookingConfirmation(phone, text, session) {
-    try {
-      const cleanText = text.trim().toLowerCase();
+      try {
+      // VALIDAÇÃO: Verifica se está no step correto
+      if (!session || session.step !== 'confirm_booking') {
+          await this.sendMessageSafely(phone, 
+          '⚠️ Você não está no processo de confirmação de agendamento.\n\n' +
+          'Digite *MENU* para começar um novo agendamento.');
+        return;
+      }
       
-      if (cleanText === 'confirmar' || cleanText === 'confirm') {
+      // VALIDAÇÃO: Verifica se todos os dados necessários estão presentes
+      const servicesForValidation = session.selectedServices || (session.selectedService ? [session.selectedService] : []);
+      if (servicesForValidation.length === 0) {
+        await this.sendMessageSafely(phone,
+          '❌ Nenhum serviço selecionado. Por favor, inicie um novo agendamento.');
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+          return;
+        }
+
+        if (!session.appointmentDateTime) {
+          await this.sendMessageSafely(phone, 
+          '❌ Data e horário não encontrados. Por favor, inicie um novo agendamento.');
+        await this.sendMainMenu(phone, session.clientName || '', false, session.clientId);
+        this.setUserSession(phone, { step: 'main_menu', clientId: session.clientId, clientName: session.clientName });
+          return;
+        }
+
+      // Normaliza o comando para aceitar qualquer variação
+      const normalizedText = this.normalizeCommand(text);
+      
+      // Verifica se o usuário quer voltar para seleção de horário
+      if (normalizedText === 'voltar' || normalizedText === 'anterior' || normalizedText === 'atras') {
+        await this.goBackToTimeSelection(phone, session);
+        return;
+      }
+      
+      if (normalizedText === 'confirmar' || normalizedText === 'confirm' || normalizedText.startsWith('confirm')) {
         // Cria o agendamento no banco de dados
         const schedule = await this.createSchedule(session);
         
-        if (schedule) {
-          // Envia mensagem de confirmação
-          const message = `✅ *Agendamento confirmado!*\n\n` +
-            `📌 Serviço: ${session.selectedService.service}\n` +
-            `📅 Data: ${session.appointmentDateTime.format('DD/MM/YYYY')}\n` +
-            `⏰ Horário: ${session.appointmentDateTime.format('HH:mm')}\n\n` +
-            'Obrigado por agendar conosco! Estamos ansiosos para atendê-lo.';
-            
-          await this.sendMessageSafely(phone, message);
-          
-          // Limpa a sessão
-          this.clearUserSession(phone);
-        } else {
+        if (!schedule || !schedule.id) {
           throw new Error('Falha ao criar agendamento');
         }
-      } else if (cleanText === 'cancelar' || cleanText === 'cancel') {
-        await this.cancelProcess(phone);
+
+        // Prepara lista de serviços para exibição
+        const selectedServices = session.selectedServices || (session.selectedService ? [session.selectedService] : []);
+        const servicesList = selectedServices.map(s => `   • ${s.service} - R$ ${s.price.toFixed(2).replace('.', ',')}`).join('\n');
+        const totalPrice = session.totalPrice || selectedServices.reduce((sum, s) => sum + s.price, 0);
+        
+        // Envia mensagem de confirmação
+        const message = `✅ *Agendamento confirmado com sucesso!*\n\n` +
+          `✂️ *Serviços:*\n${servicesList}\n\n` +
+          `💰 *Valor total:* R$ ${totalPrice.toFixed(2).replace('.', ',')}\n` +
+          `📅 *Data:* ${session.appointmentDateTime.format('DD/MM/YYYY')}\n` +
+          `⏰ *Horário:* ${session.appointmentDateTime.format('HH:mm')}h\n\n` +
+          'Muito obrigado por escolher o *Salão Fio a Fio*! 💇‍♀️✨\n\n' +
+          'Estamos ansiosos para atendê-lo. Se precisar de algo, é só chamar!\n\n' +
+          'Digite *MENU* para ver outras opções.';
+
+        await this.sendMessageSafely(phone, message);
+        
+        // Limpa a sessão
+        this.clearUserSession(phone);
+      } else if (normalizedText === 'cancelar' || normalizedText === 'cancel' || normalizedText.startsWith('cancel')) {
+        // Volta para o início do processo de agendamento (seleção de serviço)
+        await this.sendMessageSafely(phone,
+          '🔄 Voltando para seleção de serviços...\n\n' +
+          'Você pode escolher novamente os serviços, data e horário.');
+        
+        // Reinicia o processo de agendamento
+        await this.startSchedulingProcess(phone, session.clientId, session.clientName);
       } else {
         // Se a mensagem não for nem confirmar nem cancelar, pede confirmação novamente
         await this.sendMessageSafely(phone, 
-          '❌ Opção inválida. Por favor, digite *CONFIRMAR* para confirmar ou *CANCELAR* para cancelar o agendamento.');
+          '❌ Opção inválida. Por favor, digite *CONFIRMAR* para confirmar, *VOLTAR* para escolher outro horário ou *CANCELAR* para cancelar.');
       }
       
     } catch (error) {
       console.error('Erro ao processar confirmação de agendamento:', error);
-      await this.sendMessageSafely(phone, 
+      await this.sendMessageSafely(phone,
         '❌ Ocorreu um erro ao processar sua confirmação. Por favor, tente novamente.');
       
       // Volta para o menu principal em caso de erro
-      await this.sendMainMenu(phone, session?.clientName || '', false);
+      await this.sendMainMenu(phone, session?.clientName || '', false, session?.clientId);
     }
   }
 
@@ -509,41 +1306,58 @@ class WhatsAppController {
    */
   async showUserSchedules(phone, clientId, clientName) {
     try {
-      const schedules = await this.schedulesRepo.findByClientId(clientId, {
+      const schedules = await Schedules.findAll({
         where: {
+          client_id_schedules: clientId,
           date_and_houres: {
             [Op.gte]: new Date() // Apenas agendamentos futuros
           }
         },
         include: [{
           model: Service,
-          as: 'services',
+          as: 'Services',
           through: { attributes: [] } // Não inclui dados da tabela de junção
         }],
-        order: [['date_and_houres', 'ASC']]
+        order: [['date_and_houres', 'ASC']],
+        limit: 5 // Limita a 5 agendamentos
       });
+
+      // Define sessão como "viewing_schedules" para evitar processamento incorreto de números
+      const session = this.getUserSession(phone);
 
       if (!schedules || schedules.length === 0) {
         await this.sendMessageSafely(phone,
-          `Olá ${clientName}, você não possui agendamentos futuros.`);
+          `Olá ${clientName}! 👋\n\n` +
+          `Você não possui agendamentos futuros no momento.\n\n` +
+          `Digite *MENU* para ver outras opções.`);
+        // Volta para o menu principal
+        this.setUserSession(phone, { step: 'main_menu', clientId, clientName });
       } else {
         let message = `📅 *Seus próximos agendamentos*\n\n`;
-        
-        schedules.forEach((schedule, index) => {
-          const date = moment(schedule.date_and_houres);
+
+      schedules.forEach((schedule, index) => {
+          // Converte de UTC para UTC-3 (Horário de Brasília) para exibição
+          const date = moment(schedule.date_and_houres).utcOffset(-3);
           message += `*${index + 1}.* ${date.format('DD/MM/YYYY [às] HH:mm')}\n`;
           
-          if (schedule.services && schedule.services.length > 0) {
-            message += `   - ${schedule.services.map(s => s.service).join(', ')}\n\n`;
+          if (schedule.Services && schedule.Services.length > 0) {
+            message += `   ✂️ ${schedule.Services.map(s => s.service).join(', ')}\n\n`;
           } else {
             message += '\n';
           }
         });
         
         message += 'Digite *MENU* para voltar ao início.';
-        await this.sendMessageSafely(phone, message);
+      await this.sendMessageSafely(phone, message);
+        
+        // Define sessão como "viewing_schedules" para evitar que números sejam interpretados como comandos
+        this.setUserSession(phone, { 
+          step: 'viewing_schedules', 
+          clientId, 
+          clientName 
+        });
       }
-      
+
     } catch (error) {
       console.error('Erro ao buscar agendamentos:', error);
       await this.sendMessageSafely(phone,
@@ -558,6 +1372,7 @@ class WhatsAppController {
     const transaction = await sequelize.transaction();
     
     try {
+<<<<<<< HEAD
       // Busca um provider (Admin ou Provider)
       const providers = await this.accountRepo.findByRoles(['admin', 'provider']);
       const providerId = (providers && providers.length > 0) 
@@ -590,16 +1405,85 @@ class WhatsAppController {
         date_and_houres: dateAndHours,
         active: true,
         finished: false,
+=======
+      // Validações antes de criar o agendamento
+      const selectedServices = session.selectedServices || (session.selectedService ? [session.selectedService] : []);
+      if (selectedServices.length === 0) {
+        throw new Error('Nenhum serviço selecionado. Por favor, inicie um novo agendamento.');
+      }
+
+      if (!session.appointmentDateTime) {
+        throw new Error('Data e horário não encontrados. Por favor, inicie um novo agendamento.');
+      }
+
+      // Busca um provider (Admin ou Provider)
+    const providers = await this.accountRepo.findByRoles(['admin', 'provider']);
+    const providerId = (providers && providers.length > 0) 
+      ? providers[0].id 
+      : (process.env.DEFAULT_PROVIDER_ID || null);
+      
+    if (!providerId) {
+        throw new Error("Nenhum prestador de serviço disponível.");
+    }
+
+      // O horário foi selecionado em UTC-3 (Horário de Brasília)
+      // Para salvar no banco (que espera UTC), precisamos:
+      // - Se o usuário selecionou 8h UTC-3, queremos salvar como 11h UTC (8h + 3h = 11h)
+      // Isso garante que quando lermos do banco e convertermos para UTC-3, teremos 8h novamente
+      const appointmentDate = session.appointmentDateTime.clone();
+      // Garante que está em UTC-3 (Horário de Brasília) primeiro
+      const dateInUTC3 = appointmentDate.utcOffset(-3, true);
+      // Converte para UTC (adiciona 3 horas ao horário para compensar o timezone)
+      const dateToSave = dateInUTC3.utc().toDate();
+      
+      // Cria o agendamento usando o método do repositório
+      const schedule = await this.schedulesRepo.addSchedules({
+      name_client: session.clientName,
+        date_and_houres: dateToSave,
+      active: true,
+      finished: false,
+>>>>>>> 99e07ce56e3878ea2ac09af32bf150460a3da422
         client_id_schedules: session.clientId,
         provider_id_schedules: providerId
       };
 
+<<<<<<< HEAD
       // Cria o agendamento dentro da transação
       const schedule = await this.schedulesRepo.addSchedules(scheduleData, transaction);
 
       if (!schedule) {
         await transaction.rollback();
         throw new Error('Falha ao criar agendamento');
+=======
+      if (!schedule || !schedule.id) {
+        throw new Error('Falha ao criar agendamento no banco de dados');
+      }
+
+      // Associa os serviços ao agendamento usando a tabela pivô
+      const serviceIds = selectedServices.map(s => s.id);
+      const serviceAssociation = await this.schedulesServiceRepo.addSchedule_Service(schedule.id, serviceIds);
+
+      // Se a associação falhar, remove o agendamento criado (rollback)
+      if (!serviceAssociation) {
+        try {
+          await Schedules.destroy({ where: { id: schedule.id } });
+        } catch (destroyError) {
+          console.error('Erro ao remover agendamento após falha na associação de serviço:', destroyError);
+        }
+        throw new Error('Falha ao associar serviço ao agendamento');
+      }
+
+      // Emitir evento Socket.IO para atualizar Dashboard em tempo real
+      try {
+        const { emitScheduleCreated } = require('../utils/socket.io');
+        const fullSchedule = await this.schedulesRepo.findSchedules(schedule.id);
+        if (fullSchedule) {
+          emitScheduleCreated(fullSchedule);
+        }
+      } catch (socketError) {
+        // Não falhar a criação se o Socket.IO não estiver disponível
+        console.warn('Erro ao emitir evento Socket.IO:', socketError.message);
+>>>>>>> 99e07ce56e3878ea2ac09af32bf150460a3da422
       }
 
       // Associa o serviço ao agendamento dentro da transação
@@ -630,39 +1514,95 @@ class WhatsAppController {
 
   /**
    * Verifica disponibilidade de horário
+   * Usa timezone UTC-3 (Brasil - Horário de Brasília)
+   * @param {moment.Moment} dateTime - Data e horário a verificar
+   * @param {number} duration - Duração em minutos
+   * @param {Array} selectedServices - Array de serviços selecionados (opcional)
+   * @returns {Promise<boolean>} - true se há disponibilidade, false caso contrário
    */
-  async checkAvailability(dateTime, duration) {
-    const startTime = moment(dateTime);
-    const endTime = moment(dateTime).add(duration, 'minutes');
+  async checkAvailability(dateTime, duration, selectedServices = []) {
+    // Garante que está trabalhando com UTC-3 (Horário de Brasília)
+    const startTime = moment(dateTime).utcOffset(-3);
+    const endTime = moment(dateTime).utcOffset(-3).add(duration, 'minutes');
     
-    // Capacidade máxima de 3 agendamentos simultâneos
-    const MAX_CAPACITY = 3;
+    // Verifica se algum serviço selecionado tem limite de 1 por hora
+    let hasSinglePerHourService = false;
+    if (selectedServices && selectedServices.length > 0) {
+      // Busca os serviços completos do banco para verificar o campo single_per_hour
+      const serviceIds = selectedServices.map(s => s.id || s);
+      const services = await Service.findAll({
+        where: { id: { [Op.in]: serviceIds } }
+      });
+      
+      hasSinglePerHourService = services.some(s => s.single_per_hour === true);
+    }
+    
+    // Capacidade máxima: 1 para serviços single_per_hour, 3 para outros
+    const MAX_CAPACITY = hasSinglePerHourService ? 1 : 3;
 
     // Conta quantos agendamentos existem no mesmo horário
-    const count = await this.schedulesRepo.count({
+    // Converte para UTC para comparar com o banco (que salva em UTC)
+    const count = await Schedules.count({
       where: {
         active: true,
         date_and_houres: {
-          [Op.gte]: startTime.toDate(),
-          [Op.lt]: endTime.toDate()
+          [Op.gte]: startTime.utc().toDate(),
+          [Op.lt]: endTime.utc().toDate()
         }
-      }
+      },
+      include: [{
+        model: Service,
+        as: 'Services',
+        through: { attributes: [] },
+        required: false
+      }]
     });
+    
+    // Se há serviço single_per_hour, verifica se já existe algum agendamento com esse tipo de serviço no horário
+    if (hasSinglePerHourService && count > 0) {
+      // Busca agendamentos no horário para verificar se algum tem serviço single_per_hour
+      const schedulesInTime = await Schedules.findAll({
+        where: {
+          active: true,
+          date_and_houres: {
+            [Op.gte]: startTime.utc().toDate(),
+            [Op.lt]: endTime.utc().toDate()
+          }
+        },
+        include: [{
+          model: Service,
+          as: 'Services',
+          through: { attributes: [] },
+          required: false
+        }]
+      });
+      
+      // Verifica se algum agendamento existente tem serviço single_per_hour
+      const hasSinglePerHourInTime = schedulesInTime.some(schedule => 
+        schedule.Services && schedule.Services.some(service => service.single_per_hour === true)
+      );
+      
+      if (hasSinglePerHourInTime) {
+        return false; // Já existe um agendamento com serviço single_per_hour neste horário
+      }
+    }
     
     return count < MAX_CAPACITY;
   }
 
   /**
    * Obtém datas disponíveis para agendamento (próximos 30 dias)
+   * Usa timezone UTC-3 (Brasil - Horário de Brasília)
    */
   getAvailableDates() {
     const dates = [];
-    const today = moment().startOf('day');
-    const endDate = moment().add(30, 'days');
+    // Define timezone UTC-3 para o Brasil (Horário de Brasília)
+    const today = moment().utcOffset(-3).startOf('day');
+    const endDate = moment().utcOffset(-3).add(30, 'days');
     
     for (let date = moment(today); date.isBefore(endDate); date.add(1, 'day')) {
-      // Exclui domingos (0) e sábados (6)
-      if (date.day() !== 0 && date.day() !== 6) {
+      // Exclui apenas domingos (0) e segundas-feiras (1)
+      if (date.day() !== 0 && date.day() !== 1) {
         dates.push(date.clone());
       }
     }
@@ -672,21 +1612,29 @@ class WhatsAppController {
 
   /**
    * Obtém horários disponíveis para uma data específica
+   * Usa timezone UTC-3 (Brasil - Horário de Brasília)
+   * @param {moment.Moment} date - Data para verificar horários
+   * @param {number} duration - Duração em minutos
+   * @param {Array} selectedServices - Array de serviços selecionados (opcional)
+   * @returns {Promise<Array>} - Array de horários disponíveis
    */
-  async getAvailableTimes(date, duration) {
+  async getAvailableTimes(date, duration, selectedServices = []) {
     const times = [];
-    const startHour = 8; // 8:00
-    const endHour = 18;  // 18:00
-    const now = moment();
-    
+    const startHour = 9; // 9:00
+    const endHour = 17;  // 17:00
+    // Define timezone UTC-3 para comparação (Horário de Brasília)
+    const now = moment().utcOffset(-3);
+
     // Para cada hora do dia
     for (let hour = startHour; hour < endHour; hour++) {
-      const time = moment(date).hour(hour).minute(0).second(0);
-      
+      // Garante que a data está em UTC-3 (Horário de Brasília)
+      const time = moment(date).utcOffset(-3).hour(hour).minute(0).second(0);
+
       // Não mostra horários que já passaram
       if (time.isAfter(now)) {
-        const isAvailable = await this.checkAvailability(time, duration);
+        const isAvailable = await this.checkAvailability(time, duration, selectedServices);
         
+        // Só adiciona se estiver disponível (não mostra horários completos)
         if (isAvailable) {
           times.push(time.clone());
         }
@@ -724,9 +1672,11 @@ class WhatsAppController {
     // Configura um novo timeout para a sessão
     const timeoutId = setTimeout(() => {
       this.sendMessageSafely(phone, 
-        '⚠️ *Sessão encerrada por inatividade*\n\n' +
-        'Sua sessão foi encerrada por ficar muito tempo sem interação.\n' +
-        'Digite *MENU* para começar novamente.');
+        '⏰ *Sessão encerrada por inatividade*\n\n' +
+        'Olá! Percebi que você não respondeu por um tempo.\n' +
+        'Sua sessão foi encerrada automaticamente.\n\n' +
+        'Não se preocupe, você pode continuar de onde parou a qualquer momento.\n\n' +
+        'Digite *MENU* para ver as opções disponíveis.');
       this.clearUserSession(phone);
     }, this.SESSION_TIMEOUT);
     
@@ -754,25 +1704,27 @@ class WhatsAppController {
   }
 
   /**
-   * Cancela o processo atual e retorna ao menu principal
+   * Finaliza a sessão atual e retorna ao menu principal
    */
   async cancelProcess(phone) {
     try {
       // Limpa a sessão do usuário
       this.clearUserSession(phone);
       
-      // Envia mensagem de cancelamento
+      // Envia mensagem de sessão finalizada
       await this.sendMessageSafely(
         phone,
-        '❌ Operação cancelada.\n\n' +
-        'Digite *MENU* para ver as opções disponíveis.'
+        '✅ *Sessão finalizada*\n\n' +
+        'Sua sessão foi encerrada com sucesso.\n\n' +
+        'Obrigado por usar o *Salão Fio a Fio*! 💇‍♀️✨\n\n' +
+        'Se precisar de algo, é só digitar *MENU* a qualquer momento.'
       );
       
     } catch (error) {
-      console.error('Erro ao processar cancelamento:', error);
+      console.error('Erro ao processar finalização de sessão:', error);
       await this.sendMessageSafely(
         phone,
-        '❌ Ocorreu um erro ao processar o cancelamento. Por favor, tente novamente.'
+        '❌ Ocorreu um erro ao finalizar a sessão. Por favor, tente novamente.'
       );
     }
   }

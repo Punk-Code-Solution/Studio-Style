@@ -343,35 +343,72 @@ class FinancialController {
               }
             } catch (error) {
               console.error(`[Financial] Erro ao calcular para schedule ${schedule.id}:`, error);
-              // Fallback: usar 50% do valor bruto
-              const estimatedNet = Math.round(scheduleTotal * 0.5 * 100);
-              virtualEntries.push({
-                id: `virtual-income-${schedule.id}`,
-                transaction_type: 'INCOME',
-                category: 'SERVICE_PAYMENT',
-                amount: estimatedNet,
-                description: `Pagamento de serviço - Parte do Salão (Agendamento finalizado - estimado)`,
-                reference_id: schedule.id,
-                reference_type: 'Schedule',
-                schedule_id: schedule.id,
-                transaction_date: schedule.date_and_houres || new Date(),
-                schedule: schedule,
-                isVirtual: true
-              });
-              // Despesa estimada (comissão)
-              virtualEntries.push({
-                id: `virtual-expense-commission-${schedule.id}`,
-                transaction_type: 'EXPENSE',
-                category: 'COMMISSION_PAYMENT',
-                amount: estimatedNet,
-                description: `Comissão do profissional (Agendamento finalizado - estimado)`,
-                reference_id: schedule.id,
-                reference_type: 'Schedule',
-                schedule_id: schedule.id,
-                transaction_date: schedule.date_and_houres || new Date(),
-                schedule: schedule,
-                isVirtual: true
-              });
+              // Fallback: usar comissão padrão da empresa ou comissão do serviço
+              try {
+                const companySettings = await this.financialRepo.getCompanySettings();
+                const serviceCommissionRate = schedule.Services[0]?.commission_rate;
+                const estimatedCommissionRate = serviceCommissionRate || companySettings.default_commission_rate || 0.5;
+                const estimatedNet = Math.round(scheduleTotal * (1 - estimatedCommissionRate) * 100);
+                const estimatedCommission = Math.round(scheduleTotal * estimatedCommissionRate * 100);
+                
+                virtualEntries.push({
+                  id: `virtual-income-${schedule.id}`,
+                  transaction_type: 'INCOME',
+                  category: 'SERVICE_PAYMENT',
+                  amount: estimatedNet,
+                  description: `Pagamento de serviço - Parte do Salão (Agendamento finalizado - estimado)`,
+                  reference_id: schedule.id,
+                  reference_type: 'Schedule',
+                  schedule_id: schedule.id,
+                  transaction_date: schedule.date_and_houres || new Date(),
+                  schedule: schedule,
+                  isVirtual: true
+                });
+                // Despesa estimada (comissão)
+                virtualEntries.push({
+                  id: `virtual-expense-commission-${schedule.id}`,
+                  transaction_type: 'EXPENSE',
+                  category: 'COMMISSION_PAYMENT',
+                  amount: estimatedCommission,
+                  description: `Comissão do profissional (Agendamento finalizado - estimado)`,
+                  reference_id: schedule.id,
+                  reference_type: 'Schedule',
+                  schedule_id: schedule.id,
+                  transaction_date: schedule.date_and_houres || new Date(),
+                  schedule: schedule,
+                  isVirtual: true
+                });
+              } catch (fallbackError) {
+                console.error(`[Financial] Erro ao buscar configurações para fallback:`, fallbackError);
+                // Último recurso: 50% receita, 50% despesa
+                const estimatedNet = Math.round(scheduleTotal * 0.5 * 100);
+                virtualEntries.push({
+                  id: `virtual-income-${schedule.id}`,
+                  transaction_type: 'INCOME',
+                  category: 'SERVICE_PAYMENT',
+                  amount: estimatedNet,
+                  description: `Pagamento de serviço - Parte do Salão (Agendamento finalizado - estimado)`,
+                  reference_id: schedule.id,
+                  reference_type: 'Schedule',
+                  schedule_id: schedule.id,
+                  transaction_date: schedule.date_and_houres || new Date(),
+                  schedule: schedule,
+                  isVirtual: true
+                });
+                virtualEntries.push({
+                  id: `virtual-expense-commission-${schedule.id}`,
+                  transaction_type: 'EXPENSE',
+                  category: 'COMMISSION_PAYMENT',
+                  amount: estimatedNet,
+                  description: `Comissão do profissional (Agendamento finalizado - estimado)`,
+                  reference_id: schedule.id,
+                  reference_type: 'Schedule',
+                  schedule_id: schedule.id,
+                  transaction_date: schedule.date_and_houres || new Date(),
+                  schedule: schedule,
+                  isVirtual: true
+                });
+              }
             }
           }
         }
@@ -452,6 +489,9 @@ class FinancialController {
         return ResponseHandler.validationError(res, 'transactionType, category e amount são obrigatórios');
       }
 
+      // Usar o ID do usuário autenticado se createdBy não for fornecido
+      const userId = createdBy || req.user?.id || null;
+
       const entry = await this.financialRepo.createLedgerEntry({
         transactionType,
         category,
@@ -459,7 +499,7 @@ class FinancialController {
         description,
         transactionDate: transactionDate ? new Date(transactionDate) : new Date(),
         metadata,
-        createdBy
+        createdBy: userId
       });
 
       return ResponseHandler.success(res, 201, 'Entrada criada com sucesso', entry);
@@ -475,6 +515,15 @@ class FinancialController {
   async updateLedgerEntry(req, res) {
     try {
       const { id } = req.params;
+      
+      // Verificar se é uma entrada virtual (não pode ser editada)
+      if (id && (id.startsWith('virtual-income-') || id.startsWith('virtual-expense-'))) {
+        return res.status(400).json({
+          success: false,
+          message: 'Entradas virtuais não podem ser editadas. Elas são geradas automaticamente a partir de agendamentos finalizados.'
+        });
+      }
+
       const { transactionType, category, amount, description, transactionDate, metadata } = req.body;
 
       const entry = await this.financialRepo.updateLedgerEntry(id, {
@@ -499,6 +548,15 @@ class FinancialController {
   async deleteLedgerEntry(req, res) {
     try {
       const { id } = req.params;
+      
+      // Verificar se é uma entrada virtual (não pode ser deletada)
+      if (id && (id.startsWith('virtual-income-') || id.startsWith('virtual-expense-'))) {
+        return res.status(400).json({
+          success: false,
+          message: 'Entradas virtuais não podem ser deletadas. Elas são geradas automaticamente a partir de agendamentos finalizados.'
+        });
+      }
+      
       await this.financialRepo.deleteLedgerEntry(id);
 
       return ResponseHandler.success(res, 200, 'Entrada deletada com sucesso');
@@ -606,10 +664,21 @@ class FinancialController {
               }
             } catch (error) {
               console.error(`[Financial] Erro ao calcular totais para schedule ${schedule.id}:`, error);
-              // Fallback: 50% receita, 50% despesa (comissão)
-              const estimatedNet = Math.round(scheduleTotal * 0.5 * 100);
-              additionalIncome += estimatedNet;
-              additionalExpenses += estimatedNet;
+              // Fallback: usar comissão padrão da empresa ou 50% se não disponível
+              try {
+                const companySettings = await this.financialRepo.getCompanySettings();
+                const estimatedCommissionRate = companySettings.default_commission_rate || 0.5;
+                const estimatedNet = Math.round(scheduleTotal * (1 - estimatedCommissionRate) * 100);
+                const estimatedCommission = Math.round(scheduleTotal * estimatedCommissionRate * 100);
+                additionalIncome += estimatedNet;
+                additionalExpenses += estimatedCommission;
+              } catch (fallbackError) {
+                console.error(`[Financial] Erro ao buscar configurações para fallback:`, fallbackError);
+                // Último recurso: 50% receita, 50% despesa
+                const estimatedNet = Math.round(scheduleTotal * 0.5 * 100);
+                additionalIncome += estimatedNet;
+                additionalExpenses += estimatedNet;
+              }
             }
           }
         }
@@ -644,8 +713,10 @@ class FinancialController {
   async getCommissionSummary(req, res) {
     try {
       const { startDate, endDate } = req.query;
+      const userRole = req.user?.role?.toLowerCase();
+      const userId = req.user?.id;
 
-      console.log(`[Financial] Buscando resumo de comissões - startDate: ${startDate}, endDate: ${endDate}`);
+      console.log(`[Financial] Buscando resumo de comissões - startDate: ${startDate}, endDate: ${endDate}, userRole: ${userRole}, userId: ${userId}`);
 
       const where = {
         transaction_type: 'EXPENSE',
@@ -668,20 +739,35 @@ class FinancialController {
         console.log(`[Financial] Sem filtro de data - buscando todas as comissões`);
       }
 
+      // Se for provider, filtrar apenas suas comissões
+      let providerFilter = {};
+      if (userRole === 'provider' && userId) {
+        providerFilter.provider_id_schedules = userId;
+        console.log(`[Financial] Filtrando comissões apenas para o provider: ${userId}`);
+      }
+
       // Buscar entradas de comissão do livro razão
+      // Se for provider, filtrar apenas entradas relacionadas a seus schedules
+      const scheduleInclude = {
+        model: Schedules,
+        as: 'schedule',
+        required: false,
+        include: [{
+          model: Account,
+          as: 'provider',
+          required: false,
+          attributes: ['id', 'name', 'lastname']
+        }]
+      };
+
+      // Se for provider, adicionar filtro no where do schedule
+      if (providerFilter.provider_id_schedules) {
+        scheduleInclude.where = { provider_id_schedules: providerFilter.provider_id_schedules };
+      }
+
       const entries = await FinancialLedger.findAll({
         where,
-        include: [{
-          model: Schedules,
-          as: 'schedule',
-          required: false,
-          include: [{
-            model: Account,
-            as: 'provider',
-            required: false,
-            attributes: ['id', 'name', 'lastname']
-          }]
-        }]
+        include: [scheduleInclude]
       });
 
       console.log(`[Financial] Entradas de comissão do livro razão: ${entries.length}`);
@@ -751,6 +837,11 @@ class FinancialController {
           }
         }
 
+        // Se for provider, filtrar apenas suas próprias comissões
+        if (userRole === 'provider' && userId && providerId !== userId) {
+          continue; // Pular esta entrada se não for do provider logado
+        }
+
         if (providerId) {
           if (!summaryMap[providerId]) {
             summaryMap[providerId] = {
@@ -759,12 +850,18 @@ class FinancialController {
               totalCommission: 0
             };
           }
-          summaryMap[providerId].totalCommission += Math.round(entry.amount || 0);
+          // entry.amount já está em centavos no banco de dados
+          summaryMap[providerId].totalCommission += (entry.amount || 0);
         }
       }
 
       // Processar schedules finalizados sem entrada de comissão
       for (const schedule of finishedSchedules) {
+        // Se for provider, filtrar apenas seus próprios schedules
+        if (userRole === 'provider' && userId && schedule.provider_id_schedules !== userId) {
+          continue; // Pular este schedule se não for do provider logado
+        }
+
         if (!scheduleIdsWithCommission.has(schedule.id) && schedule.Services && schedule.Services.length > 0 && schedule.provider) {
           let scheduleTotal = 0;
           for (const service of schedule.Services) {

@@ -121,7 +121,7 @@ import { User, UserService } from '../../core/services/user.service';
                   <p>Nenhum agendamento encontrado</p>
                 </td>
               </tr>
-              <tr *ngFor="let schedule of paginatedSchedules">
+              <tr *ngFor="let schedule of paginatedSchedules" [ngClass]="'status-' + getStatusClass(schedule)">
                 <td>
                   <div class="user-info">
                     <div class="doctor-details">

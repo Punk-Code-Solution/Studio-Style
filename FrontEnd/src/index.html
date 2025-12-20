@@ -5,6 +5,31 @@
   <title>Studio & Style</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Logs iniciais antes do Angular carregar
+    console.log('📄 [HTML] Página carregada');
+    console.log('📄 [HTML] URL completa:', window.location.href);
+    console.log('📄 [HTML] Pathname:', window.location.pathname);
+    console.log('📄 [HTML] Base href:', document.querySelector('base')?.getAttribute('href'));
+    console.log('📄 [HTML] User Agent:', navigator.userAgent);
+    
+    // Intercepta erros de recursos não encontrados
+    window.addEventListener('error', function(e) {
+      if (e.target && e.target.tagName) {
+        console.error('❌ [HTML] Erro ao carregar recurso:', {
+          tag: e.target.tagName,
+          src: e.target.src || e.target.href,
+          error: e.message
+        });
+      }
+    }, true);
+    
+    // Log quando a página está completamente carregada
+    window.addEventListener('load', function() {
+      console.log('✅ [HTML] Página totalmente carregada');
+      console.log('✅ [HTML] Angular deve iniciar em breve...');
+    });
+  </script>
 </head>
 <body>
   <app-root></app-root>

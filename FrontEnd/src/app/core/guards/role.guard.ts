@@ -12,9 +12,17 @@ export class RoleGuard {
   ) {}
 
   canActivate(route: ActivatedRouteSnapshot): boolean {
+    const fullPath = this.getFullPath(route);
+    console.log('🛡️ [ROLE_GUARD] Verificando acesso:', {
+      path: fullPath,
+      url: this.router.url,
+      isAuthenticated: this.authService.isAuthenticated(),
+      timestamp: new Date().toISOString()
+    });
+    
     // Verifica se o usuário está autenticado
     if (!this.authService.isAuthenticated()) {
-      console.warn('RoleGuard: Usuário não autenticado');
+      console.warn('❌ [ROLE_GUARD] Usuário não autenticado. Redirecionando para /login');
       this.router.navigate(['/login'], { 
         replaceUrl: true,
         queryParams: { returnUrl: this.getFullPath(route) }
@@ -23,10 +31,9 @@ export class RoleGuard {
     }
 
     // Obtém o caminho completo da rota
-    const fullPath = this.getFullPath(route);
-    
     // Se for a rota raiz ou dashboard, permite acesso
     if (!fullPath || fullPath === 'dashboard') {
+      console.log('✅ [ROLE_GUARD] Acesso permitido (rota raiz/dashboard):', fullPath);
       return true;
     }
 
@@ -36,7 +43,7 @@ export class RoleGuard {
 
     // Verifica permissão para a rota base
     if (!this.authService.canAccessRoute(baseRoute)) {
-      console.warn(`RoleGuard: Acesso negado à rota base: ${baseRoute}`);
+      console.warn(`❌ [ROLE_GUARD] Acesso negado à rota base: ${baseRoute}`);
       this.redirectToUnauthorized('Você não tem permissão para acessar esta seção');
       return false;
     }
@@ -45,11 +52,12 @@ export class RoleGuard {
     if (hasParams) {
       const paramRoute = this.getParamRoute(fullPath);
       if (!this.authService.canAccessRoute(paramRoute)) {
-        console.warn(`RoleGuard: Acesso negado à rota com parâmetros: ${paramRoute}`);
+        console.warn(`❌ [ROLE_GUARD] Acesso negado à rota com parâmetros: ${paramRoute}`);
         this.redirectToUnauthorized('Você não tem permissão para acessar este item específico');
         return false;
       }
     }
+    console.log('✅ [ROLE_GUARD] Acesso permitido para:', fullPath);
     return true;
   }
 

@@ -62,6 +62,7 @@ export interface FinancialLedgerEntry {
   created_by?: string;
   createdAt?: string;
   updatedAt?: string;
+  isVirtual?: boolean; // Flag para indicar se é uma entrada virtual (gerada automaticamente)
 }
 
 export interface Expense {

@@ -6,8 +6,8 @@ import { User, UserService } from '../../core/services/user.service';
 import { SchedulesService, Schedule } from '../../core/services/schedules.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoggingService } from '../../core/services/logging.service';
-import { SocketService } from '../../core/services/socket.service';
-import { Subscription } from 'rxjs';
+import { ScheduleViewModalComponent } from '../schedules/schedule-view-modal/schedule-view-modal.component';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-dashboard',
@@ -16,7 +16,8 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [
     CommonModule,
-    RouterModule
+    RouterModule,
+    ScheduleViewModalComponent
   ]
 })
 export class DashboardComponent implements OnInit, OnDestroy {
@@ -28,7 +29,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   completedAppointmentsThisMonth = 0;
   totalClients = 0;
   newClientsThisMonth = 0;
-  private socketSubscriptions: Subscription[] = [];
+  private pollingInterval: any = null;
+  private lastPollingTimestamp: Date | null = null;
+  private readonly POLLING_INTERVAL = 30000; // 30 segundos
+  
+  // Modal de visualização
+  showViewModal = false;
+  selectedSchedule: Schedule | null = null;
 
   get completedAppointmentsToday(): number {
     return this.appointments.filter(a => !!a.finished).length;
@@ -40,8 +47,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private schedulesService: SchedulesService,
     private userService: UserService,
     private notificationService: NotificationService,
-    private loggingService: LoggingService,
-    private socketService: SocketService
+    private loggingService: LoggingService
   ) {
     this.currentUser = this.authService.currentUser;
   }
@@ -52,50 +58,146 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
     this.loadData();
-    this.setupSocketListeners();
+    
+    // O monitoramento global de novos agendamentos é feito pelo ScheduleMonitorService no AppComponent
+    // Aqui mantemos apenas o polling para atualizar a tela do dashboard
+    this.startPolling();
   }
 
   ngOnDestroy(): void {
-    // Limpar todas as subscrições do Socket.IO
-    this.socketSubscriptions.forEach(sub => sub.unsubscribe());
+    // Parar polling se estiver ativo
+    this.stopPolling();
   }
 
   /**
-   * Configura os listeners do Socket.IO para atualização automática
+   * Inicia polling automático para verificar novos agendamentos (usado em produção)
    */
-  private setupSocketListeners(): void {
-    // Listener para quando um novo agendamento é criado
-    const createdSub = this.socketService.onScheduleCreated.subscribe((event) => {
-      console.log('Novo agendamento recebido via Socket.IO:', event);
-      
-      // Verificar se o agendamento é de hoje
-      const scheduleDate = new Date(event.schedule.date_and_houres);
-      const today = new Date();
-      const isToday = scheduleDate.toDateString() === today.toDateString();
-      
-      if (isToday) {
-        // Recarregar dados do dashboard
-        this.loadData();
-        this.notificationService.info('Novo agendamento adicionado!', 'Dashboard atualizado');
-      } else {
-        // Apenas atualizar estatísticas do mês
-        this.loadAppointments();
+  private startPolling(): void {
+    // Armazenar timestamp inicial
+    this.lastPollingTimestamp = new Date();
+    
+    // Polling imediato na primeira vez
+    this.performPolling();
+    
+    // Configurar polling periódico
+    this.pollingInterval = setInterval(() => {
+      this.performPolling();
+    }, this.POLLING_INTERVAL);
+    
+    if (!environment.production) {
+      console.log('🔄 [Dashboard] Polling automático iniciado (intervalo: 30s)');
+    }
+  }
+
+  /**
+   * Para o polling automático
+   */
+  private stopPolling(): void {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+      if (!environment.production) {
+        console.log('🛑 [Dashboard] Polling automático parado');
       }
-    });
+    }
+  }
 
-    // Listener para quando um agendamento é atualizado
-    const updatedSub = this.socketService.onScheduleUpdated.subscribe((event) => {
-      console.log('Agendamento atualizado via Socket.IO:', event);
-      this.loadData();
-    });
+  /**
+   * Executa uma verificação de polling para novos agendamentos
+   */
+  private async performPolling(): Promise<void> {
+    try {
+      // Buscar todos os agendamentos e filtrar apenas os de hoje
+      const schedules = await this.schedulesService.getAllSchedules().toPromise();
 
-    // Listener para quando um agendamento é deletado
-    const deletedSub = this.socketService.onScheduleDeleted.subscribe((event) => {
-      console.log('Agendamento deletado via Socket.IO:', event);
-      this.loadData();
-    });
+      if (schedules && Array.isArray(schedules)) {
+        // Filtrar apenas agendamentos de hoje
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        const todayStr = today.toISOString().split('T')[0];
+        const currentAppointments = schedules.filter(schedule => {
+          if (!schedule || !schedule.date_and_houres) return false;
+          try {
+            const scheduleDateStr = new Date(schedule.date_and_houres).toISOString().split('T')[0];
+            return scheduleDateStr === todayStr;
+          } catch (e) {
+            return false;
+          }
+        });
+        
+        // Comparar com os agendamentos atuais para detectar mudanças
+        // Nota: O aviso sonoro é gerenciado globalmente pelo ScheduleMonitorService
+        const hasChanges = this.detectChanges(currentAppointments);
+        
+        if (hasChanges) {
+          if (!environment.production) {
+            console.log('🔄 [Dashboard] Mudanças detectadas via polling, atualizando...');
+          }
+          await this.loadData();
+        }
+      }
+    } catch (error) {
+      // Silenciar erros de polling para não poluir o console
+      if (!environment.production) {
+        console.error('Erro no polling:', error);
+      }
+    }
+  }
 
-    this.socketSubscriptions.push(createdSub, updatedSub, deletedSub);
+  /**
+   * Detecta se houve mudanças nos agendamentos
+   * Retorna true se houver mudanças (novos, atualizados ou removidos)
+   * Nota: O aviso sonoro é gerenciado globalmente pelo ScheduleMonitorService
+   */
+  private detectChanges(newAppointments: Schedule[]): boolean {
+    // Se não há timestamp anterior, sempre atualizar na primeira vez
+    if (!this.lastPollingTimestamp) {
+      this.lastPollingTimestamp = new Date();
+      return true;
+    }
+
+    // Comparar quantidade de agendamentos
+    if (newAppointments.length !== this.appointments.length) {
+      return true;
+    }
+
+    // Comparar IDs dos agendamentos
+    const currentIds = new Set(this.appointments.map(a => a.id));
+    const newIds = new Set(newAppointments.map(a => a.id));
+    
+    if (currentIds.size !== newIds.size) {
+      return true;
+    }
+
+    // Verificar se algum ID mudou
+    for (const id of newIds) {
+      if (!currentIds.has(id)) {
+        return true;
+      }
+    }
+
+    // Verificar se algum agendamento foi atualizado (comparar updatedAt)
+    for (const newAppointment of newAppointments) {
+      const currentAppointment = this.appointments.find(a => a.id === newAppointment.id);
+      if (currentAppointment) {
+        const newUpdatedAt = newAppointment.updatedAt ? new Date(newAppointment.updatedAt) : null;
+        const currentUpdatedAt = currentAppointment.updatedAt ? new Date(currentAppointment.updatedAt) : null;
+        
+        if (newUpdatedAt && currentUpdatedAt && newUpdatedAt.getTime() > currentUpdatedAt.getTime()) {
+          return true;
+        }
+        
+        // Verificar mudança no status finished
+        if (newAppointment.finished !== currentAppointment.finished) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   async loadData() {
@@ -278,7 +380,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   navigateToConsultation(appointment: Schedule) {
-    this.router.navigate(['/services'], { queryParams: { id: appointment.id } });
+    // Abrir modal de visualização ao invés de navegar
+    this.selectedSchedule = appointment;
+    this.showViewModal = true;
+  }
+
+  closeViewModal() {
+    this.showViewModal = false;
+    this.selectedSchedule = null;
   }
 
   navigateToNewConsultation() {
@@ -294,6 +403,38 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'client': 'Cliente'
     };
     return roles[role] || role;
+  }
+
+  getStatusCardClass(schedule: Schedule): string {
+    // Verifica o status e retorna a classe correspondente
+    if (schedule.finished) {
+      return 'status-completed';
+    }
+    if (!schedule.active) {
+      return 'status-cancelled';
+    }
+    return 'status-active';
+  }
+
+  getStatusStyles(schedule: Schedule): { [key: string]: string } {
+    // Aplica estilos inline para garantir que sejam aplicados
+    if (schedule.finished) {
+      return {
+        'border-left': '4px solid #2196f3',
+        'background': '#f3f8ff'
+      };
+    }
+    if (!schedule.active) {
+      return {
+        'border-left': '4px solid #f44336',
+        'background': '#fff5f5',
+        'opacity': '0.85'
+      };
+    }
+    return {
+      'border-left': '4px solid #4caf50',
+      'background': '#f1f8f4'
+    };
   }
 
   getStatusValue(schedule: Schedule): string {
@@ -350,3 +491,5 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 }
+
+

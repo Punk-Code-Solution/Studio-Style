@@ -4,7 +4,9 @@ import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { SidebarComponent } from './layout/sidebar/sidebar.component';
 import { AuthService } from './core/services/auth.service';
 import { NotificationsComponent } from './shared/components/notifications/notifications.component';
+import { ScheduleMonitorService } from './core/services/schedule-monitor.service';
 import { Subscription, filter } from 'rxjs';
+import { environment } from '../environments/environment';
 
 // Rotas públicas onde a sidebar não deve aparecer
 const PUBLIC_ROUTES = ['/login', '/reset-password', '/unauthorized'];
@@ -38,35 +40,71 @@ export class AppComponent implements OnInit, OnDestroy {
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private scheduleMonitorService: ScheduleMonitorService
   ) {}
 
   ngOnInit(): void {
+    console.log('🔵 [APP] AppComponent inicializado');
+    console.log('🔵 [APP] URL atual do router:', this.router.url);
+    console.log('🔵 [APP] URL completa do navegador:', window.location.href);
+    console.log('🔵 [APP] Pathname:', window.location.pathname);
+    console.log('🔵 [APP] Base href:', document.querySelector('base')?.getAttribute('href'));
+    
     // Atualiza o estado inicial
     this.updateSidebarVisibility();
 
     // Escuta mudanças no estado de autenticação
-    const authSub = this.authService.authState$.subscribe(() => {
+    const authSub = this.authService.authState$.subscribe((authState) => {
+      console.log('🔵 [APP] Estado de autenticação mudou');
       this.updateSidebarVisibility();
+      
+      // Iniciar monitoramento de agendamentos quando usuário estiver autenticado
+      if (authState.isAuthenticated && authState.user) {
+        this.scheduleMonitorService.startMonitoring();
+      } else {
+        this.scheduleMonitorService.stopMonitoring();
+      }
     });
     this.subscriptions.add(authSub);
+    
+    // Iniciar monitoramento se já estiver autenticado
+    if (this.authService.isAuthenticated()) {
+      this.scheduleMonitorService.startMonitoring();
+    }
 
     // Escuta mudanças de rota para garantir que o estado seja atualizado
     const routerSub = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
         this.currentRoute = event.urlAfterRedirects || event.url;
+        console.log('🔵 [APP] Navegação concluída:', {
+          url: event.url,
+          urlAfterRedirects: event.urlAfterRedirects,
+          currentRoute: this.currentRoute
+        });
         this.updateSidebarVisibility();
       });
     this.subscriptions.add(routerSub);
 
+    // Log de erros de navegação (apenas em desenvolvimento)
+    if (!environment.production) {
+      this.router.events.subscribe(event => {
+        if (event.type === 0) { // NavigationError
+          console.error('❌ [APP] Erro de navegação:', event);
+        }
+      });
+    }
+
     // Atualiza a rota inicial
     this.currentRoute = this.router.url;
+    console.log('🔵 [APP] Rota inicial:', this.currentRoute);
     this.updateSidebarVisibility();
   }
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+    this.scheduleMonitorService.stopMonitoring();
   }
 
   private updateSidebarVisibility(): void {
