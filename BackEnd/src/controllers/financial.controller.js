@@ -518,10 +518,7 @@ class FinancialController {
       
       // Verificar se é uma entrada virtual (não pode ser editada)
       if (id && (id.startsWith('virtual-income-') || id.startsWith('virtual-expense-'))) {
-        return res.status(400).json({
-          success: false,
-          message: 'Entradas virtuais não podem ser editadas. Elas são geradas automaticamente a partir de agendamentos finalizados.'
-        });
+        return ResponseHandler.validationError(res, 'Entradas virtuais não podem ser editadas. Elas são geradas automaticamente a partir de agendamentos finalizados.');
       }
 
       const { transactionType, category, amount, description, transactionDate, metadata } = req.body;
@@ -551,10 +548,7 @@ class FinancialController {
       
       // Verificar se é uma entrada virtual (não pode ser deletada)
       if (id && (id.startsWith('virtual-income-') || id.startsWith('virtual-expense-'))) {
-        return res.status(400).json({
-          success: false,
-          message: 'Entradas virtuais não podem ser deletadas. Elas são geradas automaticamente a partir de agendamentos finalizados.'
-        });
+        return ResponseHandler.validationError(res, 'Entradas virtuais não podem ser deletadas. Elas são geradas automaticamente a partir de agendamentos finalizados.');
       }
       
       await this.financialRepo.deleteLedgerEntry(id);
