@@ -1,5 +1,5 @@
 Back
-npx jest src/tests/integration/advanced-scenarios.test.js --detectOpenHandles
+npx jest src/__tests__/advanced-scenarios.test.js --detectOpenHandles
 npm run test:crud
 
 Front

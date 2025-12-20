@@ -1,6 +1,6 @@
 /* eslint-disable import/order */
 const WhatsAppService = require('../services/whatsapp.service');
-const { Schedules, Service, Account, Phone, TypeAccount } = require('../Database/models'); // Modelos do DB
+const { Schedules, Service, Account, Phone, TypeAccount, sequelize } = require('../Database/models'); // Modelos do DB
 const moment = require('moment');
 const { Op } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
@@ -555,6 +555,8 @@ class WhatsAppController {
    * Cria agendamento no banco de dados
    */
   async createSchedule(session) {
+    const transaction = await sequelize.transaction();
+    
     try {
       // Busca um provider (Admin ou Provider)
       const providers = await this.accountRepo.findByRoles(['admin', 'provider']);
@@ -563,31 +565,64 @@ class WhatsAppController {
         : (process.env.DEFAULT_PROVIDER_ID || null);
         
       if (!providerId) {
+        await transaction.rollback();
         throw new Error("Nenhum prestador de serviço disponível.");
       }
 
-      // Cria o agendamento
-      const schedule = await this.schedulesRepo.create({
+      // Validar horário ocupado antes de criar agendamento
+      const dateAndHours = session.appointmentDateTime.toDate();
+      const hasConflict = await this.schedulesRepo.checkTimeConflict(
+        dateAndHours,
+        providerId,
+        null, // Não é atualização
+        transaction
+      );
+
+      if (hasConflict) {
+        await transaction.rollback();
+        throw new Error('Horário já está ocupado para este prestador');
+      }
+
+      // Prepara dados do agendamento
+      const scheduleData = {
         id: uuidv4(),
         name_client: session.clientName,
-        date_and_houres: session.appointmentDateTime.toDate(),
+        date_and_houres: dateAndHours,
         active: true,
         finished: false,
         client_id_schedules: session.clientId,
         provider_id_schedules: providerId
-      });
+      };
 
-      // Associa o serviço ao agendamento
-      if (schedule && session.selectedService) {
-        await this.schedulesServiceRepo.create({
-          schedule_id: schedule.id,
-          service_id: session.selectedService.id,
-          price: session.selectedService.price
-        });
+      // Cria o agendamento dentro da transação
+      const schedule = await this.schedulesRepo.addSchedules(scheduleData, transaction);
+
+      if (!schedule) {
+        await transaction.rollback();
+        throw new Error('Falha ao criar agendamento');
       }
+
+      // Associa o serviço ao agendamento dentro da transação
+      if (schedule && session.selectedService) {
+        const result_services = await this.schedulesServiceRepo.addSchedule_Service(
+          schedule.id,
+          [session.selectedService.id],
+          transaction
+        );
+
+        if (!result_services) {
+          await transaction.rollback();
+          throw new Error('Falha ao associar serviço ao agendamento');
+        }
+      }
+
+      // Commit da transação
+      await transaction.commit();
 
       return schedule;
     } catch (error) {
+      // Rollback em caso de erro
+      await transaction.rollback();
       console.error('Erro ao criar agendamento:', error);
       throw error;
     }
