@@ -1,6 +1,7 @@
 /* eslint-disable import/order */
 const WhatsAppService = require('../services/whatsapp.service');
-const { Schedules, Service, Account, Phone, TypeAccount, Conversation, Message } = require('../Database/models'); // Modelos do DB
+
+const { Schedules, Service, Account, Phone, TypeAccount, Conversation, Message, sequelize } = require('../Database/models'); // Modelos do DB
 const moment = require('moment');
 const { Op } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
@@ -36,11 +37,12 @@ class WhatsAppController {
    * @param {string} whatsappMessageId - ID da mensagem do WhatsApp
    * @param {string} messageType - Tipo da mensagem ('text', 'image', etc.)
    * @param {string} status - Status da mensagem ('sent', 'delivered', 'read', 'failed')
+   * @param {string} contactName - Nome do contato do WhatsApp (opcional)
    */
-  async saveMessage(from, content, direction, whatsappMessageId, messageType = 'text', status = 'delivered') {
+  async saveMessage(from, content, direction, whatsappMessageId, messageType = 'text', status = 'delivered', contactName = null) {
     try {
-      // Busca ou cria a conta do cliente
-      const clientAccount = await this.getOrCreateClient(from, null);
+      // Busca ou cria a conta do cliente usando o nome do contato se disponível
+      const clientAccount = await this.getOrCreateClient(from, contactName);
       const accountId = clientAccount ? clientAccount.id : null;
 
       // Busca ou cria a conversa para este número de telefone
@@ -235,7 +237,7 @@ class WhatsAppController {
           // Ignora erro ao buscar account
         }
 
-        await this.saveMessage(from, text, 'incoming', messageId, 'text', 'delivered');
+        await this.saveMessage(from, text, 'incoming', messageId, 'text', 'delivered', contact?.name);
       } catch (error) {
         console.error('Erro ao salvar mensagem recebida:', error);
         // Não interrompe o fluxo se falhar ao salvar
@@ -262,6 +264,18 @@ class WhatsAppController {
       let account = await this.accountRepo.findAccountByPhone(phone);
 
       if (account) {
+        // Se o contato tem nome e o account não tem ou tem apenas o nome padrão, atualiza
+        if (contactName && contactName.trim() && 
+            (!account.name || account.name === 'Cliente WhatsApp' || account.name.trim() === '')) {
+          try {
+            await this.accountRepo.updateAccount({ id: account.id, name: contactName.trim() });
+            // Recarrega o account para ter o nome atualizado
+            account = await this.accountRepo.findAccountByPhone(phone);
+          } catch (error) {
+            console.error('Erro ao atualizar nome do cliente:', error);
+            // Não falha se não conseguir atualizar o nome
+          }
+        }
         return account;
       }
 
@@ -1352,26 +1366,31 @@ class WhatsAppController {
    * Cria agendamento no banco de dados
    */
   async createSchedule(session) {
+    const transaction = await sequelize.transaction();
+    
     try {
       // Validações antes de criar o agendamento
       const selectedServices = session.selectedServices || (session.selectedService ? [session.selectedService] : []);
       if (selectedServices.length === 0) {
+        await transaction.rollback();
         throw new Error('Nenhum serviço selecionado. Por favor, inicie um novo agendamento.');
       }
 
       if (!session.appointmentDateTime) {
+        await transaction.rollback();
         throw new Error('Data e horário não encontrados. Por favor, inicie um novo agendamento.');
       }
 
       // Busca um provider (Admin ou Provider)
-    const providers = await this.accountRepo.findByRoles(['admin', 'provider']);
-    const providerId = (providers && providers.length > 0) 
-      ? providers[0].id 
-      : (process.env.DEFAULT_PROVIDER_ID || null);
-      
-    if (!providerId) {
+      const providers = await this.accountRepo.findByRoles(['admin', 'provider']);
+      const providerId = (providers && providers.length > 0) 
+        ? providers[0].id 
+        : (process.env.DEFAULT_PROVIDER_ID || null);
+        
+      if (!providerId) {
+        await transaction.rollback();
         throw new Error("Nenhum prestador de serviço disponível.");
-    }
+      }
 
       // O horário foi selecionado em UTC-3 (Horário de Brasília)
       // Para salvar no banco (que espera UTC), precisamos:
@@ -1382,36 +1401,53 @@ class WhatsAppController {
       const dateInUTC3 = appointmentDate.utcOffset(-3, true);
       // Converte para UTC (adiciona 3 horas ao horário para compensar o timezone)
       const dateToSave = dateInUTC3.utc().toDate();
+
+      // Validar horário ocupado antes de criar agendamento
+      const hasConflict = await this.schedulesRepo.checkTimeConflict(
+        dateToSave,
+        providerId,
+        null, // Não é atualização
+        transaction
+      );
+
+      if (hasConflict) {
+        await transaction.rollback();
+        throw new Error('Horário já está ocupado para este prestador');
+      }
       
-      // Cria o agendamento usando o método do repositório
+      // Cria o agendamento usando o método do repositório dentro da transação
       const schedule = await this.schedulesRepo.addSchedules({
-      name_client: session.clientName,
+        name_client: session.clientName,
         date_and_houres: dateToSave,
-      active: true,
-      finished: false,
+        active: true,
+        finished: false,
         client_id_schedules: session.clientId,
         provider_id_schedules: providerId
-      });
+      }, transaction);
 
       if (!schedule || !schedule.id) {
+        await transaction.rollback();
         throw new Error('Falha ao criar agendamento no banco de dados');
       }
 
-      // Associa os serviços ao agendamento usando a tabela pivô
+      // Associa os serviços ao agendamento usando a tabela pivô dentro da transação
       const serviceIds = selectedServices.map(s => s.id);
-      const serviceAssociation = await this.schedulesServiceRepo.addSchedule_Service(schedule.id, serviceIds);
+      const serviceAssociation = await this.schedulesServiceRepo.addSchedule_Service(
+        schedule.id, 
+        serviceIds,
+        transaction
+      );
 
-      // Se a associação falhar, remove o agendamento criado (rollback)
+      // Se a associação falhar, o rollback será feito no catch
       if (!serviceAssociation) {
-        try {
-          await Schedules.destroy({ where: { id: schedule.id } });
-        } catch (destroyError) {
-          console.error('Erro ao remover agendamento após falha na associação de serviço:', destroyError);
-        }
+        await transaction.rollback();
         throw new Error('Falha ao associar serviço ao agendamento');
       }
 
-      // Emitir evento Socket.IO para atualizar Dashboard em tempo real
+      // Commit da transação antes de emitir eventos externos
+      await transaction.commit();
+
+      // Emitir evento Socket.IO para atualizar Dashboard em tempo real (após commit bem-sucedido)
       try {
         const { emitScheduleCreated } = require('../utils/socket.io');
         const fullSchedule = await this.schedulesRepo.findSchedules(schedule.id);
@@ -1425,6 +1461,10 @@ class WhatsAppController {
 
       return schedule;
     } catch (error) {
+      // Rollback em caso de erro
+      if (transaction && !transaction.finished) {
+        await transaction.rollback();
+      }
       console.error('Erro ao criar agendamento:', error);
       throw error;
     }

@@ -5,7 +5,7 @@ class FinancialRepository {
   /**
    * Registra uma entrada no livro razão (imutável)
    */
-  async createLedgerEntry(data) {
+  async createLedgerEntry(data, transaction = null) {
     try {
       const entry = await FinancialLedger.create({
         transaction_type: data.transactionType,
@@ -19,6 +19,8 @@ class FinancialRepository {
         transaction_date: data.transactionDate || new Date(),
         metadata: data.metadata,
         created_by: data.createdBy
+      }, {
+        transaction
       });
       return entry;
     } catch (error) {

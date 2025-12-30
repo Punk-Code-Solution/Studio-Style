@@ -54,7 +54,7 @@ class schedulesRepository{
      });
   }
     
-  async addSchedules( schedules ) {
+  async addSchedules(schedules, transaction = null) {
     const { 
         name_client,
         date_and_houres,
@@ -65,19 +65,46 @@ class schedulesRepository{
     } = schedules
 
     const result = await Schedules.create({
-        id: uuidv4(),
+        id: schedules.id || uuidv4(),
         name_client,
         date_and_houres,
         active,
         finished,
         provider_id_schedules,
         client_id_schedules
+      }, {
+        transaction
       });
 
       if(result){
         return result
       }
       return false
+  }
+  
+  /**
+   * Método auxiliar para verificar conflitos de horário
+   */
+  async checkTimeConflict(dateAndHours, providerId, scheduleId = null, transaction = null) {
+    const { Op } = require('sequelize');
+    const where = {
+      active: true,
+      finished: false,
+      date_and_houres: dateAndHours,
+      provider_id_schedules: providerId
+    };
+    
+    // Excluir o próprio agendamento se estiver atualizando
+    if (scheduleId) {
+      where.id = { [Op.ne]: scheduleId };
+    }
+    
+    const conflict = await Schedules.findOne({
+      where,
+      transaction
+    });
+    
+    return !!conflict;
   }
     
   async updateSchedules(scheduleData) {
