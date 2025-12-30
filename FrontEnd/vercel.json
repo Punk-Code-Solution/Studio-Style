@@ -6,8 +6,8 @@
   "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/(.*)",
-      "destination": "https://studio-style-henna.vercel.app/$1"
+      "source": "/api/(.*)",
+      "destination": "https://studio-style.vercel.app/api/$1"
     },
     {
       "source": "/((?!.*\\.).*)$",
@@ -16,7 +16,7 @@
   ],
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/api/(.*)",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
