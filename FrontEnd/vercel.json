@@ -6,10 +6,6 @@
   "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/(.*)"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
