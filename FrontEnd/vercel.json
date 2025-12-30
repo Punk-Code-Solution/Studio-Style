@@ -6,8 +6,8 @@
   "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "source": "/api/(.*)",
+      "destination": "https://studio-style.vercel.app/api/$1"
     }
   ],
   "headers": [
