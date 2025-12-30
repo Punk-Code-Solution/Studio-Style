@@ -5,6 +5,7 @@ const Schedules_Service = require('../repositories/schedules_service.repository'
 // ADICIONADO: Repositórios para criar novo cliente
 const AccountRepository = require('../repositories/account.repository');
 const TypeAccountRepository = require('../repositories/type_account.repository');
+const { sequelize } = require('../Database/models');
 
 class SchedulesController {
 
@@ -21,18 +22,36 @@ class SchedulesController {
    * Create a new schedule
    */
   async createSchedules(req, res) {
+    const transaction = await sequelize.transaction();
+    
     try {
       const schedules = req.body;
       let clientId = schedules.client_id_schedules;
 
       // Validar dados obrigatórios
       if (!schedules.name_client || !schedules.date_and_houres || !schedules.provider_id_schedules) {
+        await transaction.rollback();
         return ResponseHandler.error(res, 400, 'Nome do cliente, data/hora e prestador são obrigatórios');
       }
 
       // Validar se há serviços
       if (!schedules.services || !Array.isArray(schedules.services) || schedules.services.length === 0) {
+        await transaction.rollback();
         return ResponseHandler.error(res, 400, 'Pelo menos um serviço deve ser selecionado');
+      }
+
+      // Validar horário ocupado antes de criar agendamento
+      const dateAndHours = new Date(schedules.date_and_houres);
+      const hasConflict = await this.schedulesRepository.checkTimeConflict(
+        dateAndHours, 
+        schedules.provider_id_schedules,
+        null, // Não é atualização, então não há scheduleId para excluir
+        transaction
+      );
+
+      if (hasConflict) {
+        await transaction.rollback();
+        return ResponseHandler.error(res, 409, 'Horário já está ocupado para este prestador');
       }
 
       // LÓGICA MODIFICADA (Ponto 2): Se client_id_schedules não for fornecido, crie um novo cliente
@@ -43,10 +62,11 @@ class SchedulesController {
         const clientType = typeAccounts.find(t => t.type.toLowerCase() === 'client');
 
         if (!clientType) {
+          await transaction.rollback();
           return ResponseHandler.error(res, 500, 'Tipo de conta "client" não encontrado. Não é possível criar novo cliente.');
         }
 
-        // 2. Criar a nova conta de cliente (campos mínimos)
+        // 2. Criar a nova conta de cliente (campos mínimos) dentro da transação
         const [firstName, ...lastNameParts] = schedules.name_client.split(' ');
         const newClientData = {
           name: firstName,
@@ -59,8 +79,9 @@ class SchedulesController {
           deleted: false
         };
 
-        const newAccount = await this.accountRepository.addAccount(newClientData);
+        const newAccount = await this.accountRepository.addAccount(newClientData, transaction);
         if (!newAccount) {
+          await transaction.rollback();
           return ResponseHandler.error(res, 500, 'Falha ao criar a nova conta de cliente');
         }
 
@@ -68,23 +89,31 @@ class SchedulesController {
         schedules.client_id_schedules = clientId; // Adicionar ao objeto schedules
       }
 
-      // 3. Criar o agendamento
-      const result = await this.schedulesRepository.addSchedules(schedules);
+      // 3. Criar o agendamento dentro da transação
+      const result = await this.schedulesRepository.addSchedules(schedules, transaction);
 
       if (!result) {
+        await transaction.rollback();
         return ResponseHandler.error(res, 400, 'Falha ao criar agendamento');
       }
 
-      // 4. Adicionar serviços ao agendamento
-      const result_services = await this.schedules_serviceRepository.addSchedule_Service(result.dataValues.id, schedules.services);
+      // 4. Adicionar serviços ao agendamento dentro da transação
+      const result_services = await this.schedules_serviceRepository.addSchedule_Service(
+        result.dataValues.id, 
+        schedules.services,
+        transaction
+      );
 
       if (!result_services) {
-        // Se falhou ao adicionar serviços, remover o agendamento criado (rollback manual)
-        await this.schedulesRepository.deleteSchedules(result.dataValues.id);
+        // Rollback automático pela transação
+        await transaction.rollback();
         return ResponseHandler.error(res, 400, 'Falha ao associar serviços ao agendamento');
       }
 
-      // 5. Emitir evento Socket.IO para atualizar Dashboard em tempo real
+      // Commit da transação
+      await transaction.commit();
+
+      // 5. Emitir evento Socket.IO para atualizar Dashboard em tempo real (após commit)
       try {
         const { emitScheduleCreated } = require('../utils/socket.io');
         // Buscar o agendamento completo com relacionamentos para enviar no evento
@@ -102,6 +131,8 @@ class SchedulesController {
         services: result_services
       });
     } catch (error) {
+      // Rollback em caso de erro
+      await transaction.rollback();
       return ResponseHandler.error(res, 500, 'Falha ao criar agendamento', error.message);
     }
   }

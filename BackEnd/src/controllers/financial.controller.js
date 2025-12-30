@@ -1,6 +1,7 @@
 const FinancialRepository = require('../repositories/financial.repository');
 const PaymentCalculationService = require('../services/payment-calculation.service');
-const { FinancialLedger, Expense, Schedules, Service, Account } = require('../Database/models');
+const ResponseHandler = require('../utils/responseHandler');
+const { FinancialLedger, Expense, Schedules, Service, Account, sequelize } = require('../Database/models');
 const { Op } = require('sequelize');
 
 class FinancialController {
@@ -16,32 +17,33 @@ class FinancialController {
       const { grossAmount, serviceId, professionalId, productCost } = req.body;
 
       if (!grossAmount) {
-        return res.status(400).json({
-          success: false,
-          message: 'grossAmount é obrigatório'
-        });
+        return ResponseHandler.validationError(res, 'grossAmount é obrigatório');
       }
+
+      // Validação de tipo antes de operações matemáticas
+      if (typeof grossAmount !== 'number' || isNaN(grossAmount)) {
+        return ResponseHandler.validationError(res, 'grossAmount deve ser um número válido');
+      }
+
+      // Validação de tipo para productCost
+      const validatedProductCost = productCost && typeof productCost === 'number' && !isNaN(productCost) 
+        ? Math.round(productCost * 100) 
+        : 0;
 
       const result = await PaymentCalculationService.calculateServiceSplit({
         grossAmount: Math.round(grossAmount * 100), // Converte para centavos
         serviceId,
         professionalId,
-        productCost: productCost ? Math.round(productCost * 100) : 0
+        productCost: validatedProductCost
       });
 
       // Converte de volta para reais para resposta
       const formattedResult = this._formatToReais(result);
 
-      return res.status(200).json({
-        success: true,
-        data: formattedResult
-      });
+      return ResponseHandler.success(res, 200, 'Divisão calculada com sucesso', formattedResult);
     } catch (error) {
       console.error('Erro ao calcular divisão:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao calcular divisão de pagamento'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao calcular divisão de pagamento', error);
     }
   }
 
@@ -49,33 +51,38 @@ class FinancialController {
    * Registra pagamento de serviço no livro razão
    */
   async recordServicePayment(req, res) {
+    const transaction = await sequelize.transaction();
+    
     try {
       const { scheduleId, calculationResult, createdBy } = req.body;
 
       if (!scheduleId || !calculationResult) {
-        return res.status(400).json({
-          success: false,
-          message: 'Dados incompletos para registro de pagamento'
-        });
+        await transaction.rollback();
+        return ResponseHandler.validationError(res, 'Dados incompletos para registro de pagamento');
       }
 
       // Garante que o schedule existe e está marcado como finalizado
-      const schedule = await Schedules.findByPk(scheduleId);
+      const schedule = await Schedules.findByPk(scheduleId, { transaction });
 
       if (!schedule) {
-        return res.status(404).json({
-          success: false,
-          message: 'Agendamento não encontrado para registrar pagamento'
-        });
+        await transaction.rollback();
+        return ResponseHandler.notFound(res, 'Agendamento não encontrado para registrar pagamento');
       }
 
       // Se ainda não estiver finalizado, marcamos como finalizado
       if (!schedule.finished) {
-        await schedule.update({ finished: true });
+        await schedule.update({ finished: true }, { transaction });
       }
 
       // Valores recebidos do front estão em REAIS, precisamos converter para centavos
-      const toCents = (value) => Math.round((value || 0) * 100);
+      // Validação de tipo antes de operações matemáticas
+      const toCents = (value) => {
+        if (value === null || value === undefined) return 0;
+        if (typeof value !== 'number' || isNaN(value)) {
+          throw new Error(`Valor inválido para conversão: ${value}`);
+        }
+        return Math.round(value * 100);
+      };
 
       const entries = [];
 
@@ -109,7 +116,7 @@ class FinancialController {
       entries.push({
         transactionType: 'EXPENSE',
         category: 'GATEWAY_FEE',
-        amount: toCents(calculationResult.operationalCosts.gatewayFee),
+        amount: toCents(calculationResult.operationalCosts?.gatewayFee || 0),
         description: `Taxa do gateway de pagamento`,
         referenceId: scheduleId,
         referenceType: 'Schedule',
@@ -119,7 +126,7 @@ class FinancialController {
       });
 
       // 4. Saída: Impostos
-      if (calculationResult.taxes.totalTax > 0) {
+      if (calculationResult.taxes?.totalTax > 0) {
         entries.push({
           transactionType: 'EXPENSE',
           category: 'TAX_PAYMENT',
@@ -134,7 +141,7 @@ class FinancialController {
       }
 
       // 5. Saída: Custo de produtos
-      if (calculationResult.operationalCosts.productCost > 0) {
+      if (calculationResult.operationalCosts?.productCost > 0) {
         entries.push({
           transactionType: 'EXPENSE',
           category: 'PRODUCT_COST',
@@ -148,25 +155,23 @@ class FinancialController {
         });
       }
 
-      // Cria todas as entradas
+      // Cria todas as entradas dentro da transação
       const createdEntries = await Promise.all(
-        entries.map(entry => this.financialRepo.createLedgerEntry(entry))
+        entries.map(entry => this.financialRepo.createLedgerEntry(entry, transaction))
       );
 
-      return res.status(201).json({
-        success: true,
-        message: 'Pagamento registrado com sucesso',
-        data: {
-          entries: createdEntries.length,
-          ledgerEntries: createdEntries
-        }
+      // Commit da transação
+      await transaction.commit();
+
+      return ResponseHandler.success(res, 201, 'Pagamento registrado com sucesso', {
+        entries: createdEntries.length,
+        ledgerEntries: createdEntries
       });
     } catch (error) {
+      // Rollback em caso de erro
+      await transaction.rollback();
       console.error('Erro ao registrar pagamento:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao registrar pagamento'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao registrar pagamento', error);
     }
   }
 
@@ -440,8 +445,7 @@ class FinancialController {
         (offset ? parseInt(offset) : 0) + (limit ? parseInt(limit) : 100)
       );
 
-      return res.status(200).json({
-        success: true,
+      return ResponseHandler.success(res, 200, 'Entradas do livro razão recuperadas com sucesso', {
         data: paginatedEntries,
         meta: {
           total: allEntries.length,
@@ -451,10 +455,7 @@ class FinancialController {
       });
     } catch (error) {
       console.error('[Financial] Erro ao buscar entradas:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao buscar entradas do livro razão'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao buscar entradas do livro razão', error);
     }
   }
 
@@ -467,22 +468,13 @@ class FinancialController {
       const entry = await this.financialRepo.findLedgerEntryById(id);
 
       if (!entry) {
-        return res.status(404).json({
-          success: false,
-          message: 'Entrada não encontrada'
-        });
+        return ResponseHandler.notFound(res, 'Entrada não encontrada');
       }
 
-      return res.status(200).json({
-        success: true,
-        data: entry
-      });
+      return ResponseHandler.success(res, 200, 'Entrada recuperada com sucesso', entry);
     } catch (error) {
       console.error('Erro ao buscar entrada:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao buscar entrada'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao buscar entrada', error);
     }
   }
 
@@ -494,10 +486,7 @@ class FinancialController {
       const { transactionType, category, amount, description, transactionDate, metadata, createdBy } = req.body;
 
       if (!transactionType || !category || !amount) {
-        return res.status(400).json({
-          success: false,
-          message: 'transactionType, category e amount são obrigatórios'
-        });
+        return ResponseHandler.validationError(res, 'transactionType, category e amount são obrigatórios');
       }
 
       // Usar o ID do usuário autenticado se createdBy não for fornecido
@@ -513,17 +502,10 @@ class FinancialController {
         createdBy: userId
       });
 
-      return res.status(201).json({
-        success: true,
-        message: 'Entrada criada com sucesso',
-        data: entry
-      });
+      return ResponseHandler.success(res, 201, 'Entrada criada com sucesso', entry);
     } catch (error) {
       console.error('Erro ao criar entrada:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao criar entrada'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao criar entrada', error);
     }
   }
 
@@ -536,10 +518,7 @@ class FinancialController {
       
       // Verificar se é uma entrada virtual (não pode ser editada)
       if (id && (id.startsWith('virtual-income-') || id.startsWith('virtual-expense-'))) {
-        return res.status(400).json({
-          success: false,
-          message: 'Entradas virtuais não podem ser editadas. Elas são geradas automaticamente a partir de agendamentos finalizados.'
-        });
+        return ResponseHandler.validationError(res, 'Entradas virtuais não podem ser editadas. Elas são geradas automaticamente a partir de agendamentos finalizados.');
       }
 
       const { transactionType, category, amount, description, transactionDate, metadata } = req.body;
@@ -553,17 +532,10 @@ class FinancialController {
         metadata
       });
 
-      return res.status(200).json({
-        success: true,
-        message: 'Entrada atualizada com sucesso',
-        data: entry
-      });
+      return ResponseHandler.success(res, 200, 'Entrada atualizada com sucesso', entry);
     } catch (error) {
       console.error('Erro ao atualizar entrada:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao atualizar entrada'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao atualizar entrada', error);
     }
   }
 
@@ -576,24 +548,15 @@ class FinancialController {
       
       // Verificar se é uma entrada virtual (não pode ser deletada)
       if (id && (id.startsWith('virtual-income-') || id.startsWith('virtual-expense-'))) {
-        return res.status(400).json({
-          success: false,
-          message: 'Entradas virtuais não podem ser deletadas. Elas são geradas automaticamente a partir de agendamentos finalizados.'
-        });
+        return ResponseHandler.validationError(res, 'Entradas virtuais não podem ser deletadas. Elas são geradas automaticamente a partir de agendamentos finalizados.');
       }
       
       await this.financialRepo.deleteLedgerEntry(id);
 
-      return res.status(200).json({
-        success: true,
-        message: 'Entrada deletada com sucesso'
-      });
+      return ResponseHandler.success(res, 200, 'Entrada deletada com sucesso');
     } catch (error) {
       console.error('Erro ao deletar entrada:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao deletar entrada'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao deletar entrada', error);
     }
   }
 
@@ -730,16 +693,10 @@ class FinancialController {
       console.log(`[Financial] Totais calculados - Receita: R$ ${formattedTotals.totalIncome.toFixed(2)}, Despesas: R$ ${formattedTotals.totalExpenses.toFixed(2)}, Lucro: R$ ${formattedTotals.netProfit.toFixed(2)}`);
       console.log(`[Financial] Entradas virtuais adicionadas - Receita: R$ ${(additionalIncome / 100).toFixed(2)}, Despesas: R$ ${(additionalExpenses / 100).toFixed(2)}`);
 
-      return res.status(200).json({
-        success: true,
-        data: formattedTotals
-      });
+      return ResponseHandler.success(res, 200, 'Totais financeiros calculados com sucesso', formattedTotals);
     } catch (error) {
       console.error('[Financial] Erro ao calcular totais financeiros:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao calcular totais financeiros'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao calcular totais financeiros', error);
     }
   }
 
@@ -939,16 +896,10 @@ class FinancialController {
         console.log(`[Financial]   ${item.professionalName}: R$ ${(item.totalCommission / 100).toFixed(2)}`);
       });
 
-      return res.status(200).json({
-        success: true,
-        data: summary
-      });
+      return ResponseHandler.success(res, 200, 'Resumo de comissões gerado com sucesso', summary);
     } catch (error) {
       console.error('[Financial] Erro ao gerar resumo de comissões:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao gerar resumo de comissões'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao gerar resumo de comissões', error);
     }
   }
 
@@ -959,16 +910,10 @@ class FinancialController {
     try {
       const settings = await this.financialRepo.getCompanySettings();
 
-      return res.status(200).json({
-        success: true,
-        data: settings
-      });
+      return ResponseHandler.success(res, 200, 'Configurações financeiras recuperadas com sucesso', settings);
     } catch (error) {
       console.error('Erro ao buscar configurações:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao buscar configurações financeiras'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao buscar configurações financeiras', error);
     }
   }
 
@@ -976,17 +921,10 @@ class FinancialController {
     try {
       const settings = await this.financialRepo.updateCompanySettings(req.body);
 
-      return res.status(200).json({
-        success: true,
-        message: 'Configurações atualizadas com sucesso',
-        data: settings
-      });
+      return ResponseHandler.success(res, 200, 'Configurações atualizadas com sucesso', settings);
     } catch (error) {
       console.error('Erro ao atualizar configurações:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao atualizar configurações financeiras'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao atualizar configurações financeiras', error);
     }
   }
 
@@ -997,17 +935,10 @@ class FinancialController {
     try {
       const rule = await this.financialRepo.createCommissionRule(req.body);
 
-      return res.status(201).json({
-        success: true,
-        message: 'Regra de comissão criada com sucesso',
-        data: rule
-      });
+      return ResponseHandler.success(res, 201, 'Regra de comissão criada com sucesso', rule);
     } catch (error) {
       console.error('Erro ao criar regra:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao criar regra de comissão'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao criar regra de comissão', error);
     }
   }
 
@@ -1015,16 +946,10 @@ class FinancialController {
     try {
       const rules = await this.financialRepo.findCommissionRules(req.query);
 
-      return res.status(200).json({
-        success: true,
-        data: rules
-      });
+      return ResponseHandler.success(res, 200, 'Regras de comissão recuperadas com sucesso', rules);
     } catch (error) {
       console.error('Erro ao buscar regras:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao buscar regras de comissão'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao buscar regras de comissão', error);
     }
   }
 
@@ -1052,17 +977,10 @@ class FinancialController {
         createdBy: expenseData.created_by
       });
 
-      return res.status(201).json({
-        success: true,
-        message: 'Despesa criada com sucesso',
-        data: expense
-      });
+      return ResponseHandler.success(res, 201, 'Despesa criada com sucesso', expense);
     } catch (error) {
       console.error('Erro ao criar despesa:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao criar despesa'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao criar despesa', error);
     }
   }
 
@@ -1070,16 +988,10 @@ class FinancialController {
     try {
       const expenses = await this.financialRepo.findExpenses(req.query);
 
-      return res.status(200).json({
-        success: true,
-        data: expenses
-      });
+      return ResponseHandler.success(res, 200, 'Despesas recuperadas com sucesso', expenses);
     } catch (error) {
       console.error('Erro ao buscar despesas:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao buscar despesas'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao buscar despesas', error);
     }
   }
 
@@ -1300,32 +1212,26 @@ class FinancialController {
         }
       }
 
-      return res.status(200).json({
-        success: true,
-        data: {
-          received: {
-            total: totalReceived / 100, // Converter para reais
-            count: finishedSchedules.length,
-            details: receivedDetails
-          },
-          expected: {
-            total: totalExpected / 100, // Converter para reais
-            count: scheduledSchedules.length,
-            details: expectedDetails
-          },
-          summary: {
-            totalReceived: totalReceived / 100,
-            totalExpected: totalExpected / 100,
-            totalCombined: (totalReceived + totalExpected) / 100
-          }
+      return ResponseHandler.success(res, 200, 'Dados financeiros de schedules recuperados com sucesso', {
+        received: {
+          total: totalReceived / 100, // Converter para reais
+          count: finishedSchedules.length,
+          details: receivedDetails
+        },
+        expected: {
+          total: totalExpected / 100, // Converter para reais
+          count: scheduledSchedules.length,
+          details: expectedDetails
+        },
+        summary: {
+          totalReceived: totalReceived / 100,
+          totalExpected: totalExpected / 100,
+          totalCombined: (totalReceived + totalExpected) / 100
         }
       });
     } catch (error) {
       console.error('Erro ao buscar dados financeiros de schedules:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Erro ao buscar dados financeiros de schedules'
-      });
+      return ResponseHandler.error(res, 500, error.message || 'Erro ao buscar dados financeiros de schedules', error);
     }
   }
 

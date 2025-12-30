@@ -22,7 +22,7 @@ class schedules_serviceRepository{
      });
   }
     
-  async addSchedule_Service(schedules_id, services) {
+  async addSchedule_Service(schedules_id, services, transaction = null) {
     if (!Array.isArray(services) || services.length === 0) {
       return false;
     }
@@ -30,7 +30,8 @@ class schedules_serviceRepository{
     try {
       // Primeiro, remover todas as relações existentes para este agendamento (limpeza antes de atualizar)
       await Schedule_Service.destroy({
-        where: { schedules_id }
+        where: { schedules_id },
+        transaction
       });
 
       // Criar array de objetos para bulkCreate
@@ -41,7 +42,9 @@ class schedules_serviceRepository{
       }));
 
       // Adiciona todos os relacionamentos de uma só vez
-      const result = await Schedule_Service.bulkCreate(scheduleServicesData);
+      const result = await Schedule_Service.bulkCreate(scheduleServicesData, {
+        transaction
+      });
       return result;
     } catch (error) {
       console.error("Erro ao adicionar serviços ao agendamento:", error);
