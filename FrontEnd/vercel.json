@@ -4,17 +4,14 @@
   "outputDirectory": "dist/estudio_style/browser",
   "cleanUrls": true,
   "trailingSlash": false,
-  "routes": [
+  "rewrites": [
     {
-      "handle": "filesystem"
+      "source": "/api/(.*)",
+      "destination": "https://studio-style.vercel.app/api/$1"
     },
     {
-      "src": "/api/(.*)",
-      "dest": "https://studio-style.vercel.app/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [
