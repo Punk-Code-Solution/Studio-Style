@@ -20,7 +20,7 @@ A segurança é uma prioridade para nós. Se você descobrir uma vulnerabilidade
 
 Em vez disso, siga estes passos:
 
-1. **Envie um email para**: [punkcodesolution@gmail.com] (substitua pelo email real)
+1. **Envie um email para**: [punkcodesolution@gmail.com].
    - Assunto: `[SECURITY] Vulnerabilidade no Studio & Style`
    
 2. **Inclua as seguintes informações**:
@@ -130,7 +130,7 @@ Todas as vulnerabilidades corrigidas serão documentadas aqui após a correção
 
 Para questões de segurança, entre em contato:
 
-- **Email**: [seu-email@exemplo.com]
+- **Email**:  [punkcodesolution@gmail.com]
 - **GitHub Security Advisory**: [Link para GitHub Security]
 
 ## 📜 Licença
