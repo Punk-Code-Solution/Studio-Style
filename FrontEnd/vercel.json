@@ -7,7 +7,7 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "https://studio-style.vercel.app/api/$1"
+      "destination": "https://studio-style-henna.vercel.app/$1"
     },
     {
       "source": "/((?!.*\\.).*)$",
