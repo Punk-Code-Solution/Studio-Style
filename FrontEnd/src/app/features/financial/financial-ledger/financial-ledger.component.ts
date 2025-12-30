@@ -338,9 +338,12 @@ export class FinancialLedgerComponent implements OnInit {
     }).subscribe({
       next: (response) => {
         if (response.success) {
-          this.entries = response.data;
+          this.entries = Array.isArray(response.data) ? response.data : [];
           this.applySortAndPagination();
           this.calculateTotals();
+        } else {
+          this.entries = [];
+          this.applySortAndPagination();
         }
         this.loading = false;
       },
@@ -353,8 +356,16 @@ export class FinancialLedgerComponent implements OnInit {
   }
 
   applySortAndPagination() {
+    // Garantir que entries seja um array
+    const entries = Array.isArray(this.entries) ? this.entries : [];
+    
     // Aplicar ordenação
-    this.sortedEntries = this.tableUtils.sortData(this.entries, this.sortConfig.column, this.sortConfig.direction);
+    this.sortedEntries = this.tableUtils.sortData(entries, this.sortConfig.column, this.sortConfig.direction);
+    
+    // Garantir que sortedEntries seja um array
+    if (!Array.isArray(this.sortedEntries)) {
+      this.sortedEntries = [];
+    }
     
     // Recalcular paginação
     this.totalPages = this.tableUtils.calculateTotalPages(this.sortedEntries.length, this.itemsPerPage);

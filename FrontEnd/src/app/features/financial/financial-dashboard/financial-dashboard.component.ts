@@ -730,12 +730,16 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy, AfterView
           endDate: this.endDate
         }).toPromise();
 
-        if (entriesResponse?.success) {
-          console.log('[Financial Dashboard] Entradas recebidas para cálculo de custos:', entriesResponse.data.length);
+        if (entriesResponse?.success && entriesResponse.data) {
+          const entries = Array.isArray(entriesResponse.data) ? entriesResponse.data : [];
+          console.log('[Financial Dashboard] Entradas recebidas para cálculo de custos:', entries.length);
           if (entriesResponse.meta) {
             console.log('[Financial Dashboard] Meta:', entriesResponse.meta);
           }
-          this.calculateOperationalCosts(entriesResponse.data);
+          this.calculateOperationalCosts(entries);
+        } else {
+          console.warn('[Financial Dashboard] Resposta de entradas inválida ou sem dados:', entriesResponse);
+          this.calculateOperationalCosts([]);
         }
 
         // Carregar dados de schedules
@@ -924,8 +928,8 @@ export class FinancialDashboardComponent implements OnInit, OnDestroy, AfterView
         endDate: this.endDate
       }).toPromise();
 
-      if (entriesResponse?.success) {
-        const entries = entriesResponse.data;
+      if (entriesResponse?.success && entriesResponse.data) {
+        const entries = Array.isArray(entriesResponse.data) ? entriesResponse.data : [];
         const groupedByDate: { [key: string]: { income: number; expense: number } } = {};
 
         entries.forEach(entry => {

@@ -23,6 +23,11 @@ export class TableUtilsService {
    * Ordena um array de objetos por uma coluna específica
    */
   sortData<T>(data: T[], column: string, direction: SortDirection): T[] {
+    // Garantir que data seja um array
+    if (!Array.isArray(data)) {
+      console.warn('[TableUtils] sortData recebeu dados que não são um array:', data);
+      return [];
+    }
     if (!column || !direction) {
       return data;
     }
@@ -84,6 +89,11 @@ export class TableUtilsService {
    * Pagina os dados
    */
   paginateData<T>(data: T[], page: number, pageSize: number): T[] {
+    // Garantir que data seja um array
+    if (!Array.isArray(data)) {
+      console.warn('[TableUtils] paginateData recebeu dados que não são um array:', data);
+      return [];
+    }
     const startIndex = (page - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     return data.slice(startIndex, endIndex);
