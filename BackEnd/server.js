@@ -1,3 +1,10 @@
+/**
+ * Copyright © 2024 Punk Code Solution
+ * CNPJ: 61.805.210/0001-41
+ * Rua do Aconchego, Ilhéus - BA, CEP 45656-627
+ * Todos os direitos reservados.
+ */
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');

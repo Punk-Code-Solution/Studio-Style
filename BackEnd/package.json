@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "server.js",
   "license": "MIT",
+  "copyright": "Copyright © 2024 Punk Code Solution - CNPJ: 61.805.210/0001-41 - Rua do Aconchego, Ilhéus - BA, CEP 45656-627",
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",

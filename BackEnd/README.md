@@ -351,7 +351,16 @@ BackEnd/
 
 ## 📝 Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](../LICENSE) para mais detalhes.
+
+## © Copyright
+
+**Copyright © 2024 Punk Code Solution**
+
+- **CNPJ**: 61.805.210/0001-41
+- **Endereço**: Rua do Aconchego, Ilhéus - BA, CEP 45656-627
+
+Todos os direitos reservados.
 
 ## 👨‍💻 Autor
 

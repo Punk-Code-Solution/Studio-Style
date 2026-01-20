@@ -149,6 +149,7 @@
   color: $error-color;
   cursor: pointer;
   transition: all $transition-fast;
+  margin-bottom: $spacing-xs;
 
   i {
     font-size: $font-size-lg;
@@ -163,5 +164,21 @@
 
   &:hover {
     background-color: rgba($error-color, 0.1);
+  }
+}
+
+.copyright {
+  @include flex(column, center, center);
+  gap: 2px;
+  padding-top: $spacing-xs;
+  border-top: 1px solid $border-color;
+  margin-top: $spacing-xs;
+
+  small {
+    @include typography($font-size-xs);
+    color: $text-secondary;
+    text-align: center;
+    transition: opacity $transition-fast;
+    opacity: 1;
   }
 }

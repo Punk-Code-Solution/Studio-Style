@@ -1,6 +1,7 @@
 {
   "name": "studio_style",
   "version": "0.0.0",
+  "copyright": "Copyright © 2024 Punk Code Solution - CNPJ: 61.805.210/0001-41 - Rua do Aconchego, Ilhéus - BA, CEP 45656-627",
   "scripts": {
     "test": "ng test --no-watch --no-progress --browsers=ChromeHeadless",
     "test:watch": "ng test --watch",

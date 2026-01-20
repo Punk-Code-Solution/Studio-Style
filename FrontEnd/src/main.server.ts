@@ -5,5 +5,5 @@ import { bootstrapApplication } from '@angular/platform-browser';
 // A função bootstrap é chamada pelo AngularNodeAppEngine com o BootstrapContext
 // No Angular 19, o bootstrapApplication do platform-browser aceita o contexto como terceiro parâmetro
 export default async function bootstrap(context: any) {
-  return bootstrapApplication(AppComponent, config);
+  return bootstrapApplication(AppComponent, config, context);
 }
