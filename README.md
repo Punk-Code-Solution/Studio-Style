@@ -365,7 +365,7 @@ Todos os direitos reservados.
 ## 📞 Suporte
 
 - **Issues**: [GitHub Issues](https://github.com/Punk-Code-Solution/Studio-Style/issues)
-- **Email**: [seu-email@exemplo.com]
+- **Email**: [punkcodesolution@gmail.com]
 
 ## 🙏 Agradecimentos
 
